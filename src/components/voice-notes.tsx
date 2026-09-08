@@ -72,11 +72,22 @@ export function VoiceNotes({
   meetingId,
   compact = false,
   onCountChange,
+  filter = null,
 }: {
   noteId?: number;
   meetingId?: number;
   compact?: boolean;
   onCountChange?: (n: number) => void;
+  /**
+   * The Notes screen's own Personal / Business filter, passed straight through.
+   * `null` = All.
+   *
+   * There is deliberately no filter control inside this component: the screen
+   * has ONE filter and it governs notes, meetings and recordings together.
+   * Picking "Business" should show business notes AND business recordings, not
+   * make the user set the same thing twice in two places.
+   */
+  filter?: VoiceTag | null;
 }) {
   const [notes, setNotes] = useState<ApiVoiceNote[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -88,10 +99,11 @@ export function VoiceNotes({
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const [playingId, setPlayingId] = useState<number | null>(null);
-  /* Which tag a NEW standalone recording gets, and which the list shows.
-     Attached recordings take their filter from their note or meeting, so this
-     whole control only exists in standalone mode. */
-  const [tag, setTag] = useState<VoiceTag>("personal");
+
+  /** A new recording takes the active filter's tag, so making one while
+   *  "Business" is selected does not immediately hide it. Under "All" it falls
+   *  back to personal, matching what the screen does for a new note. */
+  const tag: VoiceTag = filter ?? "personal";
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -109,7 +121,8 @@ export function VoiceNotes({
           noteId,
           meetingId,
           standalone,
-          tag: standalone ? tag : undefined,
+          // Under "All" no tag is sent, so every recording comes back.
+          tag: standalone ? filter ?? undefined : undefined,
         }),
       );
     } catch (err) {
@@ -118,7 +131,7 @@ export function VoiceNotes({
     } finally {
       setLoaded(true);
     }
-  }, [noteId, meetingId, standalone, tag]);
+  }, [noteId, meetingId, standalone, filter]);
 
   useEffect(() => {
     refresh();
@@ -325,31 +338,6 @@ export function VoiceNotes({
         ) : null}
       </div>
 
-      {/* Personal / Business, exactly as the notes list has. Standalone only:
-          a recording attached to a note or meeting is already filtered by that
-          owner, so a second control here would be a lie. */}
-      {standalone ? (
-        <div role="group" aria-label="Recording type" className="mb-2 flex gap-2">
-          {(["personal", "business"] as VoiceTag[]).map((t) => {
-            const on = tag === t;
-            return (
-              <button
-                key={t}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setTag(t)}
-                className={cx(
-                  "rounded-lg border px-3 py-1.5 text-[12.5px] font-semibold capitalize transition-colors",
-                  on ? "border-gold text-gold" : "border-line text-muted hover:bg-line-soft",
-                )}
-              >
-                {t}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
       {/* Naming step — the recording is held locally until it is named. */}
       {pending ? (
         <div className="mb-3 rounded-xl border border-gold bg-surface p-3.5">
@@ -427,7 +415,7 @@ export function VoiceNotes({
 
       {loaded && !notes.length && standalone ? (
         <p className="mt-2 text-[12.5px] text-muted">
-          No {tag} recordings yet.
+          {filter ? `No ${filter} recordings yet.` : "No recordings yet."}
         </p>
       ) : null}
 

@@ -116,7 +116,7 @@ ck("both editors mount the recorder",
 /* A recording need not belong to a typed note. The Notes LIST carries its own
    recorder for those, exactly as the phone does — without it there is no way to
    make one on the web at all. */
-ck("the notes list has a standalone recorder", /<VoiceNotes \/>/.test(notes));
+ck("the notes list has a standalone recorder", /<VoiceNotes filter=\{filter\} \/>/.test(notes));
 /* ...and it must ask for ONLY the unattached ones, or a note's recordings show
    twice: once inside the note and once in the general list. The backend's own
    docstring names this bug. */
@@ -154,12 +154,24 @@ ck("the server refuses to retag an attached recording",
 ck("and only tag-filters the standalone list",
    /if tag and standalone_only:/.test(
      readFileSync("../zaffarology-backend/app/services/voice_note_service.py", "utf8")));
-ck("the client only shows the filter when standalone",
-   /\{standalone \? \(\s*<div role="group" aria-label="Recording type"/.test(rec));
-ck("and only sends a tag when standalone",
-   /tag: standalone \? tag : undefined/.test(rec));
-ck("the list refetches when the filter changes",
-   /\}, \[noteId, meetingId, standalone, tag\]\)/.test(rec));
+/* ONE filter for the whole screen. Notes, meetings and recordings are three
+   lists of the same person's material, so asking for Personal twice — once for
+   notes and once for recordings — is two controls doing one job. */
+ck("the recorder has NO filter control of its own",
+   !/aria-label="Recording type"/.test(rec),
+   "the screen's filter governs it instead");
+ck("it takes the screen's filter as a prop", /filter\?: VoiceTag \| null;/.test(rec));
+ck("the notes screen passes its own filter down",
+   /<VoiceNotes filter=\{filter\} \/>/.test(notes));
+ck("a new recording inherits the active filter's tag",
+   /const tag: VoiceTag = filter \?\? "personal";/.test(rec));
+ck("All sends no tag, so everything comes back",
+   /tag: standalone \? filter \?\? undefined : undefined/.test(rec));
+ck("the list refetches when the screen's filter changes",
+   /\}, \[noteId, meetingId, standalone, filter\]\)/.test(rec));
+/* Filtering and CORRECTING a tag are different jobs: the filter cannot fix a
+   recording made under the wrong one. */
+ck("a mis-tagged recording can still be moved", /retagVoiceNote/.test(rec));
 ck("a recording can be moved between the two", /retagVoiceNote/.test(rec));
 ck("moving is optimistic and reverts on failure",
    /setNotes\(before\);[\s\S]{0,140}voice-note-retag/.test(rec));

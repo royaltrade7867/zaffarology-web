@@ -2,20 +2,26 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
-## 2026-09-08 - Voice notes get Personal / Business
+## 2026-09-08 - Voice notes join the Notes screen's own filter
 
-Standalone recordings now carry the same filter the rest of the Notes screen
-has. Needed a backend change too — see the backend changelog for the column,
-the endpoint and the migration.
+Standalone recordings now carry Personal / Business, and **the screen's single
+filter drives all three lists**. Picking "Business" shows business notes,
+business meetings and business recordings; "All" shows everything. Needed a
+backend change too — see the backend changelog.
 
-- A Personal / Business switcher above the standalone recorder, which both
-  filters the list and decides the tag a new recording gets.
-- A per-row control to move one between the two. It is optimistic and the row
-  leaves the current filter, which is the honest outcome: it is no longer in
-  this list.
-- Neither control appears on a recording attached to a note or meeting — that
-  one is already filtered by its owner, so a second control would be a lie. The
-  server refuses it there as well.
+- One control, at the top of the screen, where it already was. The recorder has
+  no filter of its own: notes, meetings and recordings are three views of the
+  same person's material, so asking for "Personal" twice would be two controls
+  doing one job.
+- A new recording inherits the active filter's tag, so making one while
+  "Business" is selected does not immediately hide it — the same rule a new
+  note already followed.
+- A per-row control still moves a recording between the two, because filtering
+  and *correcting* a tag are different jobs: the filter cannot fix one that was
+  recorded under the wrong tag.
+- None of it appears on a recording attached to a note or meeting — that one is
+  already filtered by its owner, so a second control would be a lie. The server
+  refuses it there as well.
 
 ## 2026-09-08 - Phase 7: The design pass, and dark mode
 

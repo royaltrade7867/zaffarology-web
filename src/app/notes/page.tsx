@@ -444,7 +444,11 @@ function NotesAndMeetings() {
           is what makes this the STANDALONE list: a note's own recordings show
           inside that note, and listing them here too would show them twice. */}
       <div className="mt-8 border-t border-line pt-2">
-        <VoiceNotes />
+        {/* The SAME filter drives this list. One control at the top of the
+            screen governs notes, meetings and recordings together — picking
+            "Business" shows business notes and business recordings, rather than
+            making the user set the same thing twice. */}
+        <VoiceNotes filter={filter} />
       </div>
     </div>
   );
