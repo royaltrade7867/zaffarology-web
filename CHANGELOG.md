@@ -2,6 +2,33 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-08 - Phase 6: About → Instructions
+
+The workbook's own guidance, on the About screen behind a switcher: the general
+"How to Use This App" sections, then one collapsible row per pillar with its
+steps, summary, core truth and how it is actually worked.
+
+This also brings the pillar COPY to the web for the first time —
+`content/pillars.ts` had no web equivalent at all, so the scaffold rendered
+titles and nothing else. Both content files ported verbatim; they are pure data
+with no imports.
+
+**The mapping trap, avoided and pinned.** `content/pillars.ts` keeps the
+workbook's numbering, where Business Systems is 8, while the app shows it as
+pillar 5 — and pillar 1's content is titled "EXACT GOAL AND PLAN", not
+"Dreaming to Achieving". Matching on title text almost works and then silently
+attaches the wrong instructions to pillar 1 with no error anywhere. The explicit
+`CONTENT_ID_FOR_DISPLAY` map came across with it, and the fixture proves the
+failure: reintroducing title matching leaves pillar 1 with the fallback title
+and an empty body. Verified the resolved instructions are identical across both
+apps before building the UI.
+
+Rows are collapsed by default with proper `aria-expanded`/`aria-controls`, since
+the general instructions are what a first-time reader needs and five expanded
+pillars would bury them.
+
+35 checks in `check-instructions-web.ts`.
+
 ## 2026-09-08 - Phase 5: Voice notes
 
 Recording and playback in the browser, attached to a note or a meeting exactly

@@ -1,6 +1,10 @@
 "use client";
 
+import { useState } from "react";
+
 import { AuthGuard, Eagle } from "@/components/shell";
+import { InstructionsPanel } from "@/components/instructions-panel";
+import { cx } from "@/components/ui";
 
 const SOCIAL_LINKS = [
   { label: "Instagram", url: "https://www.instagram.com/zaffarology101/" },
@@ -15,7 +19,11 @@ const CONTACT = [
   { label: "zaffarkhan.com", url: "https://zaffarkhan.com" },
 ];
 
+type Tab = "about" | "instructions";
+
 export default function About() {
+  const [tab, setTab] = useState<Tab>("about");
+
   return (
     <AuthGuard>
       <div className="flex flex-col items-center text-center">
@@ -27,6 +35,42 @@ export default function About() {
         <p className="text-[13px] tracking-widest text-gold font-semibold mt-1">MASTER YOUR MIND — BUILD YOUR LEGACY</p>
       </div>
 
+      {/* Two things live on this screen: who Zaffar is, and how to use the
+          app. They are different errands, so they get a switcher rather than
+          one long scroll. */}
+      <div role="group" aria-label="Section" className="mt-6 flex justify-center gap-2">
+        {(
+          [
+            { k: "about" as const, label: "About" },
+            { k: "instructions" as const, label: "Instructions" },
+          ]
+        ).map(({ k, label }) => {
+          const on = tab === k;
+          return (
+            <button
+              key={k}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setTab(k)}
+              className={cx(
+                "rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors",
+                on
+                  ? "border-heading bg-heading text-white"
+                  : "border-line text-heading hover:bg-line-soft",
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "instructions" ? (
+        <div className="mt-7">
+          <InstructionsPanel />
+        </div>
+      ) : (
+        <>
       <div className="mt-6 rounded-xl border border-line bg-surface p-5">
         <h2 className="font-heading text-[18px] text-heading">About Zaffar Khan</h2>
         <p className="text-ink mt-2 leading-relaxed">
@@ -56,6 +100,8 @@ export default function About() {
           ))}
         </div>
       </div>
+        </>
+      )}
     </AuthGuard>
   );
 }
