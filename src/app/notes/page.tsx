@@ -438,6 +438,14 @@ function NotesAndMeetings() {
           ) : null}
         </>
       )}
+
+      {/* Recorded notes that belong to no typed note — a different kind of
+          thing, with its own controls, exactly as on the phone. Passing no ids
+          is what makes this the STANDALONE list: a note's own recordings show
+          inside that note, and listing them here too would show them twice. */}
+      <div className="mt-8 border-t border-line pt-2">
+        <VoiceNotes />
+      </div>
     </div>
   );
 }

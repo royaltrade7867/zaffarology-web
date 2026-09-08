@@ -18,18 +18,44 @@ export function Wordmark({ size = 22 }: { size?: number }) {
   );
 }
 
+/**
+ * The eagle. Two files, because the artwork's body IS the brand navy
+ * (`#1b3a5c`, 90% of its pixels) — on the dark page that is 1.34:1 and the bird
+ * all but vanishes. `eagle-dark.png` is the same artwork with the body recoloured
+ * to the theme's cream (13.06:1); the gold beak is untouched, since it reads on
+ * both grounds.
+ *
+ * Both are rendered and one is hidden by CSS rather than picked in JS: the theme
+ * is applied before React hydrates, so a JS choice would flash the wrong bird on
+ * first paint. `priority` on the light one only — the dark copy must not compete
+ * for the preload slot on a light page.
+ */
 export function Eagle({ size = 40 }: { size?: number }) {
   // intrinsic 541×424 — keep the aspect. Tailwind preflight sets img{height:auto},
   // so declare it here too to silence Next's aspect-ratio warning.
+  const h = Math.round((size * 424) / 541);
+  const box = { width: size, height: "auto" } as const;
   return (
-    <Image
-      src="/eagle.png"
-      alt="Zaffarology"
-      width={size}
-      height={Math.round((size * 424) / 541)}
-      style={{ width: size, height: "auto" }}
-      priority
-    />
+    <>
+      <Image
+        src="/eagle.png"
+        alt="Zaffarology"
+        width={size}
+        height={h}
+        style={box}
+        className="eagle-light"
+        priority
+      />
+      <Image
+        src="/eagle-dark.png"
+        alt=""
+        aria-hidden
+        width={size}
+        height={h}
+        style={box}
+        className="eagle-dark"
+      />
+    </>
   );
 }
 

@@ -112,6 +112,21 @@ ck("the note screen tracks a real count",
 ck("the recorder reports its count", /onCountChange\?\.\(notes\.length\)/.test(rec));
 ck("both editors mount the recorder",
    /<VoiceNotes noteId=\{openNote\.id\}/.test(notes) && /<VoiceNotes meetingId=\{meeting\.id\}/.test(editor));
+
+/* A recording need not belong to a typed note. The Notes LIST carries its own
+   recorder for those, exactly as the phone does — without it there is no way to
+   make one on the web at all. */
+ck("the notes list has a standalone recorder", /<VoiceNotes \/>/.test(notes));
+/* ...and it must ask for ONLY the unattached ones, or a note's recordings show
+   twice: once inside the note and once in the general list. The backend's own
+   docstring names this bug. */
+ck("standalone is derived from having no ids",
+   /const standalone = noteId == null && meetingId == null;/.test(rec));
+ck("and is sent as a query flag", /parts\.push\("standalone=true"\)/.test(api));
+ck("the server implements the split",
+   /standalone_only/.test(
+     readFileSync("../zaffarology-backend/app/services/voice_note_service.py", "utf8"),
+   ));
 ck("deleting a note takes its recordings with it (server)",
    /_soft_delete_voice_notes/.test(
      readFileSync("../zaffarology-backend/app/services/notes_service.py", "utf8"),

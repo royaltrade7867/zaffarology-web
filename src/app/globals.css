@@ -277,6 +277,19 @@ textarea {
   background-clip: content-box;
 }
 
+/* The eagle swaps with the theme in CSS, not JS — see the note on <Eagle>.
+   Only one is ever laid out, so nothing shifts. */
+.eagle-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .eagle-light { display: none; }
+  :root:not([data-theme="light"]) .eagle-dark { display: inline-block; }
+}
+:root[data-theme="dark"] .eagle-light { display: none; }
+:root[data-theme="dark"] .eagle-dark { display: inline-block; }
+/* An explicit Light choice on a dark machine must win both ways. */
+:root[data-theme="light"] .eagle-light { display: inline-block; }
+:root[data-theme="light"] .eagle-dark { display: none; }
+
 /* Numbers that are compared down a column line up. */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
