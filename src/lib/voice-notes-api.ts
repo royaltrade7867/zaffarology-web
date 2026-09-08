@@ -20,9 +20,15 @@ import { api, requestBlob } from "@/lib/api";
  *  browser codec produces in that time (opus at 128 kbps is ~1.8 MB). */
 export const MAX_RECORDING_MS = 120_000;
 
+/** The same filter notes and meetings carry. */
+export type VoiceTag = "personal" | "business";
+
 export interface ApiVoiceNote {
   id: number;
   title: string;
+  /** "personal" | "business". Only meaningful on a STANDALONE recording — one
+   *  attached to a note or meeting is filtered by that parent's tag. */
+  tag: VoiceTag;
   duration_ms: number;
   size_bytes: number;
   mime: string;
@@ -44,11 +50,14 @@ export async function loadVoiceNotes(opts?: {
   noteId?: number;
   meetingId?: number;
   standalone?: boolean;
+  /** Applies to the standalone list only; the server ignores it otherwise. */
+  tag?: VoiceTag;
 }): Promise<ApiVoiceNote[]> {
   const parts: string[] = [];
   if (opts?.noteId != null) parts.push(`note_id=${opts.noteId}`);
   if (opts?.meetingId != null) parts.push(`meeting_id=${opts.meetingId}`);
   if (opts?.standalone) parts.push("standalone=true");
+  if (opts?.tag) parts.push(`tag=${opts.tag}`);
   const data = await api.get<{ notes: ApiVoiceNote[] }>(
     `/voice-notes${parts.length ? `?${parts.join("&")}` : ""}`,
   );
@@ -74,6 +83,8 @@ export async function uploadVoiceNote(input: {
   noteId?: number;
   /** Attach to a meeting instead. */
   meetingId?: number;
+  /** Only read for a standalone recording; an attached one follows its owner. */
+  tag?: VoiceTag;
 }): Promise<ApiVoiceNote> {
   const form = new FormData();
   const mime = input.blob.type || "audio/webm";
@@ -82,6 +93,7 @@ export async function uploadVoiceNote(input: {
   form.append("duration_ms", String(Math.round(input.durationMs)));
   if (input.noteId != null) form.append("note_id", String(input.noteId));
   if (input.meetingId != null) form.append("meeting_id", String(input.meetingId));
+  if (input.tag) form.append("tag", input.tag);
   return api.upload<ApiVoiceNote>("/voice-notes", form);
 }
 
@@ -99,6 +111,12 @@ export async function loadVoiceNoteAudio(id: number): Promise<Blob> {
 
 export async function renameVoiceNote(id: number, title: string): Promise<void> {
   await api.patch(`/voice-notes/${id}`, { title });
+}
+
+/** Move a standalone recording between Personal and Business. The server
+ *  refuses this on a recording that belongs to a note or meeting. */
+export async function retagVoiceNote(id: number, tag: VoiceTag): Promise<void> {
+  await api.patch(`/voice-notes/${id}/tag`, { tag });
 }
 
 export async function restoreVoiceNote(id: number): Promise<ApiVoiceNote> {

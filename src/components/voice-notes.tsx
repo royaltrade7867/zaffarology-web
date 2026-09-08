@@ -28,8 +28,10 @@ import {
   loadVoiceNoteAudio,
   loadVoiceNotes,
   renameVoiceNote,
+  retagVoiceNote,
   uploadVoiceNote,
   type ApiVoiceNote,
+  type VoiceTag,
 } from "@/lib/voice-notes-api";
 
 const mmss = (ms: number) => {
@@ -86,6 +88,10 @@ export function VoiceNotes({
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const [playingId, setPlayingId] = useState<number | null>(null);
+  /* Which tag a NEW standalone recording gets, and which the list shows.
+     Attached recordings take their filter from their note or meeting, so this
+     whole control only exists in standalone mode. */
+  const [tag, setTag] = useState<VoiceTag>("personal");
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -98,14 +104,21 @@ export function VoiceNotes({
 
   const refresh = useCallback(async () => {
     try {
-      setNotes(await loadVoiceNotes({ noteId, meetingId, standalone }));
+      setNotes(
+        await loadVoiceNotes({
+          noteId,
+          meetingId,
+          standalone,
+          tag: standalone ? tag : undefined,
+        }),
+      );
     } catch (err) {
       setError("Could not load your recordings.");
       reportError(err, { area: "voice-notes-load" });
     } finally {
       setLoaded(true);
     }
-  }, [noteId, meetingId, standalone]);
+  }, [noteId, meetingId, standalone, tag]);
 
   useEffect(() => {
     refresh();
@@ -206,6 +219,8 @@ export function VoiceNotes({
         durationMs: pending.ms,
         noteId,
         meetingId,
+        // Only sent for a standalone recording; the server ignores it otherwise.
+        tag: standalone ? tag : undefined,
       });
       setPending(null);
       setTitle("");
@@ -266,6 +281,22 @@ export function VoiceNotes({
     }
   };
 
+  /** Move one recording between Personal and Business. Optimistic, and it
+   *  leaves the current filter, so the row disappears — which is the honest
+   *  outcome: it is no longer in this list. */
+  const retag = async (note: ApiVoiceNote, next: VoiceTag) => {
+    if (note.tag === next) return;
+    const before = notes;
+    setNotes((prev) => prev.filter((n) => n.id !== note.id));
+    try {
+      await retagVoiceNote(note.id, next);
+    } catch (err) {
+      setNotes(before);
+      setError(apiErrorMessage(err, "Could not move that recording."));
+      reportError(err, { area: "voice-note-retag", id: note.id });
+    }
+  };
+
   const remove = async (note: ApiVoiceNote) => {
     if (!window.confirm(`Delete "${note.title}"?`)) return;
     const before = notes;
@@ -293,6 +324,31 @@ export function VoiceNotes({
           <span className="text-[12px] tabular-nums text-muted">{notes.length}</span>
         ) : null}
       </div>
+
+      {/* Personal / Business, exactly as the notes list has. Standalone only:
+          a recording attached to a note or meeting is already filtered by that
+          owner, so a second control here would be a lie. */}
+      {standalone ? (
+        <div role="group" aria-label="Recording type" className="mb-2 flex gap-2">
+          {(["personal", "business"] as VoiceTag[]).map((t) => {
+            const on = tag === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setTag(t)}
+                className={cx(
+                  "rounded-lg border px-3 py-1.5 text-[12.5px] font-semibold capitalize transition-colors",
+                  on ? "border-gold text-gold" : "border-line text-muted hover:bg-line-soft",
+                )}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       {/* Naming step — the recording is held locally until it is named. */}
       {pending ? (
@@ -369,6 +425,12 @@ export function VoiceNotes({
         </p>
       ) : null}
 
+      {loaded && !notes.length && standalone ? (
+        <p className="mt-2 text-[12.5px] text-muted">
+          No {tag} recordings yet.
+        </p>
+      ) : null}
+
       {notes.length ? (
         <ul className="mt-2 space-y-1.5">
           {notes.map((n) => (
@@ -395,6 +457,17 @@ export function VoiceNotes({
                   {mmss(n.duration_ms)}
                 </span>
               </button>
+              {standalone ? (
+                <button
+                  type="button"
+                  onClick={() => retag(n, n.tag === "personal" ? "business" : "personal")}
+                  aria-label={`Move ${n.title} to ${n.tag === "personal" ? "Business" : "Personal"}`}
+                  title={`Move to ${n.tag === "personal" ? "Business" : "Personal"}`}
+                  className="shrink-0 rounded-lg border border-line px-2 py-1 text-[11px] font-semibold text-muted transition-colors hover:border-gold hover:text-gold"
+                >
+                  {n.tag === "personal" ? "Business" : "Personal"}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => remove(n)}

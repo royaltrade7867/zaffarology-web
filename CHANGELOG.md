@@ -2,6 +2,21 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-08 - Voice notes get Personal / Business
+
+Standalone recordings now carry the same filter the rest of the Notes screen
+has. Needed a backend change too — see the backend changelog for the column,
+the endpoint and the migration.
+
+- A Personal / Business switcher above the standalone recorder, which both
+  filters the list and decides the tag a new recording gets.
+- A per-row control to move one between the two. It is optimistic and the row
+  leaves the current filter, which is the honest outcome: it is no longer in
+  this list.
+- Neither control appears on a recording attached to a note or meeting — that
+  one is already filtered by its owner, so a second control would be a lie. The
+  server refuses it there as well.
+
 ## 2026-09-08 - Phase 7: The design pass, and dark mode
 
 `PRODUCT.md` and `DESIGN.md` now record what the app is and the visual system it

@@ -132,6 +132,40 @@ ck("deleting a note takes its recordings with it (server)",
      readFileSync("../zaffarology-backend/app/services/notes_service.py", "utf8"),
    ));
 
+/* ------------------ Personal / Business on a recording ------------------- */
+
+/* A standalone recording carries the same filter notes and meetings do — it is
+   the only list on the Notes screen that could not be filtered before. */
+const model = readFileSync("../zaffarology-backend/app/models/voice_note.py", "utf8");
+ck("the column exists", /tag = Column\(String\(20\), nullable=False, default="personal"\)/.test(model));
+ck("and is indexed with user_id, like notes", /ix_voice_notes_user_tag/.test(model));
+ck("a migration adds it", /add_column\(\s*"voice_notes"/.test(
+  readFileSync("../zaffarology-backend/alembic/versions/c7d1e4a90b62_voice_note_tag.py", "utf8")));
+/* Existing rows need a value for the NOT NULL to hold. */
+ck("existing recordings get a default server-side",
+   /server_default="personal"/.test(
+     readFileSync("../zaffarology-backend/alembic/versions/c7d1e4a90b62_voice_note_tag.py", "utf8")));
+
+/* THE rule: only a standalone recording owns a tag. An attached one is already
+   filtered by its note or meeting, so a second tag could disagree with it. */
+ck("the server refuses to retag an attached recording",
+   /This recording belongs to a note, so it follows/.test(
+     readFileSync("../zaffarology-backend/app/services/voice_note_service.py", "utf8")));
+ck("and only tag-filters the standalone list",
+   /if tag and standalone_only:/.test(
+     readFileSync("../zaffarology-backend/app/services/voice_note_service.py", "utf8")));
+ck("the client only shows the filter when standalone",
+   /\{standalone \? \(\s*<div role="group" aria-label="Recording type"/.test(rec));
+ck("and only sends a tag when standalone",
+   /tag: standalone \? tag : undefined/.test(rec));
+ck("the list refetches when the filter changes",
+   /\}, \[noteId, meetingId, standalone, tag\]\)/.test(rec));
+ck("a recording can be moved between the two", /retagVoiceNote/.test(rec));
+ck("moving is optimistic and reverts on failure",
+   /setNotes\(before\);[\s\S]{0,140}voice-note-retag/.test(rec));
+ck("the api exposes retag", /export async function retagVoiceNote/.test(api));
+ck("the tag rides on upload", /form\.append\("tag", input\.tag\)/.test(api));
+
 /* --------------------------- discard means discard ----------------------- */
 
 /* The recording is held locally until it is named, so discarding it leaves
