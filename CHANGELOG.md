@@ -2,6 +2,35 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-08 - Phase 4b: Daily system reporting
+
+The daily path into Pillar 5, completing Phase 4.
+
+- **"Today's reports" on Home** — every system with effort/result questions,
+  with how many are answered today, one click from opening the app. A system is
+  otherwise five clicks deep, which is right for defining one and far too buried
+  for something done daily. It renders nothing when there are no systems, and a
+  failure leaves Home alone rather than putting an error banner on the first
+  screen anyone sees.
+- **`/daily-report/[id]`** answers one system's questions for the day. Questions
+  are read from the Pillar 5 blob, answers written to the `system_reports`
+  table, joined by the pair's stable id — index-based keys would re-attach an
+  answer to the wrong question after a pair was deleted.
+- **A "no" owes days and a reason.** That is the workbook's rule and the server
+  enforces it, so the client does too: the user is told before the request goes,
+  not after it comes back 400. Switching away from "no" clears both, so a stale
+  reason cannot ride along on an answer that no longer needs one.
+- Saving is a PUT and idempotent — answering the same pair twice updates one row
+  rather than adding a second.
+
+**Caught a client/server mismatch:** the server caps `days_more` at 999 and
+rejects anything higher, but the field allowed four digits — so "1000" would
+have been accepted by the UI and bounced back as a 400 the user had to decode.
+The cap is now read from the backend source in the fixture, so the two cannot
+drift. Mobile has the same gap and is worth the same fix.
+
+36 checks in `check-daily-reports-web.ts`.
+
 ## 2026-09-08 - Phase 4a: Reports, as a real PDF
 
 Pillar and progress reports, ported from mobile onto the same shared report

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PILLARS } from "@/lib/pillars";
 import { todayLine } from "@/lib/dates";
 import { AuthGuard } from "@/components/shell";
+import { TodaysReportsCard } from "@/components/todays-reports-card";
 
 export default function HomePage() {
   return (
@@ -13,6 +14,10 @@ export default function HomePage() {
         <p className="text-[12px] tracking-[3px] font-heading text-gold">THE 5 PILLARS</p>
         <p className="text-[13px] text-muted mt-1">{todayLine()}</p>
       </div>
+
+      {/* Renders nothing when there are no business systems, so it never
+          intrudes on an account that has none. */}
+      <TodaysReportsCard />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {PILLARS.map((p) => (
