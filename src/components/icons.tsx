@@ -14,11 +14,14 @@
 type IconProps = {
   size?: number;
   className?: string;
+  /** Per-instance colour, for an accent that varies at runtime (a pillar's own
+   *  hue). Prefer `className` when the colour is fixed. */
+  style?: React.CSSProperties;
   /** Accessible name. Omit when the parent control is already labelled. */
   title?: string;
 };
 
-function Svg({ size = 18, className, title, children }: IconProps & { children: React.ReactNode }) {
+function Svg({ size = 18, className, style, title, children }: IconProps & { children: React.ReactNode }) {
   return (
     <svg
       width={size}
@@ -30,6 +33,7 @@ function Svg({ size = 18, className, title, children }: IconProps & { children: 
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      style={style}
       aria-hidden={title ? undefined : true}
       role={title ? "img" : undefined}
       focusable="false"
@@ -97,4 +101,31 @@ export const Check = (p: IconProps) => (
 
 export const Back = (p: IconProps) => (
   <Svg {...p}><path d="M19 12H5M11 6l-6 6 6 6" /></Svg>
+);
+
+export const Close = (p: IconProps) => (
+  <Svg {...p}><path d="M6 6l12 12M18 6L6 18" /></Svg>
+);
+
+export const People = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="9" cy="8" r="3.25" />
+    <path d="M3 19a6 6 0 0112 0" />
+    <path d="M16.5 6.5a3.25 3.25 0 010 6.5M18 19a5.9 5.9 0 00-2.2-4.6" />
+  </Svg>
+);
+
+export const Mail = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="M3.5 7l8.5 6 8.5-6" />
+  </Svg>
+);
+
+/** An inbound task someone assigned to you. */
+export const Inbox = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M3 13h5l1.5 2.5h5L16 13h5" />
+    <path d="M5 5h14l2 8v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5z" />
+  </Svg>
 );

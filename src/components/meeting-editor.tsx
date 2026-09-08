@@ -9,11 +9,14 @@
  * mobile app all already read that field as free text, so keeping the shape is
  * what lets the two apps edit the same meeting.
  *
- * Attendee connection-tagging is mobile-only until the web app has connections
- * (Phase 3). `attendee_ids` is therefore never written here, and never cleared:
- * a meeting tagged on the phone keeps its ids when edited on the web.
+ * Attendees are free text PLUS ids for the ones who are connections. Tagging is
+ * additive: most attendees never have an account, so a typed name always works.
+ * `addAttendee` handles ids ONLY — the field owns the text. Writing both from
+ * here raced the field and overwrote the chips with the raw draft.
  */
 import { Back, Plus, Trash } from "@/components/icons";
+import { PersonTagField } from "@/components/person-tag-field";
+import { usePartners, type Partner } from "@/lib/use-connections";
 import { SectionLabel, TextArea, cx } from "@/components/ui";
 import type { ApiMeeting } from "@/lib/notes-api";
 
@@ -80,6 +83,24 @@ export function MeetingEditor({
    * Decisions: a numbered list, stored as one newline-separated string.
    * Always at least one row, so there is something to type into.
    */
+  const { partners } = usePartners();
+
+  /**
+   * Ids only. The field writes the visible text itself, so touching `attendees`
+   * here would race it — that shipped once, overwriting the chips with the raw
+   * draft the moment a name was picked.
+   */
+  const addAttendee = (p: Partner | null, _notify?: boolean, untagUserId?: number) => {
+    if (!p) {
+      if (untagUserId !== undefined) {
+        onChange({ attendee_ids: meeting.attendee_ids.filter((id) => id !== untagUserId) });
+      }
+      return;
+    }
+    if (meeting.attendee_ids.includes(p.userId)) return;
+    onChange({ attendee_ids: [...meeting.attendee_ids, p.userId] });
+  };
+
   const decisions = meeting.decisions.split("\n");
   /**
    * The rows share ONE column, capped at 20000 by the API schema. Pydantic
@@ -166,11 +187,15 @@ export function MeetingEditor({
         placeholder="e.g. Head office, or Zoom"
         maxLength={200}
       />
-      <Field
+      <PersonTagField
         label="Attendees"
         value={meeting.attendees}
-        onChange={(v) => onChange({ attendees: v })}
+        onChangeText={(v) => onChange({ attendees: v })}
         placeholder="Who was there? Separate names with commas"
+        accent={ACCENT}
+        partners={partners}
+        onTag={addAttendee}
+        multi
         maxLength={2000}
       />
 

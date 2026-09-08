@@ -6,6 +6,7 @@ import { api, apiErrorMessage, type ApiTeamOut } from "@/lib/api";
 import { PILLARS } from "@/lib/pillars";
 import { useAuth } from "@/lib/auth-context";
 import { AuthGuard } from "@/components/shell";
+import { ConnectionsPanel } from "@/components/connections-panel";
 import { Loading } from "@/components/ui";
 
 function TeamInner() {
@@ -24,6 +25,12 @@ function TeamInner() {
 
   return (
     <div>
+      {/* Connections come first: they apply to every account, whereas the
+          progress table below only exists for a company. */}
+      <ConnectionsPanel />
+
+      <hr className="my-8 border-line" />
+
       <p className="text-[12px] tracking-widest font-heading text-gold">YOUR TEAM</p>
       <h1 className="font-heading text-[28px] text-ink">Team progress</h1>
       <p className="text-dim">

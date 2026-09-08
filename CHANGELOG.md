@@ -2,6 +2,41 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-08 - Phase 3: Connections and task assignment
+
+Invite people by email, accept, and tag them on a task so it lands on their
+board — the same rows the phone uses.
+
+- **Connections panel** on Team: invite, invites received (accept/decline),
+  connected, invites sent (withdraw). Rows are busy-guarded so a double-click
+  cannot fire two requests.
+- **The invite message never varies.** `/connections/invite` answers
+  byte-identically whether the address has an account, is already connected, or
+  is the user themselves — otherwise it becomes a way to discover who has a
+  Zaffarology account. The UI says the same thing regardless, and the fixture
+  asserts it does not read the server's reply to decide what to show.
+- **`PersonTagField`** with connection suggestions, matching the START of any
+  word in a name or email — a bare `includes` made typing "H" match "Sarah" and
+  "Ahmed" as well as "Hammad". Free-typed names keep working; tagging is
+  additive and never forced.
+- **Confirm before sending**, mirroring mobile: picking someone asks whether to
+  email them, and the wording says they are tagged *either way* — otherwise
+  "just tag" reads like it cancels. This is what replaced the old 30s undo
+  window; CLAUDE.md still described the window, and has been corrected.
+- **`AssignedToMe` overlay** above the Pillar 4 board — read-only apart from the
+  done checkbox. Assignments are never merged into the pillar blob: the title
+  lives on a server row the assignee cannot write, which makes "you can't edit
+  the assigner's wording" structural rather than a UI convention, and means a
+  whole-blob overwrite cannot delete a task someone assigned you.
+- **Meeting attendees can now be tagged**, closing the Phase 2 gap. `addAttendee`
+  handles ids ONLY — the field owns the visible text, and writing both from the
+  handler raced it and overwrote the chips with the raw draft.
+- Hooks refetch when the tab becomes visible (the browser's stand-in for
+  mobile's foreground event); there is no push channel either way.
+
+49 checks in `check-connections-web.ts`, including behavioural proof of the
+suggestion matcher and the attendee chip parsing.
+
 ## 2026-09-08 - Phase 2: Notes and Meeting notes
 
 Ported from mobile onto the same backend rows (`/notes`, `/notes/meetings`), so

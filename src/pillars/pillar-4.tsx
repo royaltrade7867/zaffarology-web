@@ -6,6 +6,11 @@ import { pillarByNumber, Accents, INK, FIELD_EMPTY } from "@/lib/pillars";
 import { dayDiff, friendlyISO, shortDate, todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
+import { AssignedToMe } from "@/components/assigned-to-me";
+import { PersonTagField } from "@/components/person-tag-field";
+import { assignTask, unassignTask } from "@/lib/connections-api";
+import { apiErrorMessage } from "@/lib/api";
+import { usePartners, useIncomingAssignments, useOutgoingAssignments, type Partner } from "@/lib/use-connections";
 import { Loading, SectionLabel, AddButton } from "@/components/ui";
 /**
  * Types come from the SHARED schema, not local copies.
@@ -74,6 +79,12 @@ function FLabel({ children }: { children: React.ReactNode }) {
 export default function Pillar4() {
   const { state, update, loaded } = usePillarState<P4State>(pillar.key, makeInitial, normalize);
   const [cur, setCur] = useState(0);
+  // Assignments live on server rows, never in the blob — see use-connections.ts.
+  const { partners } = usePartners();
+  const [assignTick, setAssignTick] = useState(0);
+  const incoming = useIncomingAssignments(assignTick);
+  const outgoing = useOutgoingAssignments(pillar.key, assignTick);
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     if (!loaded) return;
@@ -91,6 +102,55 @@ export default function Pillar4() {
   const border = item.status === "completed" ? Accents.green : isOverdue(item) ? Accents.red : "#D3D9E2";
 
   const setItem = (patch: Partial<Item>) => update((s) => { s.items[idx] = { ...s.items[idx], ...patch }; });
+
+  /** The status of THIS item's assignment, if it was sent to someone. */
+  const sent = outgoing.byTaskId[item.id];
+
+  /**
+   * Tagging sends it immediately — the tag IS the assignment, so a tag that sat
+   * there un-sent would be a promise the other person never receives. The id is
+   * only written into the blob once the server has accepted it, so a failure
+   * can't leave a tag pointing at an assignment that does not exist.
+   */
+  const onTag = async (partner: Partner | null, notify = true) => {
+    if (assigning) return;
+    if (!partner) {
+      const existing = sent;
+      setItem({ assigneeUserId: "" });
+      if (existing) {
+        try {
+          await unassignTask(existing.id);
+          setAssignTick((t) => t + 1);
+        } catch (err) {
+          alert(apiErrorMessage(err, "Couldn't unassign. Please try again."));
+        }
+      }
+      return;
+    }
+    if (!item.name.trim()) {
+      alert("Give this item a name first, so they know what they're being asked to do.");
+      return;
+    }
+    setAssigning(true);
+    try {
+      await assignTask({
+        assigneeUserId: partner.userId,
+        pillarKey: pillar.key,
+        taskId: item.id,
+        title: item.name,
+        due: item.due,
+        notify,
+      });
+      setItem({ assigneeUserId: String(partner.userId) });
+      setAssignTick((t) => t + 1);
+    } catch (err) {
+      // Leave the typed name alone — losing what they wrote would be worse than
+      // a failed assignment they can retry.
+      alert(apiErrorMessage(err, "Couldn't assign that task. Please try again."));
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   const removeItem = () => {
     if (!window.confirm("Remove this item from the huddle board?")) return;
@@ -121,6 +181,8 @@ export default function Pillar4() {
 
   return (
     <PillarScaffold pillar={pillar}>
+      <AssignedToMe rows={incoming.rows} onToggle={incoming.markDone} accent={BLUE} />
+
       <SectionLabel text="Huddle Board" small="one project at a time, 2 minutes each" color={BLUE} />
 
       {/* Navigator */}
@@ -165,7 +227,23 @@ export default function Pillar4() {
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <PersonField label="Delegated To" value={item.who} placeholder="Who owns it?" onChange={(t) => setItem({ who: t })} />
+            <PersonTagField
+              label="Delegated To"
+              value={item.who}
+              placeholder="Who owns it?"
+              onChangeText={(t) => setItem({ who: t })}
+              accent={BLUE}
+              partners={partners}
+              tagUserId={item.assigneeUserId}
+              onTag={onTag}
+              statusNote={
+                sent
+                  ? sent.status === "completed"
+                    ? `✓ ${sent.assignee_name} marked this done`
+                    : `Sent to ${sent.assignee_name}, waiting`
+                  : null
+              }
+            />
           </div>
           <div className="flex-1">
             <DateField label="Project Due Date" value={item.due} onChange={(iso) => setItem({ due: iso })} />

@@ -64,11 +64,20 @@ ck("hasVoice fails SAFE while voice notes are unimplemented",
 
 /* --------------------- never clear what the phone set --------------------- */
 
-/* The web editor has no connection picker yet. It must therefore never send
-   attendee_ids at all — sending [] would un-tag everyone on a meeting the
-   phone had tagged. */
-ck("the web editor never writes attendee_ids",
-   !/onChange\(\{[^}]*attendee_ids/.test(editor));
+/* Attendee tagging landed in Phase 3, so the editor DOES write attendee_ids now
+   — but only ever by adding or removing ONE id. A blanket write (`[]`, or the
+   whole array from local text) would un-tag everyone on a meeting the phone had
+   tagged. */
+ck("tagging adds one id, never replaces the list",
+   /attendee_ids: \[\.\.\.meeting\.attendee_ids, p\.userId\]/.test(editor));
+ck("untagging removes one id by filter",
+   /attendee_ids: meeting\.attendee_ids\.filter\(\(id\) => id !== untagUserId\)/.test(editor));
+ck("the editor never blanks the id list",
+   !/attendee_ids: \[\]/.test(editor));
+/* The field owns the visible text. Writing `attendees` from addAttendee too
+   raced it and overwrote the chips with the raw draft. */
+ck("addAttendee touches ids only, not the text",
+   !/attendees:/.test(editor.match(/const addAttendee[\s\S]*?\n  \};/)?.[0] ?? ""));
 ck("but create still seeds the field", /attendee_ids: input\.attendee_ids \?\? \[\]/.test(api));
 
 /* ------------------------ the optimistic save layer ---------------------- */
