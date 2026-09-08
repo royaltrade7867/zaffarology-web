@@ -16,6 +16,7 @@
  */
 import { Back, Plus, Trash } from "@/components/icons";
 import { PersonTagField } from "@/components/person-tag-field";
+import { VoiceNotes } from "@/components/voice-notes";
 import { usePartners, type Partner } from "@/lib/use-connections";
 import { SectionLabel, TextArea, cx } from "@/components/ui";
 import type { ApiMeeting } from "@/lib/notes-api";
@@ -71,6 +72,7 @@ export function MeetingEditor({
   onDelete,
   unsaved,
   saveError,
+  onVoiceCountChange,
 }: {
   meeting: ApiMeeting;
   onChange: (patch: Partial<ApiMeeting>) => void;
@@ -78,6 +80,9 @@ export function MeetingEditor({
   onDelete: () => void;
   unsaved: boolean;
   saveError: string | null;
+  /** Reports how many recordings this meeting has, so the blank-discard rule
+   *  does not throw away a meeting whose only content is audio. */
+  onVoiceCountChange?: (n: number) => void;
 }) {
   /**
    * Decisions: a numbered list, stored as one newline-separated string.
@@ -283,6 +288,10 @@ export function MeetingEditor({
           />
         </div>
       </section>
+
+      {/* Recordings of this meeting. Scoped by meeting id, so they live here
+          rather than in the Notes tab's general list. */}
+      <VoiceNotes meetingId={meeting.id} compact onCountChange={onVoiceCountChange} />
 
       {/* Never claim saved while a write failed. */}
       {saveError ? (

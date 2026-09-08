@@ -103,6 +103,22 @@ export const Back = (p: IconProps) => (
   <Svg {...p}><path d="M19 12H5M11 6l-6 6 6 6" /></Svg>
 );
 
+export const Play = (p: IconProps) => (
+  <Svg {...p}><path d="M8 5.5l10 6.5-10 6.5z" fill="currentColor" /></Svg>
+);
+
+export const Pause = (p: IconProps) => (
+  <Svg {...p}><path d="M9.5 5v14M14.5 5v14" /></Svg>
+);
+
+/** A microphone, for the record control. */
+export const Mic = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21" />
+  </Svg>
+);
+
 export const Close = (p: IconProps) => (
   <Svg {...p}><path d="M6 6l12 12M18 6L6 18" /></Svg>
 );

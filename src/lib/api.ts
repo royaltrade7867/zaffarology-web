@@ -44,13 +44,17 @@ async function request<T>(
   const token = loadToken();
   let res: Response;
   try {
+    // FormData must go up as-is: JSON.stringify would turn it into
+    // "[object Object]", and setting Content-Type by hand would omit the
+    // multipart boundary the browser generates. Let fetch do both.
+    const isForm = typeof FormData !== "undefined" && body instanceof FormData;
     res = await fetch(BASE_URL + path, {
       method,
       headers: {
-        "Content-Type": "application/json",
+        ...(isForm ? {} : { "Content-Type": "application/json" }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       keepalive,
     });
   } catch {
@@ -65,6 +69,24 @@ async function request<T>(
   return data as T;
 }
 
+/** Fetch a binary response (audio, a download) rather than JSON. Separate from
+ *  `request` because that one always parses the body as JSON. */
+export async function requestBlob(path: string): Promise<Blob> {
+  const token = loadToken();
+  let res: Response;
+  try {
+    res = await fetch(BASE_URL + path, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch {
+    throw new ApiError(0, "Cannot reach the server. Check your connection and try again.");
+  }
+  if (!res.ok) {
+    throw new ApiError(res.status, res.statusText || "Request failed");
+  }
+  return res.blob();
+}
+
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
@@ -72,6 +94,8 @@ export const api = {
   /** Partial update. The notes/meetings endpoints treat an absent field as
    *  untouched, so only what actually changed is sent. */
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body),
+  /** Multipart upload — pass a FormData body. */
+  upload: <T>(path: string, form: FormData) => request<T>("POST", path, form),
   /** PATCH that survives the page being torn down. Only for a save flushed
    *  from an unload handler — see `keepalive` above. */
   patchBeacon: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body, true),

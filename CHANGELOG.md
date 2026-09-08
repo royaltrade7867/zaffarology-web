@@ -2,6 +2,43 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-08 - Phase 5: Voice notes
+
+Recording and playback in the browser, attached to a note or a meeting exactly
+as on the phone.
+
+**The container risk turned out to be no risk at all, and that was checked
+first.** The plan flagged this as the highest-risk phase: browsers record
+webm/opus (Chrome, Firefox) or mp4/aac (Safari) where iOS produces m4a, and the
+backend sniffs magic bytes. Before writing any UI I fed the real sniffer genuine
+files produced by ffmpeg — WebM/Opus, MP4/AAC and Ogg/Opus — and all three were
+accepted. **No backend change was needed.** The service ignores the client's
+Content-Type entirely and decides from the bytes, which is also why
+`MediaRecorder`'s `;codecs=opus` suffix is harmless.
+
+- **`MediaRecorder`** with a container preference list, opus first (smallest),
+  falling back to mp4 for Safari and then to the browser's own choice.
+- **Naming before upload**, pre-filled with the date. Discard really discards —
+  nothing has been uploaded at that point.
+- **Playback through the API client**, not a bare `<audio src>`: the audio
+  endpoint needs the Authorization header, so a plain src attribute 401s. The
+  blob is played from an object URL, which is revoked when the next one starts.
+- **The microphone is released on every exit path.** A live `MediaStream` keeps
+  the browser's recording indicator lit; both `onstop` and unmount stop the
+  tracks.
+- **A blocked mic or an insecure origin is explained**, not left as a dead
+  button — on plain HTTP `navigator.mediaDevices` is simply absent.
+- `api.upload` and `requestBlob` added to the client. A `FormData` body must not
+  be `JSON.stringify`d (it becomes `"[object Object]"`) and its Content-Type
+  must be left to the browser, or the multipart boundary is missing.
+
+**`hasVoice` is now a real count.** Phase 2 pinned it `true` because the web
+could not count recordings and deleting a note soft-deletes its audio. The
+blank-discard rule now reads the recorder's count, with "not counted yet" still
+meaning "assume it has audio" — the direction that cannot destroy anything.
+
+40 checks in `check-voice-notes-web.ts`.
+
 ## 2026-09-08 - Phase 4b: Daily system reporting
 
 The daily path into Pillar 5, completing Phase 4.

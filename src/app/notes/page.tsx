@@ -7,16 +7,16 @@
  * rows: a Notes / Meeting notes switcher, a Personal / Business filter, a
  * Prev/Next navigator over the FILTERED list, and the blank-discard rule.
  *
- * Voice notes are Phase 5. Until then this app cannot count a note's
- * recordings, so `hasVoice` is pinned TRUE and blank-discard is effectively
- * off: an unwanted "Untitled note" is a nuisance, whereas discarding a note
- * that turned out to have audio destroys the recording with it. See the
- * comment on `hasVoice` below before changing it.
+ * A note with no text but a RECORDING is not empty — deleting a note
+ * soft-deletes its voice notes server-side, so the discard rule consults the
+ * recorder's count. "Not known yet" counts as "has audio", which is the
+ * direction that cannot destroy anything.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AuthGuard } from "@/components/shell";
 import { MeetingEditor } from "@/components/meeting-editor";
+import { VoiceNotes } from "@/components/voice-notes";
 import { Back, ChevronLeft, ChevronRight, MeetingIcon, NoteIcon, Pin, Plus, Trash } from "@/components/icons";
 import { Loading, TextArea, cx } from "@/components/ui";
 import { useNotes } from "@/lib/use-notes";
@@ -121,15 +121,21 @@ function NotesAndMeetings() {
    * no text — discarding it would destroy the audio, since deleting a note
    * soft-deletes its voice notes server-side too.
    *
-   * Voice notes are Phase 5 here, so this app cannot yet count them. UNKNOWN
-   * must therefore mean "assume it has audio", which is the direction mobile
-   * fails in as well (`voiceCount === null || voiceCount > 0`). `false` would
-   * assert there is definitely none: a note recorded on the phone with no text,
-   * opened on the web and backed out of, would be deleted along with its
-   * recording. Replace with a real count when the recorder lands — never with
-   * a bare `false`.
+   * `null` means "not counted yet", which is treated as "has audio" so a slow
+   * load can never cause a delete. Mobile fails in the same direction
+   * (`voiceCount === null || voiceCount > 0`). Never replace this with a bare
+   * `false`: that asserts there is definitely none.
    */
-  const hasVoice = true;
+  const [voiceCount, setVoiceCount] = useState<number | null>(null);
+  const hasVoice = voiceCount === null || voiceCount > 0;
+  // Stable identity: the recorder reports through an effect keyed on this.
+  const onVoiceCount = useCallback((n: number) => setVoiceCount(n), []);
+
+  // A freshly opened item starts unknown again, so the previous one's count
+  // cannot leak across and authorise a delete.
+  useEffect(() => {
+    setVoiceCount(null);
+  }, [openNoteId, openMeetingId]);
 
   const openNote = notes.find((n) => n.id === openNoteId) ?? null;
   const openMeeting = meetings.find((m) => m.id === openMeetingId) ?? null;
@@ -227,6 +233,7 @@ function NotesAndMeetings() {
         onDelete={() => confirmDelete("meeting", openMeeting.id)}
         unsaved={unsaved}
         saveError={error}
+        onVoiceCountChange={onVoiceCount}
       />
     );
   }
@@ -294,6 +301,8 @@ function NotesAndMeetings() {
           maxBreaks={400}
           className="min-h-[45vh]"
         />
+
+        <VoiceNotes noteId={openNote.id} compact onCountChange={onVoiceCount} />
 
         {error ? (
           <p className="mt-2 text-[13px] font-semibold text-danger" role="alert">{error}</p>

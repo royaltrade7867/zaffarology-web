@@ -57,10 +57,17 @@ ck("a note is only blank with no title, no body and unpinned",
 ck("the discard rule still consults hasVoice",
    (page.match(/&& !hasVoice/g) ?? []).length === 2);
 /* THE direction that matters. Deleting a note soft-deletes its recordings, so
-   while this app cannot count them, "unknown" must mean "assume it has audio".
-   `false` asserts there is definitely none and deletes a phone recording. */
-ck("hasVoice fails SAFE while voice notes are unimplemented",
-   /const hasVoice = true;/.test(page), "must not be `false` until a real count exists");
+   "not counted yet" must mean "assume it has audio". A bare `false` asserts
+   there is definitely none and would delete a recording. */
+ck("hasVoice fails SAFE when the count is unknown",
+   /const hasVoice = voiceCount === null \|\| voiceCount > 0;/.test(page));
+ck("and is never hardcoded false", !/const hasVoice = false/.test(page));
+/* A fresh item must start unknown, or the previous note's count authorises a
+   delete on this one. */
+ck("the count resets when a different item opens",
+   /setVoiceCount\(null\);\s*\n\s*\}, \[openNoteId, openMeetingId\]\)/.test(page));
+ck("the recorder reports its count back",
+   /onCountChange=\{onVoiceCount\}/.test(page));
 
 /* --------------------- never clear what the phone set --------------------- */
 
