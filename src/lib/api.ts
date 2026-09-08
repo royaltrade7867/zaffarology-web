@@ -30,7 +30,17 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  /** Let the request outlive the page. A normal `fetch` started from a
+   *  `beforeunload`/`pagehide` handler is CANCELLED when the document is torn
+   *  down, so a save flushed as the tab closes never reaches the server.
+   *  `keepalive` is the only thing that survives it. Capped at 64KB by the
+   *  spec, which is why it is opt-in rather than the default. */
+  keepalive = false,
+): Promise<T> {
   const token = loadToken();
   let res: Response;
   try {
@@ -41,6 +51,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      keepalive,
     });
   } catch {
     throw new ApiError(0, "Cannot reach the server. Check your connection and try again.");
@@ -61,6 +72,9 @@ export const api = {
   /** Partial update. The notes/meetings endpoints treat an absent field as
    *  untouched, so only what actually changed is sent. */
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body),
+  /** PATCH that survives the page being torn down. Only for a save flushed
+   *  from an unload handler — see `keepalive` above. */
+  patchBeacon: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body, true),
   del: <T>(path: string) => request<T>("DELETE", path),
 };
 

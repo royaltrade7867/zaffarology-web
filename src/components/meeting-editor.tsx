@@ -19,6 +19,14 @@ import type { ApiMeeting } from "@/lib/notes-api";
 
 const ACCENT = "var(--gold)";
 
+/** Mirrors `MeetingIn` in the backend schema. Every long field shares this
+ *  ceiling, and Pydantic REJECTS rather than truncates — so an over-long value
+ *  fails the whole PATCH, not just that field. */
+const LONG_MAX = 20000;
+/** All the decision rows live in one `decisions` column, so the cap is on the
+ *  joined string, not per row. */
+const DECISIONS_MAX = LONG_MAX;
+
 /** One field row. Empty gets the green wash, matching the pillars. */
 function Field({
   label,
@@ -73,7 +81,19 @@ export function MeetingEditor({
    * Always at least one row, so there is something to type into.
    */
   const decisions = meeting.decisions.split("\n");
-  const writeDecisions = (next: string[]) => onChange({ decisions: next.join("\n") });
+  /**
+   * The rows share ONE column, capped at 20000 by the API schema. Pydantic
+   * rejects an over-long value outright — and because every save PATCHes the
+   * whole meeting, one 422 wedges every later edit to it, title included, while
+   * the screen still shows the text. So the join is checked here and the edit
+   * is refused before it can poison the row.
+   */
+  const writeDecisions = (next: string[]) => {
+    const joined = next.join("\n");
+    if (joined.length > DECISIONS_MAX) return false;
+    onChange({ decisions: joined });
+    return true;
+  };
   const setDecision = (i: number, t: string) =>
     // Newlines would split one decision into two on the next read.
     writeDecisions(decisions.map((d, n) => (n === i ? t.replace(/\n/g, " ") : d)));
@@ -81,8 +101,11 @@ export function MeetingEditor({
     const next = decisions.filter((_, n) => n !== i);
     writeDecisions(next.length ? next : [""]);
   };
-  /** Only from a filled last row, so the list cannot grow blank rows. */
-  const canAddDecision = !!decisions[decisions.length - 1].trim();
+  const used = meeting.decisions.length;
+  const nearLimit = used > DECISIONS_MAX * 0.9;
+  /** Only from a filled last row, so the list cannot grow blank rows — and only
+   *  while there is room left in the shared column. */
+  const canAddDecision = !!decisions[decisions.length - 1]?.trim() && used < DECISIONS_MAX;
   const addDecision = () => {
     if (!canAddDecision) return;
     writeDecisions([...decisions, ""]);
@@ -123,7 +146,16 @@ export function MeetingEditor({
         maxLength={200}
       />
       <div className="grid gap-x-3 sm:grid-cols-2">
-        <Field label="Date" type="date" value={meeting.date} onChange={(v) => onChange({ date: v })} maxLength={10} />
+        {/* `maxLength` does nothing on type="date". Chrome yields "+012025-03-04"
+            (13 chars) for a 5-digit year, which the API's 10-char cap rejects —
+            wedging every later save — so clamp it here instead. */}
+        <Field
+          label="Date"
+          type="date"
+          value={meeting.date}
+          onChange={(v) => onChange({ date: v.slice(0, 10) })}
+          maxLength={10}
+        />
         {/* Free text on purpose: people write "after lunch", not 14:30. */}
         <Field label="Time" value={meeting.time} onChange={(v) => onChange({ time: v })} placeholder="e.g. 2:30pm" maxLength={40} />
       </div>
@@ -148,7 +180,7 @@ export function MeetingEditor({
           value={meeting.agenda}
           onChange={(v) => onChange({ agenda: v })}
           placeholder="Points to get through…"
-          maxLength={20000}
+          maxLength={LONG_MAX}
         />
       </div>
 
@@ -158,7 +190,7 @@ export function MeetingEditor({
           value={meeting.notes}
           onChange={(v) => onChange({ notes: v })}
           placeholder="Discussion, context, anything worth remembering…"
-          maxLength={20000}
+          maxLength={LONG_MAX}
         />
       </div>
 
@@ -194,6 +226,13 @@ export function MeetingEditor({
         {/* A small plus, not a full-width button: adding a decision is a minor
             action beside the fields themselves. Disabled until the last row
             says something, so the list cannot grow blank rows. */}
+        {nearLimit ? (
+          <p className="mb-2 text-[12px] font-semibold text-danger" role="status">
+            {used >= DECISIONS_MAX
+              ? "These decisions have reached the maximum length. Shorten one to add another."
+              : `Approaching the limit — ${(DECISIONS_MAX - used).toLocaleString()} characters left across all decisions.`}
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={addDecision}
@@ -215,7 +254,7 @@ export function MeetingEditor({
             value={meeting.next_steps}
             onChange={(v) => onChange({ next_steps: v })}
             placeholder="e.g. Sarah drafts the new tiers by Friday"
-            maxLength={20000}
+            maxLength={LONG_MAX}
           />
         </div>
       </section>

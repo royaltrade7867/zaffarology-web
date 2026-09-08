@@ -34,11 +34,40 @@ a note written on the phone opens on the web and back again.
   `currentColor` — replacing Unicode arrows, which render differently on every
   platform and cannot be baseline-aligned.
 
-`hasVoice` is already wired into the discard rule ahead of Phase 5, so a
-recording-only note cannot be thrown away once the recorder lands.
+Review of the port caught four defects, fixed before it landed:
 
-48 checks in `check-notes-web.ts`, covering every field of the discard
-predicate individually.
+- **The blank-discard rule could delete a phone recording.** `hasVoice` was
+  hardcoded `false`, which asserts "definitely no audio"; mobile treats unknown
+  as *has* audio so a slow load can never delete. Deleting a note soft-deletes
+  its voice notes server-side, so a recording-only note opened on the web and
+  backed out of would have destroyed the audio. Now pinned `true` — discard is
+  off here until the recorder can actually count them.
+- **The tab-close flush never reached the server.** A `fetch` started from a
+  `beforeunload` handler is cancelled when the document is torn down, so the
+  last edit before a close was silently lost while the code looked correct.
+  Added `keepalive` support (`api.patchBeacon`) and `pagehide` alongside
+  `beforeunload`, since Safari often fires only the latter.
+- **A long decisions list wedged every later save.** All the rows share one
+  20000-char column and Pydantic rejects rather than truncates — and each save
+  PATCHes the whole meeting, so one over-long list 422'd every subsequent edit
+  to it, title included, while the screen still showed the text. The join is
+  now capped client-side with a warning before the hard stop.
+- **`maxLength` does nothing on `<input type="date">`.** A five-digit year
+  yields `+012025-03-04` (13 chars) against a 10-char column, wedging saves the
+  same way. Clamped on write.
+
+Also: deletes now offer **Undo** (the rows are soft-deleted, so it genuinely
+restores them, recordings included), `cur` steps back on delete so the user
+lands beside what they removed, and the kind switcher became plain toggle
+buttons — it announced itself as a tab widget without arrow-key support.
+
+**Contrast:** `--gold` moved to `#8F6200`. The web app still carried `#9A6A00`,
+which sits at 4.38:1 on paper — mobile had already darkened it for exactly this
+reason, so the two apps disagreed. `--placeholder` moved to `#7d8a9c` (2.38:1 →
+3.51:1 on white, 3.31:1 on the empty-field green).
+
+63 checks in `check-notes-web.ts`, covering every field of the discard predicate
+individually and each of the four defects above.
 
 ## 2026-09-08 - Pillar 1 rebuilt: each goal is its own project
 

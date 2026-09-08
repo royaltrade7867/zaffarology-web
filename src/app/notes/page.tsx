@@ -7,9 +7,11 @@
  * rows: a Notes / Meeting notes switcher, a Personal / Business filter, a
  * Prev/Next navigator over the FILTERED list, and the blank-discard rule.
  *
- * Voice notes are Phase 5. `hasVoice` is kept in the discard condition rather
- * than dropped, so wiring the recorder in later is one line and cannot forget
- * that a recording makes an otherwise-empty note worth keeping.
+ * Voice notes are Phase 5. Until then this app cannot count a note's
+ * recordings, so `hasVoice` is pinned TRUE and blank-discard is effectively
+ * off: an unwanted "Untitled note" is a nuisance, whereas discarding a note
+ * that turned out to have audio destroys the recording with it. See the
+ * comment on `hasVoice` below before changing it.
  */
 import { useEffect, useMemo, useState } from "react";
 
@@ -78,7 +80,13 @@ function NotesAndMeetings() {
     addMeeting,
     editMeeting,
     removeMeeting,
+    undoRemoveNote,
+    undoRemoveMeeting,
   } = useNotes();
+
+  /** The last delete, offered back for a few seconds. The rows are soft-deleted
+   *  server-side, so "undo" really does restore them — recordings included. */
+  const [undo, setUndo] = useState<{ what: "note" | "meeting"; id: number } | null>(null);
 
   const [kind, setKind] = useState<Kind>("notes");
   const [filter, setFilter] = useState<Filter>(null);
@@ -109,12 +117,19 @@ function NotesAndMeetings() {
     (kind === "meetings" ? "business" : "personal");
 
   /**
-   * Whether the open item has recordings. Voice notes are Phase 5 on web, so
-   * this is false for now — but it stays in the discard condition because a
-   * note with no text and a recording is NOT empty, and discarding it would
-   * orphan the audio.
+   * Whether the open item has recordings, and therefore is NOT empty even with
+   * no text — discarding it would destroy the audio, since deleting a note
+   * soft-deletes its voice notes server-side too.
+   *
+   * Voice notes are Phase 5 here, so this app cannot yet count them. UNKNOWN
+   * must therefore mean "assume it has audio", which is the direction mobile
+   * fails in as well (`voiceCount === null || voiceCount > 0`). `false` would
+   * assert there is definitely none: a note recorded on the phone with no text,
+   * opened on the web and backed out of, would be deleted along with its
+   * recording. Replace with a real count when the recorder lands — never with
+   * a bare `false`.
    */
-  const hasVoice = false;
+  const hasVoice = true;
 
   const openNote = notes.find((n) => n.id === openNoteId) ?? null;
   const openMeeting = meetings.find((m) => m.id === openMeetingId) ?? null;
@@ -167,7 +182,11 @@ function NotesAndMeetings() {
   };
 
   const confirmDelete = (what: "note" | "meeting", id: number) => {
-    if (!window.confirm(`Delete this ${what}? This cannot be undone from here.`)) return;
+    if (!window.confirm(`Delete this ${what}?`)) return;
+    // Step back one, like mobile. `idx` clamps for rendering, but leaving `cur`
+    // stale lands the user on the last item rather than the neighbour of the
+    // one they deleted.
+    setCur((c) => Math.max(0, c - 1));
     if (what === "note") {
       setOpenNoteId(null);
       removeNote(id).catch(() => {});
@@ -175,6 +194,24 @@ function NotesAndMeetings() {
       setOpenMeetingId(null);
       removeMeeting(id).catch(() => {});
     }
+    setUndo({ what, id });
+  };
+
+  // The offer expires, so a stale "Undo" cannot sit there restoring something
+  // the user deleted minutes ago.
+  useEffect(() => {
+    if (!undo) return;
+    const t = setTimeout(() => setUndo(null), 8000);
+    return () => clearTimeout(t);
+  }, [undo]);
+
+  const runUndo = () => {
+    if (!undo) return;
+    const { what, id } = undo;
+    setUndo(null);
+    (what === "note" ? undoRemoveNote(id) : undoRemoveMeeting(id)).catch(() =>
+      alert("Could not restore that — it may already be gone."),
+    );
   };
 
   if (!loaded) return <Loading />;
@@ -281,7 +318,7 @@ function NotesAndMeetings() {
       </div>
 
       {/* Kind switcher */}
-      <div role="tablist" aria-label="Note kind" className="mb-3 flex gap-2">
+      <div role="group" aria-label="Note kind" className="mb-3 flex gap-2">
         {([
           { k: "notes" as const, label: "Notes", Icon: NoteIcon },
           { k: "meetings" as const, label: "Meeting notes", Icon: MeetingIcon },
@@ -290,8 +327,8 @@ function NotesAndMeetings() {
           return (
             <button
               key={k}
-              role="tab"
-              aria-selected={on}
+              type="button"
+              aria-pressed={on}
               onClick={() => switchKind(k)}
               className={cx(
                 "flex items-center gap-2 rounded-xl border px-3.5 py-2 text-[13.5px] font-semibold transition-colors",
@@ -341,6 +378,24 @@ function NotesAndMeetings() {
 
       {error ? (
         <p className="mb-4 text-[13px] font-semibold text-danger" role="alert">{error}</p>
+      ) : null}
+
+      {undo ? (
+        <div
+          role="status"
+          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3"
+        >
+          <span className="text-[13.5px] text-ink">
+            {undo.what === "note" ? "Note" : "Meeting"} deleted.
+          </span>
+          <button
+            type="button"
+            onClick={runUndo}
+            className="rounded-lg px-3 py-1.5 text-[13px] font-semibold text-gold transition-colors hover:bg-gold/8"
+          >
+            Undo
+          </button>
+        </div>
       ) : null}
 
       {list.length === 0 ? (

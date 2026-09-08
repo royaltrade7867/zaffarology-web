@@ -56,6 +56,11 @@ ck("a note is only blank with no title, no body and unpinned",
    the first recording-only note gets thrown away on back. */
 ck("the discard rule still consults hasVoice",
    (page.match(/&& !hasVoice/g) ?? []).length === 2);
+/* THE direction that matters. Deleting a note soft-deletes its recordings, so
+   while this app cannot count them, "unknown" must mean "assume it has audio".
+   `false` asserts there is definitely none and deletes a phone recording. */
+ck("hasVoice fails SAFE while voice notes are unimplemented",
+   /const hasVoice = true;/.test(page), "must not be `false` until a real count exists");
 
 /* --------------------- never clear what the phone set --------------------- */
 
@@ -72,7 +77,7 @@ ck("a pending save is flushed on unmount, not cancelled",
    /useEffect\(\(\) => \(\) => flushAll\(\), \[flushAll\]\)/.test(hook));
 ck("and flushed when the tab closes", /beforeunload/.test(hook));
 ck("flushAll runs the save rather than dropping it",
-   /clearTimeout\(timer\);\s*\n\s*run\(\)/.test(hook));
+   /clearTimeout\(timer\);\s*\n\s*\(unloading \? beacon : run\)\(\)/.test(hook));
 ck("a refresh cannot overwrite a row with unsaved edits",
    /dirty\.current\.has\(`note-\$\{row\.id\}`\)/.test(hook) &&
    /dirty\.current\.has\(`meeting-\$\{row\.id\}`\)/.test(hook));
@@ -82,6 +87,42 @@ ck("a failed delete puts the row back",
    (hook.match(/prev\.slice\(0, at\), row, \.\.\.prev\.slice\(at\)/g) ?? []).length === 2);
 ck("a delete cancels the pending save first",
    (hook.match(/cancelSave\(`(note|meeting)-\$\{id\}`\)/g) ?? []).length === 2);
+
+/* ------------------- a save must survive the tab closing ----------------- */
+
+/* A plain fetch started from an unload handler is cancelled with the document.
+   Only `keepalive` survives, so the flush must use the beacon variant. */
+const apiSrc = readFileSync("src/lib/api.ts", "utf8");
+ck("the client can send a keepalive request", /keepalive,/.test(apiSrc));
+ck("and exposes it as patchBeacon", /patchBeacon: <T>/.test(apiSrc));
+ck("the unload flush uses the beacon form",
+   /\(unloading \? beacon : run\)\(\)/.test(hook));
+ck("both unload events are handled (Safari fires only pagehide)",
+   /"beforeunload", onLeave/.test(hook) && /"pagehide", onLeave/.test(hook));
+ck("the note write can be sent as a beacon",
+   /updateNote\(id, patch, beacon\)/.test(hook));
+ck("the meeting write can be sent as a beacon",
+   /updateMeeting\(id, patch, beacon\)/.test(hook));
+
+/* ------------------ a delete can be taken back --------------------------- */
+
+ck("a delete offers undo", /undoRemoveNote|undoRemoveMeeting/.test(page));
+ck("and the offer expires", /setUndo\(null\), 8000/.test(page));
+ck("stepping back on delete keeps the position sane",
+   /setCur\(\(c\) => Math\.max\(0, c - 1\)\);/.test(page));
+
+/* --------------- the shared decisions column cannot be overrun ----------- */
+
+/* Pydantic REJECTS over-length rather than truncating, and every save PATCHes
+   the whole meeting — so one over-long decisions list wedges every later edit
+   to that meeting, title included. */
+ck("the joined decisions are capped before sending",
+   /joined\.length > DECISIONS_MAX/.test(editor));
+ck("the cap matches the API schema", /const LONG_MAX = 20000;/.test(editor));
+ck("adding stops when the column is full", /used < DECISIONS_MAX/.test(editor));
+ck("the user is warned before the hard stop", /nearLimit/.test(editor));
+/* maxLength does nothing on type=date; a 5-digit year yields 13 chars. */
+ck("the date is clamped to the column width", /date: v\.slice\(0, 10\)/.test(editor));
 
 /* ---------------------------- API surface -------------------------------- */
 
@@ -98,11 +139,13 @@ ck("the api client actually has patch",
 /* --------------------------- decisions list ------------------------------ */
 
 ck("decisions stay one newline-separated string",
-   /meeting\.decisions\.split\("\\n"\)/.test(editor) && /decisions: next\.join\("\\n"\)/.test(editor));
+   /meeting\.decisions\.split\("\\n"\)/.test(editor) &&
+   /const joined = next\.join\("\\n"\);/.test(editor) &&
+   /onChange\(\{ decisions: joined \}\)/.test(editor));
 ck("a decision cannot contain a newline of its own",
    /t\.replace\(\/\\n\/g, " "\)/.test(editor));
 ck("adding is gated on the last row having text",
-   /canAddDecision = !!decisions\[decisions\.length - 1\]\.trim\(\)/.test(editor));
+   /canAddDecision = !!decisions\[decisions\.length - 1\]\?\.trim\(\)/.test(editor));
 ck("removing the last decision leaves one empty row",
    /writeDecisions\(next\.length \? next : \[""\]\)/.test(editor));
 

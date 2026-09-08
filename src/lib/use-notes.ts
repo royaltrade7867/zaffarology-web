@@ -41,7 +41,16 @@ import {
 /** Matches the pillar store, so typing feels the same across the app. */
 const SAVE_DEBOUNCE_MS = 500;
 
-type Pending = { timer: ReturnType<typeof setTimeout>; run: () => Promise<unknown> };
+/**
+ * A queued save. `run` is the ordinary request; `beacon` is the same write sent
+ * with `keepalive` so it survives the page being torn down. Both are stored
+ * because the choice depends on HOW the flush was triggered, not on the edit.
+ */
+type Pending = {
+  timer: ReturnType<typeof setTimeout>;
+  run: () => Promise<unknown>;
+  beacon: () => Promise<unknown>;
+};
 
 export function useNotes() {
   const { user } = useAuth();
@@ -70,12 +79,18 @@ export function useNotes() {
     if (dirty.current.size === 0) setUnsaved(false);
   }, []);
 
-  /** Fire every queued save now. Flush, do NOT cancel: cancelling silently
-   *  discards the last half second of typing. */
-  const flushAll = useCallback(() => {
-    timers.current.forEach(({ timer, run }) => {
+  /**
+   * Fire every queued save now. Flush, do NOT cancel: cancelling silently
+   * discards the last half second of typing.
+   *
+   * `unloading` picks the `keepalive` variant. A normal fetch started while the
+   * document is being torn down is cancelled with it, so the ordinary path
+   * would look like it saved and quietly lose the edit.
+   */
+  const flushAll = useCallback((unloading = false) => {
+    timers.current.forEach(({ timer, run, beacon }) => {
       clearTimeout(timer);
-      run().catch(() => {});
+      (unloading ? beacon : run)().catch(() => {});
     });
     timers.current.clear();
   }, []);
@@ -83,11 +98,17 @@ export function useNotes() {
   useEffect(() => () => flushAll(), [flushAll]);
 
   // A closing tab never runs the unmount cleanup, so a note typed and closed
-  // straight away would lose its last edit.
+  // straight away would lose its last edit. `pagehide` as well as
+  // `beforeunload`: Safari on iOS often fires only the former, and a page
+  // restored from the back/forward cache never fires `beforeunload` at all.
   useEffect(() => {
-    const onLeave = () => flushAll();
+    const onLeave = () => flushAll(true);
     window.addEventListener("beforeunload", onLeave);
-    return () => window.removeEventListener("beforeunload", onLeave);
+    window.addEventListener("pagehide", onLeave);
+    return () => {
+      window.removeEventListener("beforeunload", onLeave);
+      window.removeEventListener("pagehide", onLeave);
+    };
   }, [flushAll]);
 
   const refresh = useCallback(async () => {
@@ -129,14 +150,16 @@ export function useNotes() {
     refresh();
   }, [refresh]);
 
-  /** Debounced write, keyed so each row has its own pending save. */
+  /** Debounced write, keyed so each row has its own pending save.
+   *  `write(beacon)` returns the request; the beacon form is only used when the
+   *  page is going away. */
   const queueSave = useCallback(
-    (key: string, run: () => Promise<unknown>) => {
+    (key: string, write: (beacon: boolean) => Promise<unknown>) => {
       markDirty(key);
       const existing = timers.current.get(key);
       if (existing) clearTimeout(existing.timer);
-      const fire = () =>
-        run()
+      const fire = (beacon: boolean) => () =>
+        write(beacon)
           .then(() => markClean(key))
           .catch((err) => {
             // Surfaced, not swallowed: the screen says "Saved automatically",
@@ -145,10 +168,11 @@ export function useNotes() {
             reportError(err, { area: "notes-save", key });
           });
       timers.current.set(key, {
-        run: fire,
+        run: fire(false),
+        beacon: fire(true),
         timer: setTimeout(() => {
           timers.current.delete(key);
-          fire();
+          fire(false)();
         }, SAVE_DEBOUNCE_MS),
       });
     },
@@ -185,7 +209,7 @@ export function useNotes() {
     (id: number, patch: Partial<ApiNote>) => {
       // Optimistic: the row updates now, the request follows.
       setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch } : n)));
-      queueSave(`note-${id}`, () => updateNote(id, patch));
+      queueSave(`note-${id}`, (beacon) => updateNote(id, patch, beacon));
     },
     [queueSave],
   );
@@ -238,7 +262,7 @@ export function useNotes() {
   const editMeeting = useCallback(
     (id: number, patch: Partial<ApiMeeting>) => {
       setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
-      queueSave(`meeting-${id}`, () => updateMeeting(id, patch));
+      queueSave(`meeting-${id}`, (beacon) => updateMeeting(id, patch, beacon));
     },
     [queueSave],
   );

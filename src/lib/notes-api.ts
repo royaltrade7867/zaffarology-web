@@ -66,9 +66,17 @@ export async function createNote(input: Partial<ApiNote>): Promise<ApiNote> {
   });
 }
 
-/** Sends ONLY what changed — the server treats absent fields as untouched. */
-export async function updateNote(id: number, patch: Partial<ApiNote>): Promise<ApiNote> {
-  return api.patch<ApiNote>(`/notes/${id}`, patch);
+/** Sends ONLY what changed — the server treats absent fields as untouched.
+ *  `beacon` keeps the request alive past a page teardown, for a save flushed
+ *  as the tab closes. */
+export async function updateNote(
+  id: number,
+  patch: Partial<ApiNote>,
+  beacon = false,
+): Promise<ApiNote> {
+  return beacon
+    ? api.patchBeacon<ApiNote>(`/notes/${id}`, patch)
+    : api.patch<ApiNote>(`/notes/${id}`, patch);
 }
 
 export async function deleteNote(id: number): Promise<void> {
@@ -106,8 +114,11 @@ export async function createMeeting(input: Partial<ApiMeeting>): Promise<ApiMeet
 export async function updateMeeting(
   id: number,
   patch: Partial<ApiMeeting>,
+  beacon = false,
 ): Promise<ApiMeeting> {
-  return api.patch<ApiMeeting>(`/notes/meetings/${id}`, patch);
+  return beacon
+    ? api.patchBeacon<ApiMeeting>(`/notes/meetings/${id}`, patch)
+    : api.patch<ApiMeeting>(`/notes/meetings/${id}`, patch);
 }
 
 export async function deleteMeeting(id: number): Promise<void> {
