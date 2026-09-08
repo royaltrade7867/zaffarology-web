@@ -2,6 +2,44 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-08 - Phase 2: Notes and Meeting notes
+
+Ported from mobile onto the same backend rows (`/notes`, `/notes/meetings`), so
+a note written on the phone opens on the web and back again.
+
+- **Notes / Meeting notes switcher**, a Personal / Business filter, and a
+  Prev/Next navigator that walks the *filtered* list. Switching tab or filter
+  resets the position — index 3 of one list means nothing in another.
+- **The blank-discard rule.** Creating a note has to create the row up front
+  (the editor saves by id), so opening one and going straight back would leave
+  an "Untitled note" nobody meant to create. A single character or a pin counts
+  as intent and keeps it.
+- **A new item inherits the active filter's tag**, falling back to whatever the
+  last item of that kind used — defaulting a business user's every note to
+  "personal" would hide it the moment they filter.
+- **Meeting decisions are a numbered list**, gated so a new row needs the
+  previous one filled, stored as one newline-separated string exactly as mobile
+  does. Changing that shape would break the emailed report and the phone.
+- **The web editor never writes `attendee_ids`.** Connection-tagging is Phase 3
+  here, and sending `[]` would silently un-tag everyone on a meeting the phone
+  had tagged.
+- Optimistic edits on a 500 ms debounce, ported with all three of mobile's
+  safety rules — a pending save is flushed rather than cancelled, a refresh
+  cannot overwrite a row with unsaved edits, and a failed delete puts the row
+  back. Added `beforeunload` on top: a browser tab can be closed mid-debounce,
+  where the phone always unmounts first.
+- `api.patch` added to the client. These endpoints treat an absent field as
+  untouched, so a PUT would blank every field the screen did not send.
+- **A drawn icon set** (`components/icons.tsx`) — one family, one stroke weight,
+  `currentColor` — replacing Unicode arrows, which render differently on every
+  platform and cannot be baseline-aligned.
+
+`hasVoice` is already wired into the discard rule ahead of Phase 5, so a
+recording-only note cannot be thrown away once the recorder lands.
+
+48 checks in `check-notes-web.ts`, covering every field of the discard
+predicate individually.
+
 ## 2026-09-08 - Pillar 1 rebuilt: each goal is its own project
 
 The screen now matches mobile's model instead of merely preserving it. A goal is
