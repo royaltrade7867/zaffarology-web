@@ -25,8 +25,26 @@ edited on the web at all.
 - `setG` re-clamps the goal index inside the updater, so a late keystroke after
   a removal cannot write to a goal that no longer exists.
 
-Pinned by `check-pillar-1-preserves-mobile.ts` (21 checks), which fails if the
-lists are ever read from the top level again.
+Two further data-loss bugs found in review of the rebuild and fixed before it
+landed:
+
+- **A delegated task created on web had no stable `id`.** It was pushed as an
+  inline literal, so `withId` minted a *fresh random* id on every load until a
+  save landed. A phone user who tagged that task would see its "Sent to Sam,
+  waiting" badge silently vanish, and re-tagging sent a duplicate email. Now
+  uses `blankDeleg()`, which is what that helper exists for.
+- **Goal and plan were capped at 250 characters, where mobile allows 600.** An
+  HTML `maxLength` does not truncate an existing value on render, but the
+  browser clamps it the moment the user types — so opening a 480-character plan
+  written on the phone and pressing one key destroyed 230 characters of it, with
+  no save button and no warning.
+- Previous Days now shows the deadline as "Thu, 31 Dec 2026" rather than a raw
+  ISO string, and the live field is labelled "Deadline" to match mobile (the
+  history renderer on this screen already said Deadline).
+
+Pinned by `check-pillar-1-preserves-mobile.ts` (28 checks), which fails if the
+lists are read from the top level again, if a delegated row is pushed without an
+id, or if the input cap drops below mobile's.
 
 ## 2026-09-08 - Phase 1: pillars on the shared schema, and a data-loss fix
 

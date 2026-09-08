@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { pillarByNumber, Accents, INK } from "@/lib/pillars";
-import { shortDate, todayKey } from "@/lib/dates";
+import { friendlyISO, shortDate, todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, MiwBox, SectionLabel, AddButton, TextArea } from "@/components/ui";
@@ -30,6 +30,7 @@ import {
  * two cannot drift again.
  */
 import {
+  blankDeleg,
   blankDod,
   blankTask,
   emptyGoal,
@@ -41,6 +42,12 @@ import {
   type Section,
   type Task,
 } from "@/pillars/schemas/pillar-1";
+
+/** Mobile caps Exact Goal / Exact Plan at 600. A SHORTER cap here does not
+ *  just limit new input: the browser clamps an existing longer value the moment
+ *  the user types, and the debounced whole-blob PUT then destroys the rest of
+ *  what they wrote on the phone. Keep this in step with mobile. */
+const GOAL_MAX = 600;
 
 const pillar = pillarByNumber(1)!;
 const RED = Accents.red;
@@ -247,7 +254,7 @@ export default function Pillar1() {
             value={g.goal}
             onChange={(e) => setG((x) => { x.goal = e.target.value; })}
             placeholder={`Write exact goal ${gi + 1} here…`}
-            maxLength={250}
+            maxLength={GOAL_MAX}
             autoCorrect="off"
             spellCheck={false}
             style={{ backgroundColor: g.goal.trim() ? "transparent" : "#F3FAF6" }}
@@ -261,12 +268,12 @@ export default function Pillar1() {
             value={g.plan}
             onChange={(v) => setG((x) => { x.plan = v; })}
             placeholder={`Write the plan for goal ${gi + 1} — the steps, the order, the deadlines…`}
-            maxLength={250}
+            maxLength={GOAL_MAX}
           />
         </div>
 
         <div className="mt-4">
-          <DateField label="Target date" value={g.target} onChange={(iso) => setG((x) => { x.target = iso; })} />
+          <DateField label="Deadline" value={g.target} onChange={(iso) => setG((x) => { x.target = iso; })} />
         </div>
 
         <AddButton label="+ Add goal" accent={pillar.accent} dimmed={!lastFilled} onClick={addGoal} />
@@ -305,7 +312,11 @@ export default function Pillar1() {
         {g.deleg.map((d, i) => (
           <TaskRow key={i} accent={BLUE} symbol="→" value={d.text} done={d.done} onChange={(text) => setG((x) => { x.deleg[i].text = text; })} onToggle={(v) => setG((x) => { x.deleg[i].done = v; })} onDelete={() => setG((x) => { x.deleg.splice(i, 1); })} actions={delegActions(i)} locked={i > 0 && !g.deleg[i - 1].text.trim()} placeholder="What did you delegate?" showWho who={d.who} onChangeWho={(text) => setG((x) => { x.deleg[i].who = text; })} />
         ))}
-        <AddButton label="+ Add delegated task to follow up" accent={BLUE} onClick={() => setG((x) => { x.deleg.push({ text: "", who: "", done: false } as Deleg); })} />
+        {/* blankDeleg(), never an inline literal: a new row needs a real `id`
+            (task assignments point at it) plus `due`/`whoUserId`. Without one,
+            `withId` mints a fresh random id on every load until a save lands,
+            so an assignment made on the phone loses its "Sent to X" badge. */}
+        <AddButton label="+ Add delegated task to follow up" accent={BLUE} onClick={() => setG((x) => { x.deleg.push(blankDeleg()); })} />
       </section>
 
       {/* Previous days, grouped per goal/project */}
@@ -317,7 +328,7 @@ export default function Pillar1() {
               <div key={i} className={i > 0 ? "mt-4 border-t border-line pt-4" : undefined}>
                 <DayField label={`Exact Goal ${i + 1}`} value={gg.goal ?? ""} />
                 <DayField label={`Exact Plan ${i + 1}`} value={gg.plan ?? ""} />
-                {gg.target ? <DayField label="Deadline" value={gg.target} /> : null}
+                {gg.target ? <DayField label="Deadline" value={friendlyISO(gg.target) ?? gg.target} /> : null}
                 {gg.work?.text.trim() ? (
                   <DayGroup label="Work of the Day" color={INK}><DayTask text={gg.work.text} done={gg.work.done} accent={RED} /></DayGroup>
                 ) : null}
