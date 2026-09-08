@@ -34,7 +34,13 @@ board — the same rows the phone uses.
 - Hooks refetch when the tab becomes visible (the browser's stand-in for
   mobile's foreground event); there is no push channel either way.
 
-49 checks in `check-connections-web.ts`, including behavioural proof of the
+**One deliberate divergence from mobile:** untagging now clears the tag only
+after the server confirms the unassign. Mobile clears it first, so a failed
+`unassignTask` leaves that board looking untagged while the task is still on the
+assignee's board — the two disagree until someone reloads. Worth porting back to
+mobile; the assign path already had the safe ordering on both.
+
+50 checks in `check-connections-web.ts`, including behavioural proof of the
 suggestion matcher and the attendee chip parsing.
 
 ## 2026-09-08 - Phase 2: Notes and Meeting notes

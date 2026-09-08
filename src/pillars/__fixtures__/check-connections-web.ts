@@ -40,6 +40,10 @@ ck("the overlay is above the board, not merged into it",
 /* An assigned task's wording belongs to the assigner. The overlay must expose
    no way to edit it — only the done checkbox. */
 ck("the overlay has no text input", !/<input(?![^>]*type="checkbox")/.test(overlay));
+/* Untag must also wait for the server. Clearing the tag first leaves this board
+   looking untagged while the task still sits on the assignee's board. */
+ck("untag clears the tag only after the server confirms",
+   /await unassignTask\(existing\.id\);\s*\n\s*setItem\(\{ assigneeUserId: "" \}\)/.test(p4));
 ck("the overlay's only control is the done checkbox",
    (overlay.match(/<input/g) ?? []).length === 1 && /type="checkbox"/.test(overlay));
 

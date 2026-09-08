@@ -116,15 +116,25 @@ export default function Pillar4() {
     if (assigning) return;
     if (!partner) {
       const existing = sent;
-      setItem({ assigneeUserId: "" });
       if (existing) {
+        // Clear the tag only once the server has actually unassigned it.
+        // Clearing first (which mobile still does) leaves this board looking
+        // untagged while the task is still sitting on the assignee's board —
+        // the two would disagree until someone reloaded.
+        setAssigning(true);
         try {
           await unassignTask(existing.id);
+          setItem({ assigneeUserId: "" });
           setAssignTick((t) => t + 1);
         } catch (err) {
           alert(apiErrorMessage(err, "Couldn't unassign. Please try again."));
+        } finally {
+          setAssigning(false);
         }
+        return;
       }
+      // Nothing was ever sent, so there is only a local tag to drop.
+      setItem({ assigneeUserId: "" });
       return;
     }
     if (!item.name.trim()) {
