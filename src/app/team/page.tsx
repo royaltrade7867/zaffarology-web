@@ -68,7 +68,7 @@ function TeamInner() {
                     const pct = Math.round((m.per_pillar?.[String(p.n)] ?? 0) * 100);
                     return (
                       <td key={p.n} className="px-2 py-2 text-center">
-                        <span className="inline-block min-w-[34px] rounded-full px-1.5 py-0.5 text-[11px] font-semibold text-white" style={{ backgroundColor: pct ? p.accent : "var(--line)" }}>
+                        <span className="inline-block min-w-[34px] rounded-full px-1.5 py-0.5 text-[11px] font-semibold text-on-accent" style={{ backgroundColor: pct ? p.accent : "var(--line)" }}>
                           {pct}%
                         </span>
                       </td>

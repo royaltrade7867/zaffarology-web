@@ -290,8 +290,8 @@ function NotesAndMeetings() {
           placeholder="Title"
           maxLength={200}
           autoFocus
-          style={{ backgroundColor: openNote.title.trim() ? "#ffffff" : "var(--field-empty)" }}
-          className="mb-3 w-full rounded-xl border border-line px-3.5 py-3 font-heading text-[19px] text-ink outline-none transition-colors focus:border-gold"
+          style={{ backgroundColor: openNote.title.trim() ? "var(--field)" : "var(--field-empty)" }}
+          className="mb-3 w-full rounded-xl border border-line px-3.5 py-3 font-heading text-[19px] text-on-card outline-none transition-colors focus:border-gold"
         />
         <TextArea
           value={openNote.body}
@@ -342,7 +342,7 @@ function NotesAndMeetings() {
               className={cx(
                 "flex items-center gap-2 rounded-xl border px-3.5 py-2 text-[13.5px] font-semibold transition-colors",
                 on
-                  ? "border-heading bg-heading text-white"
+                  ? "border-selected bg-selected text-on-selected"
                   : "border-line text-heading hover:bg-line-soft",
               )}
             >

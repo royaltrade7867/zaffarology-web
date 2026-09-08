@@ -54,7 +54,27 @@ type FieldProps = {
   error?: string;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">;
 
-export function TextField({ label, value, onChange, error, className, ...rest }: FieldProps) {
+/**
+ * A text field.
+ *
+ * `emptyTint` opts into the green "still to fill" wash. It is OFF by default
+ * because this component is shared with login, signup and forgot-password, and
+ * a green sign-in form reads as an error state on the first screen anyone sees.
+ * The workbook pages opt in; auth does not.
+ *
+ * The ink is `on-card`, never `ink`: a field is white paper in BOTH themes, so
+ * cream text on it is 1.2:1 and invisible. See DESIGN.md.
+ */
+export function TextField({
+  label,
+  value,
+  onChange,
+  error,
+  className,
+  emptyTint = false,
+  ...rest
+}: FieldProps & { emptyTint?: boolean }) {
+  const tinted = emptyTint && !error && !value.trim();
   return (
     <label className="block mb-3">
       {label ? <span className="block text-[13px] text-muted mb-1">{label}</span> : null}
@@ -64,9 +84,12 @@ export function TextField({ label, value, onChange, error, className, ...rest }:
         onChange={(e) => onChange(e.target.value)}
         autoCorrect="off"
         spellCheck={false}
-        style={{ backgroundColor: value.trim() ? "#ffffff" : FIELD_EMPTY }}
+        style={{
+          backgroundColor: tinted ? FIELD_EMPTY : "var(--field)",
+          color: "var(--on-card)",
+        }}
         className={cx(
-          "w-full min-h-[48px] rounded-xl border px-3.5 py-3 text-[15px] text-ink outline-none",
+          "w-full min-h-[48px] rounded-xl border px-3.5 py-3 text-[15px] outline-none transition-colors",
           "focus:border-gold",
           error ? "border-danger" : "border-line",
           className,
@@ -106,9 +129,9 @@ export function TextArea({ label, value, onChange, className, maxBreaks = MAX_IN
         }}
         autoCorrect="off"
         spellCheck={false}
-        style={{ backgroundColor: value.trim() ? "#ffffff" : FIELD_EMPTY }}
+        style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY }}
         className={cx(
-          "w-full min-h-[96px] rounded-xl border border-line px-3.5 py-3 text-[15px] text-ink outline-none focus:border-gold resize-y",
+          "w-full min-h-[96px] rounded-xl border border-line px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold resize-y",
           className,
         )}
       />

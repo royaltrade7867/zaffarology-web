@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { pillarByNumber, Accents, INK } from "@/lib/pillars";
 import { friendlyISO, shortDate, todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
+import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, MiwBox, SectionLabel, AddButton, TextArea } from "@/components/ui";
 import {
@@ -198,8 +199,8 @@ export default function Pillar1() {
 
   const navBtn = (disabled: boolean) =>
     ({
-      borderColor: disabled ? "#D3D9E2" : pillar.accent,
-      color: disabled ? "#A9B2C0" : pillar.accent,
+      borderColor: disabled ? "var(--line)" : pillar.accent,
+      color: disabled ? "var(--placeholder)" : pillar.accent,
     }) as const;
 
   return (
@@ -214,7 +215,7 @@ export default function Pillar1() {
           className="rounded-[10px] border-[1.5px] px-3.5 py-2.5 min-h-[40px] text-[13px] font-semibold"
           style={navBtn(gi === 0)}
         >
-          ◀ Prev
+          <ChevronLeft size={15} /> Prev
         </button>
         <span className="font-heading text-[12px] tracking-wide uppercase" style={{ color: INK }}>
           {`Goal ${gi + 1} of ${goals.length}`}
@@ -227,7 +228,7 @@ export default function Pillar1() {
           className="rounded-[10px] border-[1.5px] px-3.5 py-2.5 min-h-[40px] text-[13px] font-semibold"
           style={navBtn(gi >= goals.length - 1)}
         >
-          Next ▶
+          Next <ChevronRight size={15} />
         </button>
       </div>
 
@@ -257,8 +258,8 @@ export default function Pillar1() {
             maxLength={GOAL_MAX}
             autoCorrect="off"
             spellCheck={false}
-            style={{ backgroundColor: g.goal.trim() ? "transparent" : "#F3FAF6" }}
-            className="w-full rounded-lg px-2 py-2 font-semibold text-[16px] text-ink outline-none placeholder:text-placeholder"
+            style={{ backgroundColor: g.goal.trim() ? "var(--field)" : "var(--field-empty)" }}
+            className="w-full rounded-lg px-2 py-2 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder"
           />
         </MiwBox>
 

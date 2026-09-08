@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo_Black, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { ThemeProvider, ThemeScript } from "@/lib/theme";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,16 +18,29 @@ const archivo = Archivo_Black({
 
 export const metadata: Metadata = {
   title: "Zaffarology — 5 Pillars",
-  description: "Master your mind, build your legacy. The 8 success pillars.",
+  // Five, not eight: the folder and the App Store listing keep the old name,
+  // the app itself does not.
+  description: "Master your mind, build your legacy. The 5 success pillars.",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${archivo.variable}`}>
+    // suppressHydrationWarning: ThemeScript sets `data-theme` on this element
+    // before React hydrates, so the server's markup deliberately differs.
+    <html
+      lang="en"
+      className={`${inter.variable} ${archivo.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <ThemeScript />
+      </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

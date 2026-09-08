@@ -9,7 +9,9 @@
  *  - money always names what could not be parsed
  * A methodology footer repeats these so the document stands on its own.
  */
-import { Accents } from '@/lib/pillars';
+/* AccentHex, not Accents: a report is standalone HTML for an email or a PDF,
+   where a `var(--p8)` resolves against no document and renders as nothing. */
+import { AccentHex as Accents } from '@/lib/pillars';
 import { hasContent, type LoadedPillar } from '@/reports/loaded';
 import { todayKey } from '@/lib/ids';
 import { deadlineSection } from '@/reports/html/deadline-section';

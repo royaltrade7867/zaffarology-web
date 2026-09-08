@@ -310,8 +310,8 @@ export function VoiceNotes({
               maxLength={200}
               autoFocus
               placeholder="Voice note"
-              style={{ backgroundColor: title.trim() ? "#ffffff" : "var(--field-empty)" }}
-              className="w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-ink outline-none focus:border-gold"
+              style={{ backgroundColor: title.trim() ? "var(--field)" : "var(--field-empty)" }}
+              className="w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-on-card outline-none focus:border-gold"
             />
           </label>
           <div className="flex gap-2">

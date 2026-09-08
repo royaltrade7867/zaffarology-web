@@ -58,8 +58,8 @@ function Field({
         maxLength={maxLength}
         autoCorrect="off"
         spellCheck={false}
-        style={{ backgroundColor: value.trim() ? "#ffffff" : "var(--field-empty)" }}
-        className="w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:border-gold"
+        style={{ backgroundColor: value.trim() ? "var(--field)" : "var(--field-empty)" }}
+        className="w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-on-card outline-none transition-colors focus:border-gold"
       />
     </label>
   );

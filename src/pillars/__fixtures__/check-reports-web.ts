@@ -14,7 +14,7 @@
  */
 import { readFileSync } from "fs";
 
-import { Accents } from "@/lib/pillars";
+import { AccentHex, Accents } from "@/lib/pillars";
 import { ReportColors } from "@/reports/palette";
 import { renderPillarReport } from "@/reports/html/pillar-report";
 import { makeInitial as p1Init } from "@/pillars/schemas/pillar-1";
@@ -54,9 +54,20 @@ for (const [token, cssName] of [
 
 /* The TS accent map is a THIRD copy, and it had drifted: reports were printing
    the old #9A6A00 gold (4.38:1 on paper) while the CSS used the fixed one. */
-ck("Accents.gold matches the report palette",
-   Accents.gold.toLowerCase() === ReportColors.gold.toLowerCase(),
-   `${Accents.gold} vs ${ReportColors.gold}`);
+ck("AccentHex.gold matches the report palette",
+   AccentHex.gold.toLowerCase() === ReportColors.gold.toLowerCase(),
+   `${AccentHex.gold} vs ${ReportColors.gold}`);
+
+/* Two accent maps by design, and mixing them up is silent either way:
+   `Accents` is theme-aware for components, `AccentHex` is literal for output
+   that leaves the document. A var() in report HTML renders as NOTHING, and a
+   fixed hex in a component cannot follow the theme. */
+ck("Accents are CSS variables, for components", Accents.gold.startsWith("var(--"));
+ck("AccentHex are literal hexes, for report output", /^#[0-9A-Fa-f]{6}$/.test(AccentHex.gold));
+ck("report HTML uses the hex map, never the var one",
+   /AccentHex as Accents/.test(readFileSync("src/reports/html/progress-report.ts", "utf8")));
+ck("and the pillar report uses accentHex",
+   /accent: p\.accentHex/.test(readFileSync("src/reports/html/pillar-report.ts", "utf8")));
 
 /* ---------------- the report still renders, and renders content ---------- */
 
@@ -74,6 +85,12 @@ ck("it is a complete document", html.startsWith("<!doctype html>") && html.inclu
 ck("the user's own words reach the report", html.includes("Hit $1M"));
 ck("it carries A4 page CSS, so printing is sane", /@page\s*\{[^}]*A4/.test(html));
 ck("the accent is the corrected gold", html.includes(ReportColors.gold));
+/* A var() reaching report HTML resolves against no document and renders as
+   nothing — the report's OWN variables, declared in its <style>, are fine. */
+ck("no app CSS variable leaks into report HTML",
+   !/var\(--(p[1-8]|gold|ink|heading|muted|line|surface|background)\)/.test(
+     html.replace(/<style>[\s\S]*?<\/style>/g, ""),
+   ));
 
 /* ------------------------- the pdfmake wiring ---------------------------- */
 

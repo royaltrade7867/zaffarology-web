@@ -39,7 +39,7 @@ export default function Login() {
         </h1>
         <p className="text-[12px] tracking-widest text-gold mt-2 font-semibold">WELCOME BACK</p>
         <h2 className="font-heading text-[28px] text-ink">Log in</h2>
-        <p className="text-dim mt-1">Continue building your 8 pillars.</p>
+        <p className="text-dim mt-1">Continue building your 5 pillars.</p>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); submit(); }}>

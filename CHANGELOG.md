@@ -2,6 +2,50 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-08 - Phase 7: The design pass, and dark mode
+
+`PRODUCT.md` and `DESIGN.md` now record what the app is and the visual system it
+inherited from the phone. The world was not replaced — it was documented and
+extended for a wide screen.
+
+**Dark mode, matching the phone.** Navy page, cream text, lightened gold, with
+the phone's rule intact: **writing surfaces stay white in both themes**, because
+a workbook's paper does not go dark. Light / Dark / System in Profile, applied
+before first paint so there is no flash of the wrong theme.
+
+**Nineteen fields would have rendered invisible text the moment dark mode
+existed.** They set `text-ink` on a white field — cream on white, 1.2:1. This is
+the bug CLAUDE.md says has shipped twice on the phone, and it was sitting in the
+web app waiting for a dark theme to expose it. All nineteen now use `--on-card`.
+
+Other contrast failures found by measuring rather than looking:
+
+- `bg-heading text-white` on four tab/pill controls: `--heading` is navy in
+  light and **cream** in dark, so white-on-cream was 1.2:1. Replaced with a
+  `--selected` / `--on-selected` pair that contrasts by construction.
+- White text on a pillar-accent fill failed on **all five** accents in dark
+  (2.2–2.8:1), because the accents lighten for the navy page. Added
+  `--on-accent`, which flips with the theme; worst case is now 5.36:1.
+- The placeholder was tinted for the navy page, but a placeholder only ever sits
+  on a *field* — it was 2.58:1 on the white paper it actually renders against.
+  It is now one value that clears 3:1 on both field states.
+
+**The accents became CSS variables.** ~80 call sites read `p.accent` into an
+inline style, where a fixed hex cannot follow the theme, and the light accents
+sit at 1.6–2.9:1 on navy. `Accents` are now `var(--pN)`; `AccentHex` keeps the
+literal values for report HTML, which is rendered outside the document where a
+`var()` resolves to nothing. A fixture asserts each is used in the right place.
+
+Also in this pass: the browser's own surfaces are themed (selection, caret,
+scrollbars, focus rings); `focus-visible` is always visible and a mouse click
+leaves no ring; `prefers-reduced-motion` is respected; Home was rebuilt for the
+width with a real masthead; control glyphs (`✕ ◀ ▶ ✓`) became drawn icons, while
+the same glyphs *inside the workbook's own copy* were left alone; and three
+stale "8 pillars" strings in app copy became 5.
+
+81 checks in `check-theme-web.ts`, including two that assert the WRONG pairings
+really are unreadable — which is why the tokens exist separately at all.
+
 ## 2026-09-08 - Phase 6: About → Instructions
 
 The workbook's own guidance, on the About screen behind a switcher: the general

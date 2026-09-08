@@ -61,7 +61,7 @@ export function TopNav() {
                 href={n.href}
                 className={cx(
                   "rounded-lg px-3 py-1.5 text-[13.5px] font-semibold transition-colors",
-                  active ? "bg-heading text-white" : "text-heading hover:bg-line-soft",
+                  active ? "bg-selected text-on-selected" : "text-heading hover:bg-line-soft",
                 )}
               >
                 {n.label}

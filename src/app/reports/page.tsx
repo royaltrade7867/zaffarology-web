@@ -121,7 +121,7 @@ function Reports() {
                 onClick={() => setKind(k)}
                 className={cx(
                   "rounded-xl border px-3.5 py-2 text-[13.5px] font-semibold transition-colors",
-                  on ? "border-heading bg-heading text-white" : "border-line text-heading hover:bg-line-soft",
+                  on ? "border-selected bg-selected text-on-selected" : "border-line text-heading hover:bg-line-soft",
                 )}
               >
                 {label}

@@ -109,8 +109,8 @@ export default function Pillar2() {
             rows={2}
             autoCorrect="off"
             spellCheck={false}
-            style={{ backgroundColor: state.problem.trim() ? "transparent" : "#F3FAF6" }}
-            className="w-full resize-y rounded-lg px-2 py-2 font-semibold text-[16px] text-ink outline-none placeholder:text-placeholder min-h-[60px]"
+            style={{ backgroundColor: state.problem.trim() ? "var(--field)" : "var(--field-empty)" }}
+            className="w-full resize-y rounded-lg px-2 py-2 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder min-h-[60px]"
           />
         </MiwBox>
       </section>

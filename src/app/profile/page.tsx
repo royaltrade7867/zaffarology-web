@@ -5,7 +5,8 @@ import { useState } from "react";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthGuard } from "@/components/shell";
-import { Button } from "@/components/ui";
+import { Button, cx } from "@/components/ui";
+import { useTheme, type ThemeChoice } from "@/lib/theme";
 
 const ROLE_LABELS: Record<string, string> = {
   individual: "Individual",
@@ -42,16 +43,53 @@ function ProfileInner() {
       {company && user?.role === "company_admin" ? (
         <div className="mt-5 rounded-xl border-[1.5px] border-gold bg-surface p-4">
           <p className="text-[12px] tracking-widest font-heading text-gold">TEAM INVITE CODE</p>
-          <p className="font-heading text-[24px] tracking-widest text-gold-text mt-1">{company.inviteCode}</p>
+          <p className="font-heading text-[24px] tracking-widest text-gold mt-1">{company.inviteCode}</p>
           <p className="text-muted text-[13px] mt-1">Share this code with your employees. They choose &ldquo;Join a company&rdquo; at sign-up.</p>
         </div>
       ) : null}
+
+      <ThemePicker />
 
       <div className="mt-8 space-y-2 max-w-sm">
         <Button label="Log out" variant="ghost" onClick={async () => { await signOut(); router.replace("/"); }} />
         <Button label="Delete account" variant="danger" onClick={confirmDelete} loading={busy} />
       </div>
     </div>
+  );
+}
+
+/** Light / Dark / System, the same three the phone offers. */
+function ThemePicker() {
+  const { choice, setChoice } = useTheme();
+  return (
+    <section className="mt-8 max-w-sm">
+      <h2 className="font-heading text-[12px] uppercase tracking-wide text-muted">Appearance</h2>
+      <div role="group" aria-label="Appearance" className="mt-2 flex gap-2">
+        {(
+          [
+            { k: "light" as const, label: "Light" },
+            { k: "dark" as const, label: "Dark" },
+            { k: "system" as const, label: "System" },
+          ]
+        ).map(({ k, label }) => {
+          const on = choice === k;
+          return (
+            <button
+              key={k}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setChoice(k as ThemeChoice)}
+              className={cx(
+                "flex-1 rounded-xl border px-3 py-2 text-[13px] font-semibold transition-colors",
+                on ? "border-gold text-gold" : "border-line text-muted hover:bg-line-soft",
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

@@ -7,6 +7,7 @@ import { dayDiff, friendlyISO, shortDate, todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { AssignedToMe } from "@/components/assigned-to-me";
+import { ChevronLeft, ChevronRight, Close } from "@/components/icons";
 import { PersonTagField } from "@/components/person-tag-field";
 import { assignTask, unassignTask } from "@/lib/connections-api";
 import { apiErrorMessage } from "@/lib/api";
@@ -99,7 +100,7 @@ export default function Pillar4() {
   const items = state.items.length ? state.items : [blank()];
   const idx = Math.min(cur, items.length - 1);
   const item = items[idx];
-  const border = item.status === "completed" ? Accents.green : isOverdue(item) ? Accents.red : "#D3D9E2";
+  const border = item.status === "completed" ? Accents.green : isOverdue(item) ? Accents.red : "var(--line)";
 
   const setItem = (patch: Partial<Item>) => update((s) => { s.items[idx] = { ...s.items[idx], ...patch }; });
 
@@ -201,9 +202,9 @@ export default function Pillar4() {
           disabled={idx === 0}
           onClick={() => setCur((c) => Math.max(0, c - 1))}
           className="rounded-[10px] border-[1.5px] px-3.5 py-2.5 min-h-[40px] text-[13px] font-semibold"
-          style={{ borderColor: idx === 0 ? "#D3D9E2" : BLUE, color: idx === 0 ? "#A9B2C0" : BLUE }}
+          style={{ borderColor: idx === 0 ? "var(--line)" : BLUE, color: idx === 0 ? "var(--placeholder)" : BLUE }}
         >
-          ◀ Prev
+          <ChevronLeft size={15} /> Prev
         </button>
         <span className="font-heading text-[12px] tracking-wide uppercase" style={{ color: INK }}>
           {`Item ${idx + 1} of ${items.length}`}
@@ -212,9 +213,9 @@ export default function Pillar4() {
           disabled={idx >= items.length - 1}
           onClick={() => setCur((c) => Math.min(items.length - 1, c + 1))}
           className="rounded-[10px] border-[1.5px] px-3.5 py-2.5 min-h-[40px] text-[13px] font-semibold"
-          style={{ borderColor: idx >= items.length - 1 ? "#D3D9E2" : BLUE, color: idx >= items.length - 1 ? "#A9B2C0" : BLUE }}
+          style={{ borderColor: idx >= items.length - 1 ? "var(--line)" : BLUE, color: idx >= items.length - 1 ? "var(--placeholder)" : BLUE }}
         >
-          Next ▶
+          Next <ChevronRight size={15} />
         </button>
       </div>
 
@@ -231,8 +232,8 @@ export default function Pillar4() {
           maxLength={100}
           autoCorrect="off"
           spellCheck={false}
-          style={{ backgroundColor: item.name.trim() ? "transparent" : FIELD_EMPTY }}
-          className="w-full rounded-lg px-2 py-2 mb-1.5 font-semibold text-[16px] text-ink outline-none placeholder:text-placeholder"
+          style={{ backgroundColor: item.name.trim() ? "var(--field)" : FIELD_EMPTY }}
+          className="w-full rounded-lg px-2 py-2 mb-1.5 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder"
         />
 
         <div className="flex gap-3">
@@ -299,10 +300,10 @@ export default function Pillar4() {
               maxLength={280}
               autoCorrect="off"
               spellCheck={false}
-              style={{ backgroundColor: item.note.trim() ? "#FFFFFF" : FIELD_EMPTY }}
-              className="w-full min-h-[64px] rounded-[10px] border-[1.5px] border-line px-3 py-3 text-[15px] text-ink outline-none focus:border-gold resize-y placeholder:text-placeholder"
+              style={{ backgroundColor: item.note.trim() ? "var(--field)" : FIELD_EMPTY }}
+              className="w-full min-h-[64px] rounded-[10px] border-[1.5px] border-line px-3 py-3 text-[15px] text-on-card outline-none focus:border-gold resize-y placeholder:text-placeholder"
             />
-            <p className="text-[12px] font-semibold mt-1.5" style={{ color: countSentences(item.note) > 3 ? Accents.red : "#4E6A8C" }}>
+            <p className="text-[12px] font-semibold mt-1.5" style={{ color: countSentences(item.note) > 3 ? Accents.red : "var(--muted)" }}>
               {countSentences(item.note)} / 3 sentences{countSentences(item.note) > 3 ? ", too long, cut it down" : ""}
             </p>
           </div>
@@ -310,8 +311,8 @@ export default function Pillar4() {
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 mt-3">
-          <button onClick={removeItem} className="mr-auto p-1 text-[11px] font-semibold" style={{ color: "#4E6A8C" }}>
-            ✕ Remove
+          <button onClick={removeItem} className="mr-auto p-1 text-[11px] font-semibold" style={{ color: "var(--muted)" }}>
+            <Close size={13} /> Remove
           </button>
           {item.status === "completed" ? (
             <>
@@ -331,7 +332,7 @@ export default function Pillar4() {
               <button
                 onClick={fileItem}
                 className="rounded-[3px] border-[1.5px] px-2 py-1 text-[11px] font-semibold"
-                style={{ borderColor: "#191A1E", color: "#191A1E" }}
+                style={{ borderColor: "var(--ink)", color: "var(--ink)" }}
               >
                 File
               </button>
@@ -380,7 +381,7 @@ export default function Pillar4() {
           <div key={i} className="py-2 border-b border-line">
             <div className="flex justify-between">
               <span className="flex-1 font-bold text-[13px] text-ink">✓ {f.name}</span>
-              <span className="text-[11px]" style={{ color: "#4E6A8C" }}>{f.date}</span>
+              <span className="text-[11px]" style={{ color: "var(--muted)" }}>{f.date}</span>
             </div>
             {f.who ? <p className="text-[12px] font-medium mt-0.5" style={{ color: Accents.blue }}>Delegated to: {f.who}</p> : null}
             {f.early ? <p className="text-[12px] font-bold mt-0.5" style={{ color: Accents.green }}>{f.early}</p> : null}

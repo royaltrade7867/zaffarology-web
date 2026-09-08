@@ -270,7 +270,8 @@ export function renderPillarReport(loaded: LoadedPillar, meta: ReportMeta): stri
     heading: `Pillar ${p.n}`,
     subheading: p.name,
     note: p.sub,
-    accent: p.accent,
+    // Report HTML is standalone: a var() would resolve against nothing.
+    accent: p.accentHex,
     metaLines,
     body,
     // Names are included exactly as entered — this is stated so a recipient knows.

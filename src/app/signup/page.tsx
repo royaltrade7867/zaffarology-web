@@ -10,7 +10,7 @@ import { Button, TextField, cx } from "@/components/ui";
 
 type Path = "individual" | "company" | "employee";
 const PATHS: { key: Path; label: string; hint: string }[] = [
-  { key: "individual", label: "Individual", hint: "Work through the 8 pillars on your own" },
+  { key: "individual", label: "Individual", hint: "Work through the 5 pillars on your own" },
   { key: "company", label: "Company", hint: "Create your company and invite your team" },
   { key: "employee", label: "Join a company", hint: "Enter the invite code from your admin" },
 ];
@@ -57,7 +57,7 @@ export default function Signup() {
         </h1>
         <p className="text-[12px] tracking-widest text-gold mt-2 font-semibold">GET STARTED</p>
         <h2 className="font-heading text-[28px] text-ink">Create account</h2>
-        <p className="text-dim mt-1">Create your account to start building your 8 pillars.</p>
+        <p className="text-dim mt-1">Create your account to start building your 5 pillars.</p>
       </div>
 
       <div className="space-y-2 mb-4">

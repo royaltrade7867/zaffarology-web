@@ -133,7 +133,7 @@ export function TodaysReportsCard() {
                   className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums"
                   style={
                     done
-                      ? { backgroundColor: "rgba(31,107,74,0.12)", color: "#1F6B4A" }
+                      ? { backgroundColor: "color-mix(in srgb, var(--p3) 14%, transparent)", color: "var(--p3)" }
                       : { backgroundColor: "var(--line-soft)", color: "var(--muted)" }
                   }
                 >

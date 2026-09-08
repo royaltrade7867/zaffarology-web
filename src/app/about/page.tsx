@@ -55,7 +55,7 @@ export default function About() {
               className={cx(
                 "rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors",
                 on
-                  ? "border-heading bg-heading text-white"
+                  ? "border-selected bg-selected text-on-selected"
                   : "border-line text-heading hover:bg-line-soft",
               )}
             >

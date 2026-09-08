@@ -252,7 +252,7 @@ function YesNo({
           ]
         ).map(({ v, text, Icon }) => {
           const on = value === v;
-          const tone = v === "yes" ? "#1F6B4A" : "var(--danger)";
+          const tone = v === "yes" ? "var(--p3)" : "var(--danger)";
           return (
             <button
               key={v}
@@ -263,7 +263,7 @@ function YesNo({
               className={cx(
                 "flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-xl border text-[13.5px] font-semibold transition-colors",
                 busy ? "cursor-wait" : "",
-                on ? "text-white" : "border-line text-muted hover:bg-line-soft",
+                on ? "text-on-accent" : "border-line text-muted hover:bg-line-soft",
               )}
               style={on ? { backgroundColor: tone, borderColor: tone } : undefined}
             >
@@ -301,8 +301,8 @@ function Field({
         maxLength={inputMode === "numeric" ? 3 : 2000}
         // Writing surfaces stay white/green whatever the page does, so the ink
         // on them is always the dark token.
-        style={{ backgroundColor: value.trim() ? "#ffffff" : "var(--field-empty)" }}
-        className="w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:border-gold"
+        style={{ backgroundColor: value.trim() ? "var(--field)" : "var(--field-empty)" }}
+        className="w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-on-card outline-none transition-colors focus:border-gold"
       />
     </label>
   );

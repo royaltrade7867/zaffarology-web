@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { Close } from "@/components/icons";
 
 import { pillarByNumber, Accents, HEADING, FIELD_EMPTY } from "@/lib/pillars";
 import { newId } from "@/lib/dates";
@@ -66,7 +67,7 @@ export default function Pillar8() {
         <Crumb label="Businesses" onClick={() => setView({ level: "biz" })} />
         {biz ? <><Sep /><Crumb label={biz.name} onClick={() => setView({ level: "dept", bizId: biz.id })} /></> : null}
         {dept ? <><Sep /><Crumb label={dept.name} onClick={() => setView({ level: "sys", bizId: biz!.id, deptId: dept.id })} /></> : null}
-        {sys && view.level === "detail" ? <><Sep /><span className="font-semibold text-[12px]" style={{ color: "#4E6A8C" }}>{sys.num}</span></> : null}
+        {sys && view.level === "detail" ? <><Sep /><span className="font-semibold text-[12px]" style={{ color: "var(--muted)" }}>{sys.num}</span></> : null}
       </div>
 
       {view.level === "biz" ? (
@@ -178,7 +179,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
       <SectionLabel text={label} small={small} color={NAVY} />
       {rows.length === 0 ? (
         <div className="flex items-center gap-2.5 rounded-2xl border border-dashed border-line px-3.5 py-4 mb-1" style={{ backgroundColor: "rgba(27,58,92,0.02)" }}>
-          <span className="text-[13px] leading-snug" style={{ color: "#8593A8" }}>{empty}</span>
+          <span className="text-[13px] leading-snug" style={{ color: "var(--placeholder)" }}>{empty}</span>
         </div>
       ) : rows.map((r) => (
         <div
@@ -187,20 +188,20 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
           className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3 py-3 mb-2.5 cursor-pointer shadow-sm transition-colors hover:bg-[#F6F7F9]"
         >
           {r.badge ? (
-            <div className="flex h-11 min-w-[44px] items-center justify-center rounded-xl px-2 text-white font-heading text-[11px] tracking-wide" style={{ backgroundColor: NAVY }}>{r.badge}</div>
+            <div className="flex h-11 min-w-[44px] items-center justify-center rounded-xl px-2 text-on-accent font-heading text-[11px] tracking-wide" style={{ backgroundColor: NAVY }}>{r.badge}</div>
           ) : (
             <div className="flex h-11 w-11 items-center justify-center rounded-xl font-heading text-[16px]" style={{ backgroundColor: "rgba(27,58,92,0.08)", color: NAVY }}>{(r.name.trim()[0] ?? "•").toUpperCase()}</div>
           )}
           <div className="flex-1 min-w-0">
             <p className="font-bold text-[15.5px] text-ink truncate">{r.name}</p>
-            {r.sub ? <p className="text-[12.5px] mt-0.5" style={{ color: "#4E6A8C" }}>{r.sub}</p> : null}
+            {r.sub ? <p className="text-[12.5px] mt-0.5" style={{ color: "var(--muted)" }}>{r.sub}</p> : null}
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); r.onDel(); }}
             aria-label={`Delete ${r.name}`}
             className="flex h-8 w-8 items-center justify-center rounded-full text-[13px]"
-            style={{ backgroundColor: "rgba(14,28,48,0.05)", color: "#9AA6B6" }}
-          >✕</button>
+            style={{ backgroundColor: "rgba(14,28,48,0.05)", color: "var(--placeholder)" }}
+          ><Close size={13} /></button>
           <span className="flex h-8 w-8 items-center justify-center rounded-full text-[16px] leading-none" style={{ backgroundColor: "rgba(27,58,92,0.07)", color: NAVY }}>›</span>
         </div>
       ))}
@@ -213,10 +214,10 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
           onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
           placeholder={addPlaceholder}
           maxLength={80}
-          style={{ backgroundColor: val.trim() ? "#ffffff" : FIELD_EMPTY }}
-          className="flex-1 min-h-[48px] rounded-xl border-[1.5px] border-line px-3.5 text-[15px] text-ink outline-none focus:border-gold placeholder:text-placeholder"
+          style={{ backgroundColor: val.trim() ? "var(--field)" : FIELD_EMPTY }}
+          className="flex-1 min-h-[48px] rounded-xl border-[1.5px] border-line px-3.5 text-[15px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
         />
-        <button onClick={submit} style={{ backgroundColor: NAVY }} className="min-h-[48px] rounded-xl px-5 text-white font-heading text-[12px] tracking-widest">ADD</button>
+        <button onClick={submit} style={{ backgroundColor: NAVY }} className="min-h-[48px] rounded-xl px-5 text-on-accent font-heading text-[12px] tracking-widest">ADD</button>
       </div>
     </div>
   );
@@ -228,7 +229,7 @@ function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Busines
   return (
     <div>
       <div className="flex items-center gap-2.5 mb-5">
-        <span className="flex h-6 min-w-[40px] items-center justify-center rounded px-1.5 text-white font-heading text-[11px]" style={{ backgroundColor: NAVY }}>{sys.num}</span>
+        <span className="flex h-6 min-w-[40px] items-center justify-center rounded px-1.5 text-on-accent font-heading text-[11px]" style={{ backgroundColor: NAVY }}>{sys.num}</span>
         <p className="flex-1 font-heading text-[18px]" style={{ color: HEADING }}>{sys.name.toUpperCase()}</p>
       </div>
 
@@ -299,23 +300,23 @@ function FlowChart({ sys, biz, dept }: { sys: System; biz: Business; dept: Depar
     <div className="mt-3">
       {steps.length ? (
         <div className="flex flex-col items-center mb-3">
-          <div className="rounded-full px-5 py-1.5 text-white font-heading text-[12px] tracking-widest" style={{ backgroundColor: Accents.green }}>Start</div>
+          <div className="rounded-full px-5 py-1.5 text-on-accent font-heading text-[12px] tracking-widest" style={{ backgroundColor: Accents.green }}>Start</div>
           {steps.map((s, i) => (
             <div key={i} className="flex flex-col items-center self-stretch">
-              <span className="text-[18px] my-0.5" style={{ color: "#4E6A8C" }}>↓</span>
+              <span className="text-[18px] my-0.5" style={{ color: "var(--muted)" }}>↓</span>
               <div className="self-stretch rounded-md border-2 bg-surface px-3 py-2" style={{ borderColor: NAVY }}>
                 <p className="font-heading text-[10px] tracking-widest" style={{ color: NAVY }}>Step {i + 1}</p>
                 <p className="text-[13px] text-ink mt-0.5">{s}</p>
               </div>
             </div>
           ))}
-          <span className="text-[18px] my-0.5" style={{ color: "#4E6A8C" }}>↓</span>
-          <div className="rounded-full px-5 py-1.5 text-white font-heading text-[12px] tracking-widest" style={{ backgroundColor: Accents.red }}>Done</div>
+          <span className="text-[18px] my-0.5" style={{ color: "var(--muted)" }}>↓</span>
+          <div className="rounded-full px-5 py-1.5 text-on-accent font-heading text-[12px] tracking-widest" style={{ backgroundColor: Accents.red }}>Done</div>
         </div>
       ) : null}
       <div className="flex flex-wrap gap-1.5">
         <ShareBtn label="📋 Copy" color={NAVY} onClick={copy} />
-        <ShareBtn label="✉ Email" color="#5B6770" onClick={email} />
+        <ShareBtn label="✉ Email" color="var(--muted)" onClick={email} />
       </div>
     </div>
   );
@@ -326,7 +327,7 @@ function FlowChart({ sys, biz, dept }: { sys: System; biz: Business; dept: Depar
 function TrainingSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: System) => void) => void }) {
   if (!sys.trainings.length) {
     return <>
-      <p className="text-[13px] leading-snug" style={{ color: "#8593A8" }}>No training yet - add the first one below.</p>
+      <p className="text-[13px] leading-snug" style={{ color: "var(--placeholder)" }}>No training yet - add the first one below.</p>
       <AddButton label="+ Add training / give another training" accent={Accents.green} onClick={() => updateSys((s) => { s.trainings.push({ id: newId(), trainee: "", trainer: "", date: "", satisfied: "", remarks: "" }); })} />
     </>;
   }
@@ -362,7 +363,7 @@ function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Syste
   const lastTrainee = sys.trainings[sys.trainings.length - 1]?.trainee ?? "";
   if (!sys.evals.length) {
     return <>
-      <p className="text-[13px] leading-snug" style={{ color: "#8593A8" }}>No evaluation yet - add the first one below.</p>
+      <p className="text-[13px] leading-snug" style={{ color: "var(--placeholder)" }}>No evaluation yet - add the first one below.</p>
       <AddButton label="+ Add evaluation / evaluate again" accent={Accents.green} onClick={() => updateSys((s) => { s.evals.push({ id: newId(), trainee: lastTrainee, evaluator: "", evalDate: "", satisfied: "", implDate: "", remarks: "" }); })} />
     </>;
   }
@@ -401,7 +402,7 @@ function ReviewSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Sys
   const lastTrainee = sys.trainings[sys.trainings.length - 1]?.trainee ?? "";
   if (!sys.reviews.length) {
     return <>
-      <p className="text-[13px] leading-snug" style={{ color: "#8593A8" }}>No review yet - add the first one below.</p>
+      <p className="text-[13px] leading-snug" style={{ color: "var(--placeholder)" }}>No review yet - add the first one below.</p>
       <AddButton label="+ Add fortnightly review" accent={Accents.green} onClick={() => updateSys((s) => { s.reviews.push({ id: newId(), trainee: lastTrainee, reviewer: "", date: "", satisfied: "", remarks: "" }); })} />
     </>;
   }
@@ -433,13 +434,13 @@ function confirmDel(msg: string, onOk: () => void) {
 const Crumb = ({ label, onClick }: { label: string; onClick: () => void }) => (
   <button onClick={onClick} className="font-semibold text-[12px]" style={{ color: NAVY }}>{label}</button>
 );
-const Sep = () => <span className="text-[12px] px-0.5" style={{ color: "#A9B2C0" }}> › </span>;
+const Sep = () => <span className="text-[12px] px-0.5" style={{ color: "var(--placeholder)" }}> › </span>;
 const Section = ({ n, title, small }: { n: number; title: string; small?: string }) => (
   <div className="flex items-start gap-2.5 mt-6 mb-2">
-    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white font-heading text-[12px]" style={{ backgroundColor: NAVY }}>{n}</span>
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-on-accent font-heading text-[12px]" style={{ backgroundColor: NAVY }}>{n}</span>
     <div className="flex-1">
       <p className="font-bold text-[15px]" style={{ color: HEADING }}>{title}</p>
-      {small ? <p className="text-[11px] mt-0.5" style={{ color: "#4E6A8C" }}>{capFirst(small)}</p> : null}
+      {small ? <p className="text-[11px] mt-0.5" style={{ color: "var(--muted)" }}>{capFirst(small)}</p> : null}
     </div>
   </div>
 );
@@ -455,7 +456,7 @@ const TextField = ({ value, onChange, placeholder }: { value: string; onChange: 
     placeholder={placeholder}
     maxLength={120}
     style={{ backgroundColor: value.trim() ? "transparent" : FIELD_EMPTY }}
-    className="w-full min-h-[48px] rounded-xl border-[1.5px] border-line px-3.5 py-3 text-[15px] text-ink outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
+    className="w-full min-h-[48px] rounded-xl border-[1.5px] border-line px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
   />
 );
 const Area = ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (
@@ -466,8 +467,8 @@ const Area = ({ value, onChange, placeholder }: { value: string; onChange: (v: s
     onChange={(e) => onChange(e.target.value)}
     placeholder={placeholder}
     maxLength={400}
-    style={{ backgroundColor: value.trim() ? "#ffffff" : FIELD_EMPTY }}
-    className="w-full min-h-[60px] rounded-xl border-[1.5px] border-line px-3 py-3 text-[15px] text-ink outline-none focus:border-gold resize-y mb-1.5 placeholder:text-placeholder"
+    style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY }}
+    className="w-full min-h-[60px] rounded-xl border-[1.5px] border-line px-3 py-3 text-[15px] text-on-card outline-none focus:border-gold resize-y mb-1.5 placeholder:text-placeholder"
   />
 );
 const DelLink = ({ onClick }: { onClick: () => void }) => (
@@ -493,10 +494,10 @@ function EditableList({ items, onChange, placeholder, addLabel }: { items: strin
             onChange={(e) => { const n = [...list]; n[i] = e.target.value; onChange(n); }}
             placeholder={placeholder(i + 1)}
             maxLength={200}
-            style={{ backgroundColor: it.trim() ? "transparent" : FIELD_EMPTY }}
-            className="flex-1 min-w-0 rounded-md px-2 py-1.5 text-[14px] text-ink outline-none placeholder:text-placeholder"
+            style={{ backgroundColor: it.trim() ? "var(--field)" : FIELD_EMPTY }}
+            className="flex-1 min-w-0 rounded-md px-2 py-1.5 text-[14px] text-on-card outline-none placeholder:text-placeholder"
           />
-          <button onClick={() => { const n = list.filter((_, x) => x !== i); onChange(n.length ? n : [""]); }} className="text-[15px]" style={{ color: "#4E6A8C" }}>✕</button>
+          <button onClick={() => { const n = list.filter((_, x) => x !== i); onChange(n.length ? n : [""]); }} className="text-[15px]" style={{ color: "var(--muted)" }}><Close size={13} /></button>
         </div>
       ))}
       <button

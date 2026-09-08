@@ -119,9 +119,9 @@ export default function Pillar3() {
     <PillarScaffold pillar={pillar}>
       {/* ☀ AM Planning */}
       <p className="font-heading text-[20px] uppercase" style={{ color: Accents.gold }}>
-        ☀ AM <span style={{ color: "#1B3A5C" }}>PLANNING</span>
+        ☀ AM <span style={{ color: "var(--heading)" }}>PLANNING</span>
       </p>
-      <p className="font-medium text-[12px] mt-1 mb-5" style={{ color: "#4E6A8C" }}>
+      <p className="font-medium text-[12px] mt-1 mb-5" style={{ color: "var(--muted)" }}>
         Set in the morning - plan the money-making day.
       </p>
 
@@ -151,9 +151,9 @@ export default function Pillar3() {
       {/* ☾ PM Achievement */}
       <div className="border-t-[3px] border-ink pt-6 mt-2">
         <p className="font-heading text-[20px] uppercase" style={{ color: GREEN }}>
-          ☾ PM <span style={{ color: "#1B3A5C" }}>ACHIEVEMENT</span>
+          ☾ PM <span style={{ color: "var(--heading)" }}>ACHIEVEMENT</span>
         </p>
-        <p className="font-medium text-[12px] mt-1 mb-5" style={{ color: "#4E6A8C" }}>
+        <p className="font-medium text-[12px] mt-1 mb-5" style={{ color: "var(--muted)" }}>
           Fill in the evening - what did the day actually produce?
         </p>
       </div>
@@ -161,7 +161,7 @@ export default function Pillar3() {
       {/* AM Plan Check */}
       <section className="mb-8">
         <SectionLabel text="AM Plan Check" small="exactly what you wrote this morning, achieved or not?" />
-        <div className="rounded-xl border bg-surface p-3.5" style={{ borderColor: "#D3D9E2" }}>
+        <div className="rounded-xl border bg-surface p-3.5" style={{ borderColor: "var(--line)" }}>
           <ReviewGroup label="Work of the Day" color={INK}>
             <ReviewItem tag="Work" task={state.work} onToggle={(v) => update((s) => { s.work.done = v; })} />
           </ReviewGroup>
@@ -200,8 +200,8 @@ export default function Pillar3() {
             maxLength={600}
             autoCorrect="off"
             spellCheck={false}
-            style={{ backgroundColor: state.pm.trim() ? "transparent" : FIELD_EMPTY }}
-            className="w-full min-h-[80px] rounded-lg px-2 py-1.5 text-[15px] text-ink outline-none resize-y placeholder:text-placeholder"
+            style={{ backgroundColor: state.pm.trim() ? "var(--field)" : FIELD_EMPTY }}
+            className="w-full min-h-[80px] rounded-lg px-2 py-1.5 text-[15px] text-on-card outline-none resize-y placeholder:text-placeholder"
           />
           <div className="flex items-center gap-2.5 mt-3">
             <span className="font-heading text-[11px] tracking-[0.15em]" style={{ color: GREEN }}>$ MONEY MADE</span>
@@ -279,7 +279,7 @@ function ReviewItem({ tag, task, onToggle }: { tag: string; task: Task; onToggle
   if (!task.text.trim()) {
     return (
       <div className="flex items-center gap-2 py-[3px]">
-        <span className="font-semibold text-[11px] min-w-[44px]" style={{ color: "#4E6A8C" }}>{tag}</span>
+        <span className="font-semibold text-[11px] min-w-[44px]" style={{ color: "var(--muted)" }}>{tag}</span>
         <span className="text-[12px] italic text-placeholder">(not set this morning)</span>
       </div>
     );
@@ -294,8 +294,8 @@ function ReviewItem({ tag, task, onToggle }: { tag: string; task: Task; onToggle
       >
         {task.done ? "✓" : "✗"}
       </button>
-      <span className="font-semibold text-[11px] min-w-[44px]" style={{ color: "#4E6A8C" }}>{tag}</span>
-      <span className="flex-1 truncate text-[13px]" style={{ color: task.done ? "#4E6A8C" : INK, textDecorationLine: task.done ? "line-through" : "none" }}>
+      <span className="font-semibold text-[11px] min-w-[44px]" style={{ color: "var(--muted)" }}>{tag}</span>
+      <span className="flex-1 truncate text-[13px]" style={{ color: task.done ? "var(--muted)" : INK, textDecorationLine: task.done ? "line-through" : "none" }}>
         {task.text}
       </span>
     </div>

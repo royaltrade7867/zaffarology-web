@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { Check, Close } from "@/components/icons";
 import { Accents, FIELD_EMPTY, HEADING } from "@/lib/pillars";
 import { friendlyISO } from "@/lib/dates";
 import { cx } from "@/components/ui";
@@ -26,7 +27,7 @@ export function Checkbox({
       style={{ width: size, height: size, backgroundColor: checked ? HEADING : "transparent", borderColor: Accents.gold, opacity: disabled ? 0.4 : 1 }}
       className="shrink-0 rounded-full border-2 flex items-center justify-center"
     >
-      {checked ? <span className="text-white text-[13px] leading-none">✓</span> : null}
+      {checked ? <Check size={13} className="text-on-accent" /> : null}
     </button>
   );
 }
@@ -119,7 +120,7 @@ export function TaskRow({
               key={a.label}
               onClick={a.onClick}
               className="rounded border-[1.5px] px-2 py-1 text-[11px] font-semibold"
-              style={{ borderColor: a.kind === "delete" ? Accents.red : "#191A1E", color: a.kind === "delete" ? Accents.red : "#191A1E" }}
+              style={{ borderColor: a.kind === "delete" ? Accents.red : "var(--ink)", color: a.kind === "delete" ? Accents.red : "var(--ink)" }}
             >
               {a.label}
             </button>
@@ -127,7 +128,7 @@ export function TaskRow({
         </div>
       ) : onDelete ? (
         <button onClick={onDelete} className="shrink-0 text-muted px-1" aria-label="Remove">
-          ✕
+          <Close size={13} />
         </button>
       ) : null}
     </div>
@@ -155,8 +156,8 @@ export function DateField({ value, onChange, label }: { value: string; onChange:
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        style={{ backgroundColor: value ? "#ffffff" : FIELD_EMPTY }}
-        className="w-full min-h-[48px] rounded-xl border border-line px-3.5 text-[15px] text-ink outline-none focus:border-gold"
+        style={{ backgroundColor: value ? "var(--field)" : FIELD_EMPTY }}
+        className="w-full min-h-[48px] rounded-xl border border-line px-3.5 text-[15px] text-on-card outline-none focus:border-gold"
       />
     </label>
   );
@@ -172,8 +173,8 @@ export function PersonField({ label, value, placeholder, onChange, accent }: { l
         placeholder={placeholder}
         autoCorrect="off"
         spellCheck={false}
-        style={{ backgroundColor: value.trim() ? "#ffffff" : FIELD_EMPTY, borderColor: accent ?? "var(--line)" }}
-        className="w-full min-h-[48px] rounded-xl border px-3.5 py-3 text-[15px] text-ink outline-none focus:border-gold placeholder:text-placeholder"
+        style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: accent ?? "var(--line)" }}
+        className="w-full min-h-[48px] rounded-xl border px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
       />
     </label>
   );
