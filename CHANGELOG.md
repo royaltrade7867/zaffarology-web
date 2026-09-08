@@ -34,13 +34,45 @@ board — the same rows the phone uses.
 - Hooks refetch when the tab becomes visible (the browser's stand-in for
   mobile's foreground event); there is no push channel either way.
 
+Review caught five defects, fixed before the phase closed:
+
+- **Typing a comma was silently eaten**, merging two attendees into one. The
+  port dropped mobile's `onDraft`, and `setAll` trimmed the trailing separator —
+  which is precisely what marks a name as committed — so "Ana, Bo" was stored as
+  the single name "Ana Bo" with no chips. The separator is now always kept, and
+  three keystroke replays in the fixture prove the sequences stay apart.
+- **Removing a chip never untagged the person.** Both the X and backspace
+  rewrote only the text, so `attendee_ids` kept an id with nothing on screen to
+  show it — unremovable, since re-adding and re-removing repeated the no-op.
+- **The "Invites sent" list disclosed who has an account, and their real name.**
+  `/connections/invite` answers identically by design, but the pending row it
+  creates resolved the counterpart User a moment later, so a registered address
+  showed "Jane Doe / Waiting for them to accept" and a stranger showed the raw
+  email. One invite at a time, that enumerates the user base and maps it to
+  names. **Fixed in the backend** (`ConnectionService.list_for` now withholds
+  the id and name on an unaccepted *outgoing* row), since both apps read the
+  same rows; incoming invites and accepted connections resolve as before. The
+  web wording no longer branches either. 13 checks in
+  `zaffarology-backend/scripts/check_invite_privacy.py`.
+- **The suggestion list was unreachable by keyboard.** It handled `onMouseDown`
+  only, and blur closed the list before Tab could reach it — so tagging was
+  mouse-only. Now a proper combobox: arrow keys move, Enter picks, Escape
+  dismisses, with `role="option"` and `aria-activedescendant`. Nothing is
+  pre-selected, so a stray Enter cannot assign anyone.
+- **Two people assigned the same task collapsed to one badge.** The DB
+  constraint is (assigner, pillar, task, assignee), so several rows can share a
+  `source_task_id`; a plain map kept whichever the server returned last, which
+  made the status note flip between people and could unassign the wrong one.
+  Rows are now grouped and ordered by id, with "+N more assigned" surfacing the
+  rest instead of hiding them.
+
 **One deliberate divergence from mobile:** untagging now clears the tag only
 after the server confirms the unassign. Mobile clears it first, so a failed
 `unassignTask` leaves that board looking untagged while the task is still on the
 assignee's board — the two disagree until someone reloads. Worth porting back to
 mobile; the assign path already had the safe ordering on both.
 
-50 checks in `check-connections-web.ts`, including behavioural proof of the
+68 checks in `check-connections-web.ts`, including behavioural proof of the
 suggestion matcher and the attendee chip parsing.
 
 ## 2026-09-08 - Phase 2: Notes and Meeting notes

@@ -222,15 +222,16 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
         </Group>
       ) : null}
 
-      {/* Sent, still waiting */}
+      {/* Sent, still waiting.
+
+          One wording for every sent invite. Branching on `user_id` announced
+          whether that address has an account — the very thing the identical
+          invite reply exists to hide. The server now also withholds the id and
+          name on an unaccepted outgoing row, so this is belt and braces. */}
       {outgoing.length ? (
         <Group title="Invites sent">
           {outgoing.map((r) => (
-            <Row
-              key={r.id}
-              r={r}
-              sub={r.user_id ? "Waiting for them to accept" : "Invited, waiting for them to join"}
-            >
+            <Row key={r.id} r={r} sub="Invited, waiting for them to accept">
               <IconButton
                 label={`Withdraw invite to ${r.email}`}
                 onClick={() => cancelInvite(r)}

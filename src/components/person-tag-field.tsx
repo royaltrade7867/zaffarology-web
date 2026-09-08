@@ -21,6 +21,8 @@ import type { Partner } from "@/lib/use-connections";
 
 const MAX_SUGGESTIONS = 5;
 
+let listSeq = 0;
+
 export function PersonTagField({
   label,
   value,
@@ -51,7 +53,12 @@ export function PersonTagField({
   statusNote?: string | null;
 }) {
   const [focused, setFocused] = useState(false);
+  /** Which suggestion the keyboard is on. -1 = none, so typing does not
+   *  pre-select someone and turn a stray Enter into an assignment. */
+  const [active, setActive] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Stable per instance, so two fields on one page do not share option ids.
+  const listId = useRef(`ptf-list-${++listSeq}`).current;
   const tint = accent ?? "var(--gold)";
 
   const tagged = partners.find((p) => String(p.userId) === tagUserId) ?? null;
@@ -62,8 +69,14 @@ export function PersonTagField({
   const committed = multi ? value.split(",").slice(0, -1).map((n) => n.trim()).filter(Boolean) : [];
   const draft = multi ? value.split(",").pop() ?? "" : value;
 
+  /**
+   * The trailing separator after the last chip is ALWAYS kept: it is what marks
+   * that name as committed. Trimming it (the first version did) merged the last
+   * chip straight back into the draft on the next keystroke, so typing
+   * "Ana, Bo" ended up as the single name "Ana Bo".
+   */
   const setAll = (names: string[], tail: string) =>
-    onChangeText([...names, tail].join(", ").replace(/,\s*$/, tail ? "" : ", "));
+    onChangeText((names.length ? names.join(", ") + ", " : "") + tail);
 
   /**
    * Matches the START of any word in the name (or the email), not any position
@@ -117,13 +130,79 @@ export function PersonTagField({
     inputRef.current?.focus();
   };
 
-  /** Backspace at the start of an empty draft removes the last chip WHOLE,
-   *  rather than nibbling its final character. */
+  /** Typing a comma commits the name, the way Return would in a mail client.
+   *  Without this the comma is eaten by `setAll`'s trailing-separator trim and
+   *  "Ana, Bo" is stored as the single name "Ana Bo". */
+  const onDraft = (t: string) => {
+    setActive(-1);
+    if (!multi) {
+      onChangeText(t);
+      return;
+    }
+    if (t.includes(",")) {
+      const [done, ...rest] = t.split(",");
+      const name = done.trim();
+      setAll(name ? [...committed, name] : committed, rest.join(",").trim());
+      return;
+    }
+    // A draft never starts with whitespace: the separator after a chip already
+    // provides the gap, so a typed space would otherwise pile up in front.
+    setAll(committed, committed.length ? t.replace(/^\s+/, "") : t);
+  };
+
+  /** Untag whoever that chip stood for. Removing the text alone leaves the id
+   *  in `attendee_ids` with nothing on screen to show it — unremovable, since
+   *  re-adding and re-removing repeats the same no-op. */
+  const untagByName = (name: string) => {
+    const p = partners.find((x) => x.name.trim().toLowerCase() === name.trim().toLowerCase());
+    if (p) onTag(null, false, p.userId);
+  };
+
+  const removeAt = (i: number) => {
+    const gone = committed[i];
+    setAll(committed.filter((_, n) => n !== i), draft);
+    untagByName(gone);
+  };
+
+  /**
+   * Keyboard access to the suggestions, plus whole-chip backspace.
+   *
+   * The list has to be driven from the input rather than by tabbing into it:
+   * blur closes the list, so focus could never land on an option. Arrow keys
+   * move, Enter picks, Escape dismisses — the combobox pattern the ARIA roles
+   * on this field promise.
+   */
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (suggestions.length) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActive((i) => (i + 1) % suggestions.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActive((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+        return;
+      }
+      if (e.key === "Enter" && active >= 0) {
+        e.preventDefault();
+        pick(suggestions[active]);
+        setActive(-1);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setActive(-1);
+        setFocused(false);
+        return;
+      }
+    }
     if (!multi || e.key !== "Backspace" || draft.length) return;
     if (!committed.length) return;
     e.preventDefault();
+    const gone = committed[committed.length - 1];
     setAll(committed.slice(0, -1), "");
+    untagByName(gone);
   };
 
   return (
@@ -171,7 +250,7 @@ export function PersonTagField({
                     {n}
                     <button
                       type="button"
-                      onClick={() => setAll(committed.filter((_, k) => k !== i), draft)}
+                      onClick={() => removeAt(i)}
                       aria-label={`Remove ${n}`}
                       className="text-muted transition-colors hover:text-danger"
                     >
@@ -183,9 +262,7 @@ export function PersonTagField({
             <input
               ref={inputRef}
               value={draft}
-              onChange={(e) =>
-                multi ? setAll(committed, e.target.value) : onChangeText(e.target.value)
-              }
+              onChange={(e) => onDraft(e.target.value)}
               onKeyDown={onKeyDown}
               onFocus={() => setFocused(true)}
               // Delayed so a click on a suggestion lands before the list closes.
@@ -200,26 +277,39 @@ export function PersonTagField({
               role="combobox"
               aria-expanded={suggestions.length > 0}
               aria-autocomplete="list"
+              aria-controls={listId}
+              aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
               className="min-w-[8ch] flex-1 bg-transparent px-1 py-1 text-[15px] text-ink outline-none"
             />
           </div>
 
           {suggestions.length ? (
             <ul
+              id={listId}
               role="listbox"
               aria-label="Matching connections"
               className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-line bg-surface shadow-lg"
             >
-              {suggestions.map((p) => (
-                <li key={p.userId}>
+              {suggestions.map((p, i) => (
+                <li
+                  key={p.userId}
+                  id={`${listId}-${i}`}
+                  role="option"
+                  aria-selected={i === active}
+                >
                   <button
                     type="button"
+                    tabIndex={-1}
                     // mousedown, not click: blur would close the list first.
                     onMouseDown={(e) => {
                       e.preventDefault();
                       pick(p);
                     }}
-                    className="flex w-full items-baseline gap-2 px-3 py-2.5 text-left transition-colors hover:bg-line-soft"
+                    onMouseEnter={() => setActive(i)}
+                    className={cx(
+                      "flex w-full items-baseline gap-2 px-3 py-2.5 text-left transition-colors",
+                      i === active ? "bg-line-soft" : "hover:bg-line-soft",
+                    )}
                   >
                     <span className="text-[14.5px] font-semibold text-ink">{p.name}</span>
                     <span className="truncate text-[12px] text-muted">{p.email}</span>

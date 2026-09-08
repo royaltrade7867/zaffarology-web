@@ -14,7 +14,7 @@
  * the foreground (`AppState`), the browser equivalent is the tab becoming
  * visible again. There is no push channel either way.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/lib/auth-context";
 import { reportError } from "@/lib/error-reporting";
@@ -135,14 +135,27 @@ export function useIncomingAssignments(refreshKey?: number) {
   return { rows, loaded, refetch, markDone };
 }
 
-/** Status of tasks I assigned, keyed by the task id in my own blob. */
+/**
+ * Status of tasks I assigned, keyed by the task id in my own blob.
+ *
+ * The DB allows SEVERAL assignees per source task — its uniqueness constraint
+ * is (assigner, pillar, task, assignee) — while a board item carries one
+ * `assigneeUserId`. So `allByTaskId` keeps every row and `byTaskId` exposes a
+ * deterministic first (lowest id = earliest assignment) rather than whichever
+ * one the server happened to return last, which made the status note flip
+ * between people. `extraCount` lets a screen say when there are more.
+ */
 export function useOutgoingAssignments(pillarKey: string, refreshKey?: number) {
-  const [byTaskId, setByTaskId] = useState<Record<string, ApiOutgoingAssignment>>({});
+  const [allByTaskId, setAllByTaskId] = useState<Record<string, ApiOutgoingAssignment[]>>({});
 
   const refetch = useCallback(async () => {
     try {
       const rows = await loadOutgoingAssignments(pillarKey);
-      setByTaskId(Object.fromEntries(rows.map((r) => [r.source_task_id, r])));
+      const grouped: Record<string, ApiOutgoingAssignment[]> = {};
+      for (const r of rows) (grouped[r.source_task_id] ??= []).push(r);
+      // Stable order, so the badge does not change identity between refetches.
+      for (const k of Object.keys(grouped)) grouped[k].sort((a, b) => a.id - b.id);
+      setAllByTaskId(grouped);
     } catch {
       // A missing status badge is a cosmetic loss; the item still renders.
     }
@@ -154,5 +167,19 @@ export function useOutgoingAssignments(pillarKey: string, refreshKey?: number) {
 
   useOnVisible(refetch);
 
-  return { byTaskId, refetch };
+  const byTaskId = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(allByTaskId).map(([k, v]) => [k, v[0]]),
+      ) as Record<string, ApiOutgoingAssignment>,
+    [allByTaskId],
+  );
+
+  /** How many assignees BEYOND the one shown, per task. */
+  const extraCount = useCallback(
+    (taskId: string) => Math.max(0, (allByTaskId[taskId]?.length ?? 0) - 1),
+    [allByTaskId],
+  );
+
+  return { byTaskId, allByTaskId, extraCount, refetch };
 }

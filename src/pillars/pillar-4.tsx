@@ -248,9 +248,14 @@ export default function Pillar4() {
               onTag={onTag}
               statusNote={
                 sent
-                  ? sent.status === "completed"
-                    ? `✓ ${sent.assignee_name} marked this done`
-                    : `Sent to ${sent.assignee_name}, waiting`
+                  ? (sent.status === "completed"
+                      ? `✓ ${sent.assignee_name} marked this done`
+                      : `Sent to ${sent.assignee_name}, waiting`) +
+                    // Several people can hold the same source task; say so
+                    // rather than silently showing only the first.
+                    (outgoing.extraCount(item.id)
+                      ? ` · +${outgoing.extraCount(item.id)} more assigned`
+                      : "")
                   : null
               }
             />

@@ -116,6 +116,63 @@ ck("a trailing separator makes no blank chip", parse("Ana, ").committed.length =
 ck("a double comma yields no blank chip",
    parse("Ana,,Bo").committed.every((n) => n.length > 0));
 
+/* A comma COMMITS the name. Without an onDraft that handles it, setAll's
+   trailing-separator trim eats the comma and "Ana, Bo" is stored as the single
+   name "Ana Bo" with no chips at all. */
+ck("a comma commits the name", /if \(t\.includes\(","\)\)/.test(tagField));
+const setAll2 = (names: string[], tail: string) =>
+  (names.length ? names.join(", ") + ", " : "") + tail;
+const onDraft = (committed: string[], t: string) => {
+  if (t.includes(",")) {
+    const [done, ...rest] = t.split(",");
+    const name = done.trim();
+    return setAll2(name ? [...committed, name] : committed, rest.join(",").trim());
+  }
+  return setAll2(committed, committed.length ? t.replace(/^\s+/, "") : t);
+};
+/* Replay the real keystrokes. The trailing separator must SURVIVE the space
+   after the comma — trimming it merged the chip back into the draft. */
+for (const [seq, chips, tail] of [
+  ["Ana, Bo", 1, "Bo"],
+  ["Ana,Bo,Cy", 2, "Cy"],
+  ["Ana Lopez-Ruiz, Bo", 1, "Bo"],
+] as const) {
+  let typed = "";
+  for (const ch of seq) typed = onDraft(parse(typed).committed, parse(typed).draft + ch);
+  const got = parse(typed);
+  ck(`typing ${JSON.stringify(seq)} keeps the names apart`,
+     got.committed.length === chips && got.draft.trim() === tail,
+     JSON.stringify(typed));
+}
+ck("the separator is kept, not trimmed",
+   /names\.join\(", "\) \+ ", "/.test(tagField));
+
+/* Removing a chip must UNTAG, or the id stays in attendee_ids with nothing on
+   screen to show it — and re-adding then re-removing repeats the same no-op. */
+ck("removing a chip untags the person", /const removeAt = \(i: number\)[\s\S]*?untagByName\(gone\);/.test(tagField));
+ck("backspacing a chip untags too",
+   /setAll\(committed\.slice\(0, -1\), ""\);\s*\n\s*untagByName\(gone\);/.test(tagField));
+ck("untagByName resolves the partner by name", /partners\.find\(\(x\) => x\.name\.trim\(\)\.toLowerCase\(\)/.test(tagField));
+
+/* The suggestion list must be operable without a mouse. */
+ck("arrow keys move through suggestions", /e\.key === "ArrowDown"/.test(tagField) && /e\.key === "ArrowUp"/.test(tagField));
+ck("Enter picks the highlighted one", /e\.key === "Enter" && active >= 0/.test(tagField));
+ck("Escape dismisses the list", /e\.key === "Escape"/.test(tagField));
+ck("nothing is pre-selected, so a stray Enter assigns nobody",
+   /useState\(-1\)/.test(tagField));
+ck("options carry role=option", /role="option"/.test(tagField));
+ck("the input points at the active option", /aria-activedescendant=/.test(tagField));
+ck("and at the list it controls", /aria-controls=\{listId\}/.test(tagField));
+
+/* ---------------- several assignees on one source task ------------------- */
+
+/* The DB constraint is (assigner, pillar, task, assignee), so one source task
+   can have several rows. Keying a plain map by task id silently kept whichever
+   the server returned last, flipping the badge between people. */
+ck("outgoing rows are grouped, not overwritten", /\(grouped\[r\.source_task_id\] \?\?= \[\]\)\.push\(r\)/.test(hook));
+ck("and ordered deterministically", /sort\(\(a, b\) => a\.id - b\.id\)/.test(hook));
+ck("extra assignees are surfaced, not hidden", /extraCount/.test(hook) && /more assigned/.test(p4));
+
 /* ------------------------- refresh without push -------------------------- */
 
 /* There is no push channel: an invite accepted elsewhere only shows up when the
