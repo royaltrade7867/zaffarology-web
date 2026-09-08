@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+/* Zaffarology web app — v3 "paper" palette, matched 1:1 to the mobile app
+   (src/constants/theme.ts). Light-only for now (a dark paper variant can be
+   added later, same as mobile). */
+:root {
+  --background: #f7f6f2; /* paper */
+  --surface: #ffffff; /* white cards */
+  --ink: #191a1e; /* body text */
+  --heading: #1b3a5c; /* brand navy — headings / titles / eagle */
+  --muted: #4e6a8c; /* cool-navy secondary text (no warm grey) */
+  --dim: #2f4c6b;
+  --line: #d3d9e2; /* hairline */
+  --line-soft: #e6e9ef;
+  --placeholder: #9fa9b8;
+  --field-empty: #f3faf6; /* very light green on an empty input */
+
+  --gold: #9a6a00;
+  --gold-hover: #b98700;
+  --gold-deep: #7a5400;
+  --on-gold: #ffffff;
+  --danger: #c8102e;
+
+  /* one accent per pillar */
+  --p1: #9a6a00; /* gold */
+  --p2: #c8102e; /* red */
+  --p3: #1f6b4a; /* green */
+  --p4: #1e4e8c; /* blue */
+  --p5: #6b2d5c; /* plum */
+  --p6: #0e5e6f; /* teal */
+  --p7: #6b4a1f; /* brown */
+  --p8: #1b3a5c; /* navy */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-heading: var(--heading);
+  --color-muted: var(--muted);
+  --color-dim: var(--dim);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-placeholder: var(--placeholder);
+  --color-field-empty: var(--field-empty);
+  --color-gold: var(--gold);
+  --color-gold-hover: var(--gold-hover);
+  --color-gold-deep: var(--gold-deep);
+  --color-on-gold: var(--on-gold);
+  --color-danger: var(--danger);
+  --color-p1: var(--p1);
+  --color-p2: var(--p2);
+  --color-p3: var(--p3);
+  --color-p4: var(--p4);
+  --color-p5: var(--p5);
+  --color-p6: var(--p6);
+  --color-p7: var(--p7);
+  --color-p8: var(--p8);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-archivo);
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Utility helpers used across pillar screens */
+.font-heading {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+}
+.placeholder\:italic::placeholder {
+  font-style: normal;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--placeholder);
+  text-decoration: none; /* never strike a placeholder */
+}
+* {
+  box-sizing: border-box;
+}

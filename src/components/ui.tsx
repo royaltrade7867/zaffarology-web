@@ -1,0 +1,166 @@
+"use client";
+
+import { FIELD_EMPTY } from "@/lib/pillars";
+import type { ReactNode, TextareaHTMLAttributes, InputHTMLAttributes } from "react";
+
+export function cx(...parts: (string | false | null | undefined)[]): string {
+  return parts.filter(Boolean).join(" ");
+}
+
+/** Capitalise the first letter (used for small labels/hints). */
+export function capFirst(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+/* ---------------- Buttons ---------------- */
+export function Button({
+  label,
+  onClick,
+  variant = "primary",
+  disabled,
+  loading,
+  type = "button",
+  className,
+}: {
+  label: string;
+  onClick?: () => void;
+  variant?: "primary" | "ghost" | "danger";
+  disabled?: boolean;
+  loading?: boolean;
+  type?: "button" | "submit";
+  className?: string;
+}) {
+  const off = disabled || loading;
+  const base =
+    "w-full min-h-[48px] rounded-xl px-5 font-semibold text-[15px] transition-colors flex items-center justify-center gap-2 disabled:opacity-60";
+  const styles =
+    variant === "primary"
+      ? "bg-gold text-on-gold hover:bg-gold-hover"
+      : variant === "danger"
+        ? "border border-danger text-danger hover:bg-danger/5"
+        : "border border-line text-heading hover:bg-line-soft";
+  return (
+    <button type={type} onClick={onClick} disabled={off} className={cx(base, styles, className)}>
+      {loading ? "…" : label}
+    </button>
+  );
+}
+
+/* ---------------- Text inputs (empty → light green) ---------------- */
+type FieldProps = {
+  label?: string;
+  value: string;
+  onChange: (v: string) => void;
+  error?: string;
+} & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">;
+
+export function TextField({ label, value, onChange, error, className, ...rest }: FieldProps) {
+  return (
+    <label className="block mb-3">
+      {label ? <span className="block text-[13px] text-muted mb-1">{label}</span> : null}
+      <input
+        {...rest}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoCorrect="off"
+        spellCheck={false}
+        style={{ backgroundColor: value.trim() ? "#ffffff" : FIELD_EMPTY }}
+        className={cx(
+          "w-full min-h-[48px] rounded-xl border px-3.5 py-3 text-[15px] text-ink outline-none",
+          "focus:border-gold",
+          error ? "border-danger" : "border-line",
+          className,
+        )}
+      />
+      {error ? <span className="block text-[12px] text-danger mt-1">{error}</span> : null}
+    </label>
+  );
+}
+
+/** Most hard line breaks (Enter) allowed in one field, so a user can't push the
+ *  box down the page with empty lines. Matches the mobile app. */
+export const MAX_INPUT_BREAKS = 5;
+
+type AreaProps = {
+  label?: string;
+  value: string;
+  onChange: (v: string) => void;
+  /** most hard line breaks (Enter) allowed; wrapping is never restricted */
+  maxBreaks?: number;
+} & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange">;
+
+export function TextArea({ label, value, onChange, className, maxBreaks = MAX_INPUT_BREAKS, ...rest }: AreaProps) {
+  const countBreaks = (t: string) => (t.match(/\n/g) ?? []).length;
+  return (
+    <label className="block mb-3">
+      {label ? <span className="block text-[13px] text-muted mb-1">{label}</span> : null}
+      <textarea
+        {...rest}
+        value={value}
+        onChange={(e) => {
+          const t = e.target.value;
+          // Reject an edit that adds a break beyond the cap (paste included), but
+          // never block deleting or an edit that keeps the count where it is.
+          if (countBreaks(t) > maxBreaks && countBreaks(t) > countBreaks(value)) return;
+          onChange(t);
+        }}
+        autoCorrect="off"
+        spellCheck={false}
+        style={{ backgroundColor: value.trim() ? "#ffffff" : FIELD_EMPTY }}
+        className={cx(
+          "w-full min-h-[96px] rounded-xl border border-line px-3.5 py-3 text-[15px] text-ink outline-none focus:border-gold resize-y",
+          className,
+        )}
+      />
+    </label>
+  );
+}
+
+/* ---------------- Section label + hint ---------------- */
+export function SectionLabel({ text, small, color }: { text: string; small?: string; color?: string }) {
+  return (
+    <div className="mb-2">
+      <h3 className="font-heading text-[15px] leading-tight" style={{ color: color ?? "var(--heading)" }}>
+        {text.toUpperCase()}
+      </h3>
+      {small ? <p className="text-[12px] text-muted mt-0.5">{capFirst(small)}</p> : null}
+    </div>
+  );
+}
+
+export function Hint({ children }: { children: ReactNode }) {
+  return <p className="text-[12px] text-muted">{typeof children === "string" ? capFirst(children) : children}</p>;
+}
+
+/* ---------------- Card + accent box ---------------- */
+export function MiwBox({ accent, children }: { accent: string; children: ReactNode }) {
+  return (
+    <div className="rounded-xl border bg-surface p-3.5 shadow-sm" style={{ borderColor: accent }}>
+      {children}
+    </div>
+  );
+}
+
+export function AddButton({ label, accent, onClick, disabled, dimmed }: { label: string; accent: string; onClick: () => void; disabled?: boolean; /** Greys the button out but keeps it clickable, so `onClick` can explain why it isn't available yet. */ dimmed?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-disabled={dimmed || undefined}
+      className={`mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border-[1.5px] px-4 py-3 text-[13.5px] font-semibold transition-colors disabled:opacity-45${dimmed ? " opacity-50" : ""}`}
+      style={{ borderColor: accent, color: accent, backgroundColor: `${accent}10` }}
+    >
+      <span className="text-lg leading-none">+</span>
+      {label.replace(/^\+\s*/, "")}
+    </button>
+  );
+}
+
+/* ---------------- Loading ---------------- */
+export function Loading({ full = true }: { full?: boolean }) {
+  return (
+    <div className={cx("flex items-center justify-center", full ? "min-h-[60vh]" : "py-12")}>
+      <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-line border-t-gold" />
+    </div>
+  );
+}
