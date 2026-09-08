@@ -1,6 +1,9 @@
 /** Pillar accents (hex) — matched 1:1 to mobile src/constants/theme.ts Accents. */
 export const Accents = {
-  gold: "#9A6A00",
+  /** Darkened from #9A6A00, which scored 4.38:1 as text on paper — the only
+   *  accent to miss 4.5:1. Must match --gold in globals.css and Colors.light.gold
+   *  in the mobile theme; the three had drifted. */
+  gold: "#8F6200",
   red: "#C8102E",
   green: "#1F6B4A",
   blue: "#1E4E8C",

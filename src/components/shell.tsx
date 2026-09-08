@@ -36,6 +36,7 @@ export function Eagle({ size = 40 }: { size?: number }) {
 const NAV = [
   { href: "/home", label: "Home" },
   { href: "/notes", label: "Notes" },
+  { href: "/reports", label: "Reports" },
   { href: "/team", label: "Team" },
   { href: "/about", label: "About" },
   { href: "/profile", label: "Profile" },

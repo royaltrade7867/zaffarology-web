@@ -2,6 +2,36 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-08 - Phase 4a: Reports, as a real PDF
+
+Pillar and progress reports, ported from mobile onto the same shared report
+tree — the stats, HTML and text renderers are the *same source*, so both apps
+agree on what a report says. Only `share.ts` had native imports, so everything
+else moved across untouched.
+
+- **A real PDF download** (pdfmake), chosen over rasterising the HTML: the text
+  is selectable and searchable, verified by extracting the ToUnicode CMaps from
+  a generated file rather than assuming it. ~1 MB, dynamically imported, so
+  nobody pays for it until they ask for a PDF.
+- **Copy as text** for a quick paste into an email or a message.
+- The report loader mirrors `usePillarState`'s semantics without a component,
+  including the offline `localStorage` fallback — the cache key is asserted to
+  match the hook's, or the fallback silently finds nothing.
+
+**A pdfmake bug worth recording.** pdfmake 0.3's `vfs_fonts` registers its own
+fonts; the first version of this code hand-wired them from a `mod.vfs` that
+does not exist in 0.3, overwriting the working font map with `{}`. `createPdf`
+then hung forever — no throw, no console output, no download. It was only found
+by generating a PDF in headless Chrome. The fixture now pins the correct wiring.
+
+**Fixed a colour drift found on the way.** `Accents.gold` in `lib/pillars.ts`
+was still `#9A6A00` — the value that fails contrast at 4.38:1 on paper — while
+`globals.css` had been corrected to `#8F6200`. So every report printed the wrong
+gold, and the TS and CSS layers disagreed. All three definitions (report
+palette, CSS, accent map) are now asserted equal.
+
+32 checks in `check-reports-web.ts`.
+
 ## 2026-09-08 - Phase 3: Connections and task assignment
 
 Invite people by email, accept, and tag them on a task so it lands on their
