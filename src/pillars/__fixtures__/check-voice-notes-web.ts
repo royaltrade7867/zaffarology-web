@@ -172,6 +172,12 @@ ck("the list refetches when the screen's filter changes",
 /* Filtering and CORRECTING a tag are different jobs: the filter cannot fix a
    recording made under the wrong one. */
 ck("a mis-tagged recording can still be moved", /retagVoiceNote/.test(rec));
+/* The chip shows what the recording IS, not where clicking sends it. Labelling
+   it with the destination made a personal recording display the word
+   "Business", which reads as a mis-filed row rather than an action. */
+ck("the tag chip shows the current tag", /\{n\.tag\}\s*<\/button>/.test(rec));
+ck("and its spoken label says both state and action",
+   /is \$\{n\.tag\}\. Move it to/.test(rec));
 ck("a recording can be moved between the two", /retagVoiceNote/.test(rec));
 ck("moving is optimistic and reverts on failure",
    /setNotes\(before\);[\s\S]{0,140}voice-note-retag/.test(rec));

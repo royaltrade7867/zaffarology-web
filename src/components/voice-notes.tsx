@@ -446,14 +446,20 @@ export function VoiceNotes({
                 </span>
               </button>
               {standalone ? (
+                /* The chip shows what this recording IS, and moves it on click.
+                   Labelling it with the DESTINATION read as the current tag —
+                   a personal recording displaying the word "Business" looked
+                   like a mis-filed row rather than an action. */
                 <button
                   type="button"
                   onClick={() => retag(n, n.tag === "personal" ? "business" : "personal")}
-                  aria-label={`Move ${n.title} to ${n.tag === "personal" ? "Business" : "Personal"}`}
+                  aria-label={`${n.title} is ${n.tag}. Move it to ${
+                    n.tag === "personal" ? "business" : "personal"
+                  }.`}
                   title={`Move to ${n.tag === "personal" ? "Business" : "Personal"}`}
-                  className="shrink-0 rounded-lg border border-line px-2 py-1 text-[11px] font-semibold text-muted transition-colors hover:border-gold hover:text-gold"
+                  className="shrink-0 rounded-full border border-line px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted transition-colors hover:border-gold hover:text-gold"
                 >
-                  {n.tag === "personal" ? "Business" : "Personal"}
+                  {n.tag}
                 </button>
               ) : null}
               <button
