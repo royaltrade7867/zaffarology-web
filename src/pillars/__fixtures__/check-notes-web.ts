@@ -93,12 +93,42 @@ ck("a pending save is flushed on unmount, not cancelled",
    /useEffect\(\(\) => \(\) => flushAll\(\), \[flushAll\]\)/.test(hook));
 ck("and flushed when the tab closes", /beforeunload/.test(hook));
 ck("flushAll runs the save rather than dropping it",
-   /clearTimeout\(timer\);\s*\n\s*\(unloading \? beacon : run\)\(\)/.test(hook));
+   /clearTimeout\(timer\);\s*\n\s*\/\/[^\n]*\n\s*send\(patch, unloading\)/.test(hook));
 ck("a refresh cannot overwrite a row with unsaved edits",
    /dirty\.current\.has\(`note-\$\{row\.id\}`\)/.test(hook) &&
    /dirty\.current\.has\(`meeting-\$\{row\.id\}`\)/.test(hook));
 ck("a failed save is surfaced, not swallowed",
    /Some changes could not be saved/.test(hook));
+
+/* THE data-loss bug found in browser testing. Each queued save used to REPLACE
+   the pending one for that row, and each carried only its own patch — so typing
+   a title and then the body inside the 500ms window sent `{body}` alone and the
+   title was silently lost. Local state kept showing it, so nothing looked wrong
+   until a real reload. Patches now accumulate. */
+ck("pending patches MERGE rather than replace",
+   /const merged: Partial<T> = \{ \.\.\.\(existing\?\.patch as Partial<T>\), \.\.\.patch \};/.test(hook));
+ck("the accumulated patch is what gets sent", /send\(merged, beacon\)/.test(hook));
+ck("and a flush sends the accumulated patch too", /send\(patch, unloading\)/.test(hook));
+
+/* Prove the behaviour, not just its shape. */
+type P = Record<string, string>;
+const timers = new Map<string, { patch: P }>();
+const queue = (key: string, patch: P) => {
+  const ex = timers.get(key);
+  timers.set(key, { patch: { ...ex?.patch, ...patch } });
+};
+queue("note-1", { title: "TEST" });
+queue("note-1", { body: "words" });
+const merged = timers.get("note-1")!.patch;
+ck("title survives a body edit in the same window", merged.title === "TEST");
+ck("body survives too", merged.body === "words");
+timers.clear();
+queue("m1", { date: "2026-09-10" });
+queue("m1", { time: "2:30pm" });
+queue("m1", { place: "Head office" });
+const m = timers.get("m1")!.patch;
+ck("a meeting keeps date, time AND place",
+   m.date === "2026-09-10" && m.time === "2:30pm" && m.place === "Head office");
 ck("a failed delete puts the row back",
    (hook.match(/prev\.slice\(0, at\), row, \.\.\.prev\.slice\(at\)/g) ?? []).length === 2);
 ck("a delete cancels the pending save first",
@@ -112,13 +142,13 @@ const apiSrc = readFileSync("src/lib/api.ts", "utf8");
 ck("the client can send a keepalive request", /keepalive,/.test(apiSrc));
 ck("and exposes it as patchBeacon", /patchBeacon: <T>/.test(apiSrc));
 ck("the unload flush uses the beacon form",
-   /\(unloading \? beacon : run\)\(\)/.test(hook));
+   /send\(patch, unloading\)/.test(hook) && /flushAll\(true\)/.test(hook));
 ck("both unload events are handled (Safari fires only pagehide)",
    /"beforeunload", onLeave/.test(hook) && /"pagehide", onLeave/.test(hook));
 ck("the note write can be sent as a beacon",
-   /updateNote\(id, patch, beacon\)/.test(hook));
+   /updateNote\(id, merged, beacon\)/.test(hook));
 ck("the meeting write can be sent as a beacon",
-   /updateMeeting\(id, patch, beacon\)/.test(hook));
+   /updateMeeting\(id, merged, beacon\)/.test(hook));
 
 /* ------------------ a delete can be taken back --------------------------- */
 

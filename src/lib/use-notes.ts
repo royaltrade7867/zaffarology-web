@@ -42,14 +42,22 @@ import {
 const SAVE_DEBOUNCE_MS = 500;
 
 /**
- * A queued save. `run` is the ordinary request; `beacon` is the same write sent
- * with `keepalive` so it survives the page being torn down. Both are stored
- * because the choice depends on HOW the flush was triggered, not on the edit.
+ * A queued save.
+ *
+ * `patch` ACCUMULATES every field changed inside the debounce window. It used
+ * to hold one write per row, replaced on each keystroke — so typing a title and
+ * then the body within 500ms sent only `{body}` and the title was silently
+ * lost. The local state still showed it, so the loss was invisible until a
+ * genuine reload.
+ *
+ * `send` is the request; `beacon` is the same write with `keepalive`, so it
+ * survives the page being torn down. Both are stored because the choice depends
+ * on HOW the flush was triggered, not on the edit.
  */
-type Pending = {
+type Pending<T> = {
   timer: ReturnType<typeof setTimeout>;
-  run: () => Promise<unknown>;
-  beacon: () => Promise<unknown>;
+  patch: Partial<T>;
+  send: (patch: Partial<T>, beacon: boolean) => Promise<unknown>;
 };
 
 export function useNotes() {
@@ -62,7 +70,8 @@ export function useNotes() {
   const [unsaved, setUnsaved] = useState(false);
 
   // One pending timer per row, so editing two rows never drops one's save.
-  const timers = useRef<Map<string, Pending>>(new Map());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const timers = useRef<Map<string, Pending<any>>>(new Map());
   /**
    * Keys with an edit the server has not confirmed — either still inside the
    * debounce or in flight. A refresh must not overwrite these rows, or a
@@ -88,9 +97,10 @@ export function useNotes() {
    * would look like it saved and quietly lose the edit.
    */
   const flushAll = useCallback((unloading = false) => {
-    timers.current.forEach(({ timer, run, beacon }) => {
+    timers.current.forEach(({ timer, patch, send }) => {
       clearTimeout(timer);
-      (unloading ? beacon : run)().catch(() => {});
+      // The ACCUMULATED patch, so a flush cannot drop a field either.
+      send(patch, unloading).catch(() => {});
     });
     timers.current.clear();
   }, []);
@@ -153,13 +163,27 @@ export function useNotes() {
   /** Debounced write, keyed so each row has its own pending save.
    *  `write(beacon)` returns the request; the beacon form is only used when the
    *  page is going away. */
+  /**
+   * Debounced write, keyed so each row has its own pending save.
+   *
+   * The patch is MERGED into whatever is already pending for that row. Replacing
+   * it — which this used to do — meant the last field edited inside the window
+   * was the only one sent, and every earlier one was lost with no error.
+   */
   const queueSave = useCallback(
-    (key: string, write: (beacon: boolean) => Promise<unknown>) => {
+    <T,>(
+      key: string,
+      patch: Partial<T>,
+      send: (patch: Partial<T>, beacon: boolean) => Promise<unknown>,
+    ) => {
       markDirty(key);
       const existing = timers.current.get(key);
       if (existing) clearTimeout(existing.timer);
-      const fire = (beacon: boolean) => () =>
-        write(beacon)
+
+      const merged: Partial<T> = { ...(existing?.patch as Partial<T>), ...patch };
+
+      const fire = (beacon: boolean) =>
+        send(merged, beacon)
           .then(() => markClean(key))
           .catch((err) => {
             // Surfaced, not swallowed: the screen says "Saved automatically",
@@ -167,12 +191,13 @@ export function useNotes() {
             setError("Some changes could not be saved. Check your connection.");
             reportError(err, { area: "notes-save", key });
           });
+
       timers.current.set(key, {
-        run: fire(false),
-        beacon: fire(true),
+        patch: merged,
+        send,
         timer: setTimeout(() => {
           timers.current.delete(key);
-          fire(false)();
+          fire(false);
         }, SAVE_DEBOUNCE_MS),
       });
     },
@@ -209,7 +234,9 @@ export function useNotes() {
     (id: number, patch: Partial<ApiNote>) => {
       // Optimistic: the row updates now, the request follows.
       setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch } : n)));
-      queueSave(`note-${id}`, (beacon) => updateNote(id, patch, beacon));
+      queueSave<ApiNote>(`note-${id}`, patch, (merged, beacon) =>
+        updateNote(id, merged, beacon),
+      );
     },
     [queueSave],
   );
@@ -262,7 +289,9 @@ export function useNotes() {
   const editMeeting = useCallback(
     (id: number, patch: Partial<ApiMeeting>) => {
       setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
-      queueSave(`meeting-${id}`, (beacon) => updateMeeting(id, patch, beacon));
+      queueSave<ApiMeeting>(`meeting-${id}`, patch, (merged, beacon) =>
+        updateMeeting(id, merged, beacon),
+      );
     },
     [queueSave],
   );

@@ -12,7 +12,7 @@
  * recorder's count. "Not known yet" counts as "has audio", which is the
  * direction that cannot destroy anything.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AuthGuard } from "@/components/shell";
 import { MeetingEditor } from "@/components/meeting-editor";
@@ -186,6 +186,34 @@ function NotesAndMeetings() {
     setOpenMeetingId(null);
     if (m && isMeetingBlank(m) && !hasVoice) removeMeeting(m.id).catch(() => {});
   };
+
+  /**
+   * The same discard, for every OTHER way of leaving.
+   *
+   * `closeNote` only runs from the back arrow. Clicking "Home" in the top nav
+   * unmounts this screen without it, which left a permanent "Untitled note"
+   * behind — the likeliest source of the stray blank notes already on this
+   * account.
+   *
+   * Refs, because the cleanup runs once on unmount and would otherwise close
+   * over the first render's empty lists and delete nothing.
+   */
+  const latest = useRef({ notes, meetings, openNoteId, openMeetingId, hasVoice });
+  latest.current = { notes, meetings, openNoteId, openMeetingId, hasVoice };
+
+  useEffect(
+    () => () => {
+      const { notes: ns, meetings: ms, openNoteId: nId, openMeetingId: mId, hasVoice: hv } =
+        latest.current;
+      if (hv) return; // a recording makes it non-empty
+      const note = ns.find((n) => n.id === nId);
+      if (note && isNoteBlank(note)) removeNote(note.id).catch(() => {});
+      const meeting = ms.find((m) => m.id === mId);
+      if (meeting && isMeetingBlank(meeting)) removeMeeting(meeting.id).catch(() => {});
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const confirmDelete = (what: "note" | "meeting", id: number) => {
     if (!window.confirm(`Delete this ${what}?`)) return;

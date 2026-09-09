@@ -187,6 +187,30 @@ export const DEFAULT_DEPARTMENTS = [
   'Record Keeping',
 ] as const;
 
+/**
+ * The colour a department is drawn in.
+ *
+ * The five standard departments are the SAME in every business, so they get a
+ * fixed colour rather than one derived from their position — plum, the app's
+ * pink. Colouring by index meant "Loyalty" was teal in one business and brown
+ * in another, which made the row read as a different department.
+ *
+ * A department the user added themselves has no fixed identity, so it still
+ * cycles through the remaining accents by position.
+ *
+ * Returns an accent KEY, not a hex, so each app resolves it in its own theme —
+ * the light plum is 1.6:1 on the dark page and must not be reused there.
+ */
+export type DeptAccent = 'plum' | 'gold' | 'teal' | 'green' | 'brown' | 'red' | 'blue';
+
+const CUSTOM_DEPT_ACCENTS: DeptAccent[] = ['gold', 'teal', 'green', 'brown', 'red', 'blue'];
+
+export function deptAccent(name: string, index: number): DeptAccent {
+  const n = name.trim().toLowerCase();
+  if (DEFAULT_DEPARTMENTS.some((d) => d.trim().toLowerCase() === n)) return 'plum';
+  return CUSTOM_DEPT_ACCENTS[index % CUSTOM_DEPT_ACCENTS.length];
+}
+
 export const blankDepartment = (name: string, n: number): Department => ({
   id: withId(undefined),
   name,

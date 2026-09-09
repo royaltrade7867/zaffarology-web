@@ -128,6 +128,25 @@ for (const f of componentFiles) {
 }
 ck("no field paints theme ink on itself", offenders.length === 0, offenders.slice(0, 3).join(" | "));
 
+/* The OTHER half of the same bug, and the one the class-name check above cannot
+   see: an element whose TEXT is `on-card` must never be `transparent` when
+   filled. `on-card` is near-black because a field is white paper in both
+   themes; transparent lets it paint on the navy card at 1.30:1 instead.
+   This shipped in the Pillar 5 system editor — sections 1-5 were unreadable in
+   dark mode while the textarea one line below was correct. */
+const transparentInk: string[] = [];
+for (const f of componentFiles) {
+  const src = readFileSync(f, "utf8");
+  for (const m of src.matchAll(/trim\(\)\s*\?\s*"transparent"/g)) {
+    // Look at the surrounding element for the ink it pairs with.
+    const around = src.slice(Math.max(0, m.index! - 400), m.index! + 400);
+    if (/text-on-card/.test(around)) transparentInk.push(`${f}: ${around.slice(380, 460).trim()}`);
+  }
+}
+ck("no filled field goes transparent while its ink is on-card",
+   transparentInk.length === 0,
+   transparentInk[0] ?? "");
+
 /* Auth must stay neutral: a green sign-in form reads as an error state on the
    first screen anyone sees. */
 const ui = readFileSync("src/components/ui.tsx", "utf8");

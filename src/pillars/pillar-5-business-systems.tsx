@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Close } from "@/components/icons";
+import { ChevronRight, Close } from "@/components/icons";
 
 import { pillarByNumber, Accents, HEADING, FIELD_EMPTY } from "@/lib/pillars";
 import { newId } from "@/lib/dates";
@@ -25,6 +25,7 @@ import {
   DEFAULT_DEPARTMENTS,
   blankDepartment,
   blankSystem,
+  deptAccent,
   deptKind,
   makeInitial,
   normalize as normalizeP8,
@@ -39,6 +40,13 @@ import {
 } from "@/pillars/schemas/business-systems";
 
 const pillar = pillarByNumber(5)!;
+/** Accent key from the shared schema -> this app's CSS variable, so a
+ *  department's colour follows the theme instead of being a fixed hex. */
+const ACCENT_VAR: Record<string, string> = {
+  gold: "p1", red: "p2", green: "p3", blue: "p4",
+  plum: "p5", teal: "p6", brown: "p7", navy: "p8",
+};
+
 const NAVY = Accents.navy;
 
 type NavState = { level: "biz" | "dept" | "sys" | "detail"; bizId?: string; deptId?: string; sysId?: string };
@@ -106,9 +114,11 @@ export default function Pillar8() {
           label="Departments"
           small={`inside ${biz.name}`}
           empty="No departments yet, add one below."
-          rows={biz.departments.map((d) => ({
+          rows={biz.departments.map((d, di) => ({
             key: d.id,
             name: d.name,
+            badge: d.num,
+            tint: `var(--${ACCENT_VAR[deptAccent(d.name, di)]})`,
             sub: `${d.systems.length} ${d.systems.length === 1 ? "system" : "systems"}`,
             onOpen: () => setView({ level: "sys", bizId: biz.id, deptId: d.id }),
             onDel: () =>
@@ -138,6 +148,7 @@ export default function Pillar8() {
             key: s.id,
             name: s.name,
             badge: s.num,
+            tint: `var(--${ACCENT_VAR[deptAccent(dept.name, 0)]})`,
             onOpen: () => setView({ level: "detail", bizId: biz.id, deptId: dept.id, sysId: s.id }),
             onDel: () =>
               confirmDel(`Delete system ${s.num} "${s.name}"?`, () =>
@@ -170,7 +181,18 @@ export default function Pillar8() {
 
 /* ---------- list levels ---------- */
 
-interface RowSpec { key: string; name: string; sub?: string; badge?: string; onOpen: () => void; onDel: () => void }
+interface RowSpec {
+  key: string;
+  name: string;
+  sub?: string;
+  /** D1, S1 — the row's identity, as on the phone. */
+  badge?: string;
+  /** The row's own accent. The five standard departments share one (plum), so
+   *  they read as a family in every business; custom ones cycle. */
+  tint?: string;
+  onOpen: () => void;
+  onDel: () => void;
+}
 function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label: string; small: string; empty: string; rows: RowSpec[]; addPlaceholder: string; onAdd: (name: string) => void }) {
   const [val, setVal] = useState("");
   const submit = () => { if (val.trim()) { onAdd(val.trim()); setVal(""); } };
@@ -185,13 +207,18 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
         <div
           key={r.key}
           onClick={r.onOpen}
-          className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3 py-3 mb-2.5 cursor-pointer shadow-sm transition-colors hover:bg-[#F6F7F9]"
+          className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3 py-3 mb-2.5 cursor-pointer shadow-sm transition-colors hover:bg-line-soft"
         >
-          {r.badge ? (
-            <div className="flex h-11 min-w-[44px] items-center justify-center rounded-xl px-2 text-on-accent font-heading text-[11px] tracking-wide" style={{ backgroundColor: NAVY }}>{r.badge}</div>
-          ) : (
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl font-heading text-[16px]" style={{ backgroundColor: "rgba(27,58,92,0.08)", color: NAVY }}>{(r.name.trim()[0] ?? "•").toUpperCase()}</div>
-          )}
+          {/* The number IS the identity — D1, S1 — exactly as on the phone. A
+              letter avatar cannot tell three departments starting with "A"
+              apart. Outlined in the row's own accent, so the five standard
+              departments read as one family in every business. */}
+          <div
+            className="flex h-11 min-w-[44px] shrink-0 items-center justify-center rounded-xl border-[1.5px] px-2 font-heading text-[12px] tracking-wide"
+            style={{ borderColor: r.tint ?? NAVY, color: r.tint ?? NAVY }}
+          >
+            {r.badge ?? (r.name.trim()[0] ?? "•").toUpperCase()}
+          </div>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-[15.5px] text-ink truncate">{r.name}</p>
             {r.sub ? <p className="text-[12.5px] mt-0.5" style={{ color: "var(--muted)" }}>{r.sub}</p> : null}
@@ -202,7 +229,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
             className="flex h-8 w-8 items-center justify-center rounded-full text-[13px]"
             style={{ backgroundColor: "rgba(14,28,48,0.05)", color: "var(--placeholder)" }}
           ><Close size={13} /></button>
-          <span className="flex h-8 w-8 items-center justify-center rounded-full text-[16px] leading-none" style={{ backgroundColor: "rgba(27,58,92,0.07)", color: NAVY }}>›</span>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted"><ChevronRight size={16} /></span>
         </div>
       ))}
       <div className="flex gap-2 mt-2">
@@ -455,7 +482,12 @@ const TextField = ({ value, onChange, placeholder }: { value: string; onChange: 
     onChange={(e) => onChange(e.target.value)}
     placeholder={placeholder}
     maxLength={120}
-    style={{ backgroundColor: value.trim() ? "transparent" : FIELD_EMPTY }}
+    /* `var(--field)`, never `transparent`. The ink here is `on-card` (near
+       black) because a field is white paper in both themes — so a transparent
+       fill paints that ink on the navy CARD at 1.30:1, which is invisible. The
+       `Area` below already did this correctly; this input was missed, and it is
+       what makes sections 1-5 of the system editor unreadable in dark mode. */
+    style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY }}
     className="w-full min-h-[48px] rounded-xl border-[1.5px] border-line px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
   />
 );
