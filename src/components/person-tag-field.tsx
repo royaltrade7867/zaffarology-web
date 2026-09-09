@@ -18,6 +18,7 @@ import { useMemo, useRef, useState } from "react";
 import { Close } from "@/components/icons";
 import { cx } from "@/components/ui";
 import type { Partner } from "@/lib/use-connections";
+import { useDialog } from "@/components/dialog";
 
 const MAX_SUGGESTIONS = 5;
 
@@ -52,6 +53,7 @@ export function PersonTagField({
   /** "Sent to X, waiting" / "X marked this done" — shown under the field. */
   statusNote?: string | null;
 }) {
+  const dialog = useDialog();
   const [focused, setFocused] = useState(false);
   /** Which suggestion the keyboard is on. -1 = none, so typing does not
    *  pre-select someone and turn a stray Enter into an assignment. */
@@ -108,8 +110,8 @@ export function PersonTagField({
   }, [partners, draft, focused, hasTag, multi, value]);
 
   /** Ask before anything leaves, then tag. */
-  const pick = (p: Partner) => {
-    const notify = window.confirm(
+  const pick = async (p: Partner) => {
+    const notify = await dialog.confirm(
       `Email ${p.name}?\n\n` +
         `${p.name} will be tagged on this either way — it appears on their board. ` +
         `OK also emails them about it; Cancel just tags them.`,

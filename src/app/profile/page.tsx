@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { AuthGuard } from "@/components/shell";
 import { Button, cx } from "@/components/ui";
 import { useTheme, type ThemeChoice } from "@/lib/theme";
+import { useDialog } from "@/components/dialog";
 
 const ROLE_LABELS: Record<string, string> = {
   individual: "Individual",
@@ -16,11 +17,12 @@ const ROLE_LABELS: Record<string, string> = {
 
 function ProfileInner() {
   const { user, company, signOut, deleteAccount } = useAuth();
+  const dialog = useDialog();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   const confirmDelete = async () => {
-    if (!window.confirm("This permanently deletes your account and all your pillar data. This cannot be undone.")) return;
+    if (!await dialog.confirm("This permanently deletes your account and all your pillar data. This cannot be undone.")) return;
     setBusy(true);
     try {
       await deleteAccount();

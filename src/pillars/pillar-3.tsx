@@ -8,6 +8,7 @@ import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, MiwBox, SectionLabel, AddButton } from "@/components/ui";
 import { TaskRow, Footer, FiledBox, PassNote, DayReport, DayGroup, DayTask, DayField, type TaskAction } from "@/components/task";
+import { useDialog } from "@/components/dialog";
 /**
  * Types come from the SHARED schema, not local copies.
  *
@@ -74,6 +75,7 @@ const TAG: Record<Section, { label: string; color: string; bg: string }> = {
 };
 
 export default function Pillar3() {
+  const dialog = useDialog();
   const { state, update, loaded } = usePillarState<P3State>(pillar.key, makeInitial, normalize);
 
   useEffect(() => {
@@ -92,13 +94,13 @@ export default function Pillar3() {
   const achievedN = planned.filter((t) => t.done).length;
 
   const fileTask = (text: string, section: Section, clear: () => void) => {
-    if (!text.trim()) return alert("This task is empty, nothing to file.");
+    if (!text.trim()) return void dialog.alert("This task is empty, nothing to file.");
     update((s) => { s.filed = [{ text, section, date: mdDate() }, ...s.filed]; });
     clear();
   };
 
-  const newDay = () => {
-    if (!window.confirm("Start a new day? Today is saved to Previous Days first, then everything clears for a fresh day.")) return;
+  const newDay = async () => {
+    if (!await dialog.confirm("Start a new day? Today is saved to Previous Days first, then everything clears for a fresh day.")) return;
     update((s) => { rollover(s, s.day || todayKey()); });
   };
 
@@ -252,7 +254,7 @@ export default function Pillar3() {
         empty="Nothing filed yet."
         clearLabel="Clear all filed"
         hasItems={state.filed.length > 0}
-        onClear={() => { if (window.confirm("Delete everything in the filed archive?")) update((s) => { s.filed = []; }); }}
+        onClear={async () => { if (await dialog.confirm("Delete everything in the filed archive?")) update((s) => { s.filed = []; }); }}
       >
         {state.filed.map((f, i) => (
           <div key={i} className="flex items-center gap-2.5 py-2 border-b border-line">

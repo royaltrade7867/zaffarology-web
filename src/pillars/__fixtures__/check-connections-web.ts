@@ -59,7 +59,7 @@ ck("connections-api documents the rule", /must NOT try to infer/.test(api));
 
 /* --------------------- confirm before anything sends --------------------- */
 
-ck("picking a person confirms first", /window\.confirm\(/.test(tagField));
+ck("picking a person confirms first", /dialog\.confirm\(/.test(tagField));
 ck("the confirm says BOTH answers assign",
    /tagged on this either way/.test(tagField));
 ck("the choice is passed through as notify", /onTag\(p, notify\)/.test(tagField));
@@ -188,7 +188,7 @@ ck("a failed refetch keeps the last known list",
 
 ck("a row cannot be double-clicked into two calls", /busy\.includes\(/.test(panel));
 ck("destructive actions confirm first",
-   (panel.match(/window\.confirm\(/g) ?? []).length >= 3);
+   (panel.match(/dialog\.confirm\(/g) ?? []).length >= 3);
 ck("marking done is optimistic and reverts on failure",
    /done \? "open" : "completed"/.test(hook));
 

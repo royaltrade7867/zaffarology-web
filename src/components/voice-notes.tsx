@@ -22,6 +22,7 @@ import { Check, Close, Mic, Pause, Play, Trash } from "@/components/icons";
 import { cx } from "@/components/ui";
 import { apiErrorMessage } from "@/lib/api";
 import { reportError } from "@/lib/error-reporting";
+import { useDialog } from "@/components/dialog";
 import {
   MAX_RECORDING_MS,
   deleteVoiceNote,
@@ -89,6 +90,7 @@ export function VoiceNotes({
    */
   filter?: VoiceTag | null;
 }) {
+  const dialog = useDialog();
   const [notes, setNotes] = useState<ApiVoiceNote[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -279,7 +281,7 @@ export function VoiceNotes({
   };
 
   const rename = async (note: ApiVoiceNote) => {
-    const next = window.prompt("Rename this recording", note.title);
+    const next = await dialog.prompt("Rename this recording", { defaultValue: note.title });
     if (next == null) return;
     const trimmed = next.trim();
     if (!trimmed || trimmed === note.title) return;
@@ -311,7 +313,7 @@ export function VoiceNotes({
   };
 
   const remove = async (note: ApiVoiceNote) => {
-    if (!window.confirm(`Delete "${note.title}"?`)) return;
+    if (!await dialog.confirm(`Delete "${note.title}"?`)) return;
     const before = notes;
     setNotes((prev) => prev.filter((n) => n.id !== note.id));
     try {

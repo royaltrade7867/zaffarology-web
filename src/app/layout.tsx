@@ -3,6 +3,7 @@ import { Archivo_Black, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider, ThemeScript } from "@/lib/theme";
+import { DialogProvider } from "@/components/dialog";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -39,7 +40,9 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <DialogProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </DialogProvider>
         </ThemeProvider>
       </body>
     </html>

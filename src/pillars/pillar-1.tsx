@@ -8,6 +8,7 @@ import { usePillarState } from "@/lib/use-pillar-state";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, MiwBox, SectionLabel, AddButton, TextArea } from "@/components/ui";
+import { useDialog } from "@/components/dialog";
 import {
   TaskRow,
   Footer,
@@ -99,6 +100,7 @@ function rollover(s: P1State, closingDate: string) {
 }
 
 export default function Pillar1() {
+  const dialog = useDialog();
   const { state, update, loaded } = usePillarState<P1State>(pillar.key, makeInitial, normalize);
   const [cur, setCur] = useState(0);
 
@@ -130,7 +132,7 @@ export default function Pillar1() {
     });
 
   const fileTask = (text: string, section: Section, clear: () => void) => {
-    if (!text.trim()) return alert("This task is empty, nothing to file.");
+    if (!text.trim()) return void dialog.alert("This task is empty, nothing to file.");
     update((s) => { s.filed = [{ text, section, date: shortDate() }, ...s.filed]; });
     clear();
   };
@@ -144,7 +146,7 @@ export default function Pillar1() {
   const addGoal = () => {
     if (!lastFilled) {
       const n = goals.length;
-      alert(
+      void dialog.alert(
         `Fill in ${!lastGoal?.goal.trim() ? `Exact Goal (Project) ${n}` : `Exact Plan ${n}`} before adding another goal.`,
       );
       setCur(goals.length - 1); // take the user to the goal that needs finishing
@@ -156,8 +158,8 @@ export default function Pillar1() {
     setCur((c) => c + 1);
   };
 
-  const removeGoal = () => {
-    if (!window.confirm(`Delete Exact Goal (Project) ${gi + 1}, its plan, target date and all of its tasks?`)) return;
+  const removeGoal = async () => {
+    if (!await dialog.confirm(`Delete Exact Goal (Project) ${gi + 1}, its plan, target date and all of its tasks?`)) return;
     update((s) => {
       s.goals.splice(gi, 1);
       if (!s.goals.length) s.goals.push(emptyGoal());
@@ -165,8 +167,8 @@ export default function Pillar1() {
     setCur((c) => Math.max(0, c - 1));
   };
 
-  const newDay = () => {
-    if (!window.confirm("Start a new day? Today is saved to Previous Days first, then the daily tasks clear for a fresh day. Your goals, plans and target dates are kept, along with un-chased delegated items and your filed archive.")) return;
+  const newDay = async () => {
+    if (!await dialog.confirm("Start a new day? Today is saved to Previous Days first, then the daily tasks clear for a fresh day. Your goals, plans and target dates are kept, along with un-chased delegated items and your filed archive.")) return;
     update((s) => { rollover(s, s.day || todayKey()); });
   };
 
@@ -191,7 +193,7 @@ export default function Pillar1() {
   const lastExtraFilled = !g.extra.length || !!g.extra[g.extra.length - 1].text.trim();
   const addExtra = () => {
     if (!lastExtraFilled) {
-      alert("Fill in the previous extra-mile task before adding another.");
+      void dialog.alert("Fill in the previous extra-mile task before adding another.");
       return;
     }
     setG((x) => { x.extra.push(blankTask()); });
@@ -212,10 +214,10 @@ export default function Pillar1() {
           disabled={gi === 0}
           onClick={() => setCur((c) => Math.max(0, c - 1))}
           aria-label="Previous goal"
-          className="rounded-[10px] border-[1.5px] px-3.5 py-2.5 min-h-[40px] text-[13px] font-semibold"
+          className="flex h-10 w-10 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
           style={navBtn(gi === 0)}
         >
-          <ChevronLeft size={15} /> Prev
+          <ChevronLeft size={18} />
         </button>
         <span className="font-heading text-[12px] tracking-wide uppercase" style={{ color: INK }}>
           {`Goal ${gi + 1} of ${goals.length}`}
@@ -225,10 +227,10 @@ export default function Pillar1() {
           disabled={gi >= goals.length - 1}
           onClick={() => setCur((c) => Math.min(goals.length - 1, c + 1))}
           aria-label="Next goal"
-          className="rounded-[10px] border-[1.5px] px-3.5 py-2.5 min-h-[40px] text-[13px] font-semibold"
+          className="flex h-10 w-10 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
           style={navBtn(gi >= goals.length - 1)}
         >
-          Next <ChevronRight size={15} />
+          <ChevronRight size={18} />
         </button>
       </div>
 
@@ -348,7 +350,7 @@ export default function Pillar1() {
         )}
       />
 
-      <FiledBox title="Filed Tasks" empty="Nothing filed yet." clearLabel="Clear all filed" hasItems={state.filed.length > 0} onClear={() => { if (window.confirm("Delete everything in the filed archive?")) update((s) => { s.filed = []; }); }}>
+      <FiledBox title="Filed Tasks" empty="Nothing filed yet." clearLabel="Clear all filed" hasItems={state.filed.length > 0} onClear={async () => { if (await dialog.confirm("Delete everything in the filed archive?")) update((s) => { s.filed = []; }); }}>
         {state.filed.map((f, i) => (
           <div key={i} className="flex items-center gap-2.5 py-2 border-b border-line">
             <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide" style={{ backgroundColor: TAG[f.section].bg, color: TAG[f.section].color }}>{TAG[f.section].label.toUpperCase()}</span>

@@ -5,6 +5,7 @@ import { Check, Close } from "@/components/icons";
 import { Accents, FIELD_EMPTY, HEADING } from "@/lib/pillars";
 import { friendlyISO } from "@/lib/dates";
 import { cx } from "@/components/ui";
+import { useDialog } from "@/components/dialog";
 
 /* ---------------- Checkbox (gold ring, navy fill when checked) ---------------- */
 export function Checkbox({
@@ -72,6 +73,7 @@ export function TaskRow({
   onChangeWho?: (v: string) => void;
   noStrike?: boolean;
 }) {
+  const dialog = useDialog();
   const filled = value.trim().length > 0;
   const struck = done && filled && !noStrike;
   return (
@@ -94,7 +96,7 @@ export function TaskRow({
           disabled={locked}
           autoCorrect="off"
           spellCheck={false}
-          onClick={() => locked && alert("Fill the previous field first.")}
+          onClick={() => locked && void dialog.alert("Fill the previous field first.")}
           className={cx(
             "w-full bg-transparent py-2 text-[15px] outline-none placeholder:text-placeholder",
             done && filled ? "text-muted" : "text-ink",

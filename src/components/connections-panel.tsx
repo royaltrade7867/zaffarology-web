@@ -17,6 +17,7 @@ import { Check, Close, Mail, People, Plus } from "@/components/icons";
 import { cx } from "@/components/ui";
 import { apiErrorMessage } from "@/lib/api";
 import { reportError } from "@/lib/error-reporting";
+import { useDialog } from "@/components/dialog";
 import {
   acceptConnection,
   inviteConnection,
@@ -31,6 +32,7 @@ const nameOf = (r: ApiConnection) => r.full_name?.trim() || r.email;
 const initial = (r: ApiConnection) => nameOf(r).charAt(0).toUpperCase() || "?";
 
 export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
+  const dialog = useDialog();
   const [rows, setRows] = useState<ApiConnection[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,14 +104,14 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
   const accept = (r: ApiConnection) =>
     withBusy(r.id, () => acceptConnection(r.id), "Could not accept that invite.");
 
-  const decline = (r: ApiConnection) => {
-    if (!window.confirm(`Decline the invite from ${nameOf(r)}?`)) return;
+  const decline = async (r: ApiConnection) => {
+    if (!await dialog.confirm(`Decline the invite from ${nameOf(r)}?`)) return;
     withBusy(r.id, () => removeConnection(r.id), "Could not decline that invite.");
   };
 
-  const disconnect = (r: ApiConnection) => {
+  const disconnect = async (r: ApiConnection) => {
     if (
-      !window.confirm(
+      !await dialog.confirm(
         `Disconnect from ${nameOf(r)}? You'll no longer be able to tag each other on tasks.`,
       )
     )
@@ -117,8 +119,8 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
     withBusy(r.id, () => removeConnection(r.id), "Could not disconnect.");
   };
 
-  const cancelInvite = (r: ApiConnection) => {
-    if (!window.confirm(`Withdraw the invite to ${r.email}?`)) return;
+  const cancelInvite = async (r: ApiConnection) => {
+    if (!await dialog.confirm(`Withdraw the invite to ${r.email}?`)) return;
     withBusy(r.id, () => removeConnection(r.id), "Could not withdraw that invite.");
   };
 

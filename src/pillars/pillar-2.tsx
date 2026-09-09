@@ -6,6 +6,7 @@ import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, MiwBox, SectionLabel, AddButton, Hint } from "@/components/ui";
 import { TaskRow, Footer, FiledBox, type TaskAction } from "@/components/task";
+import { useDialog } from "@/components/dialog";
 /**
  * Types come from the SHARED schema, not local copies.
  *
@@ -32,19 +33,27 @@ const pillar = pillarByNumber(2)!;
 const GREEN = Accents.green;
 
 export default function Pillar2() {
+  const dialog = useDialog();
   const { state, update, loaded } = usePillarState<P2State>(pillar.key, makeInitial, normalize);
   if (!loaded) return <Loading />;
 
   const sols = state.sols.length ? state.sols : [{ text: "", done: false }];
   const winner = sols.find((s) => s.done && s.text.trim());
   const nonEmpty = sols.filter((s) => s.text.trim()).length;
+  // Only from a filled last row, so the list cannot grow blank rows.
+  const lastSolFilled = !sols.length || !!sols[sols.length - 1].text.trim();
+  const addSol = () => {
+    if (!lastSolFilled) return;
+    update((s) => { s.sols.push({ text: "", done: false }); });
+  };
+
   const progress = winner
     ? "Winning solution found ✓"
     : `${nonEmpty} ${nonEmpty === 1 ? "solution" : "solutions"} on the table`;
 
   const fileEntry = (solution: string): boolean => {
     if (!state.problem.trim()) {
-      alert("Write the exact problem first.");
+      void dialog.alert("Write the exact problem first.");
       return false;
     }
     update((s) => {
@@ -64,9 +73,9 @@ export default function Pillar2() {
     });
   };
 
-  const solvedReset = () => {
+  const solvedReset = async () => {
     const win = sols.find((s) => s.done && s.text.trim());
-    if (!window.confirm("File this problem as solved and start a fresh one?")) return;
+    if (!await dialog.confirm("File this problem as solved and start a fresh one?")) return;
     fileSolved(win?.text ?? "");
   };
 
@@ -84,8 +93,8 @@ export default function Pillar2() {
     {
       label: "Solved",
       kind: "file",
-      onClick: () => {
-        if (!window.confirm("File this problem as SOLVED with this solution and start a fresh one?")) return;
+      onClick: async () => {
+        if (!await dialog.confirm("File this problem as SOLVED with this solution and start a fresh one?")) return;
         fileSolved(state.sols[i].text);
       },
     },
@@ -143,10 +152,13 @@ export default function Pillar2() {
             noStrike
           />
         ))}
+        {/* Gated like every other repeating list: a new row only once the last
+            one says something, or the list grows blank rows nobody meant. */}
         <AddButton
           label="+ Add possible solution"
           accent={GREEN}
-          onClick={() => update((s) => { s.sols.push({ text: "", done: false }); })}
+          dimmed={!lastSolFilled}
+          onClick={addSol}
         />
         <div className="mt-2">
           <Hint>Tick ✓ the solution that works, then choose: Delete, File, or Solved.</Hint>
@@ -160,8 +172,8 @@ export default function Pillar2() {
         empty="No solved problems yet."
         clearLabel="Clear all solved"
         hasItems={state.filed.length > 0}
-        onClear={() => {
-          if (window.confirm("Delete all solved problems?")) update((s) => { s.filed = []; });
+        onClear={async () => {
+          if (await dialog.confirm("Delete all solved problems?")) update((s) => { s.filed = []; });
         }}
       >
         {state.filed.map((f, i) => (

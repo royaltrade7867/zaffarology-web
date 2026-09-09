@@ -13,6 +13,7 @@ import { assignTask, unassignTask } from "@/lib/connections-api";
 import { apiErrorMessage } from "@/lib/api";
 import { usePartners, useIncomingAssignments, useOutgoingAssignments, type Partner } from "@/lib/use-connections";
 import { Loading, SectionLabel, AddButton } from "@/components/ui";
+import { useDialog } from "@/components/dialog";
 /**
  * Types come from the SHARED schema, not local copies.
  *
@@ -78,6 +79,7 @@ function FLabel({ children }: { children: React.ReactNode }) {
 }
 
 export default function Pillar4() {
+  const dialog = useDialog();
   const { state, update, loaded } = usePillarState<P4State>(pillar.key, makeInitial, normalize);
   const [cur, setCur] = useState(0);
   // Assignments live on server rows, never in the blob — see use-connections.ts.
@@ -128,7 +130,7 @@ export default function Pillar4() {
           setItem({ assigneeUserId: "" });
           setAssignTick((t) => t + 1);
         } catch (err) {
-          alert(apiErrorMessage(err, "Couldn't unassign. Please try again."));
+          void dialog.alert(apiErrorMessage(err, "Couldn't unassign. Please try again."));
         } finally {
           setAssigning(false);
         }
@@ -139,7 +141,7 @@ export default function Pillar4() {
       return;
     }
     if (!item.name.trim()) {
-      alert("Give this item a name first, so they know what they're being asked to do.");
+      void dialog.alert("Give this item a name first, so they know what they're being asked to do.");
       return;
     }
     setAssigning(true);
@@ -157,14 +159,14 @@ export default function Pillar4() {
     } catch (err) {
       // Leave the typed name alone — losing what they wrote would be worse than
       // a failed assignment they can retry.
-      alert(apiErrorMessage(err, "Couldn't assign that task. Please try again."));
+      void dialog.alert(apiErrorMessage(err, "Couldn't assign that task. Please try again."));
     } finally {
       setAssigning(false);
     }
   };
 
-  const removeItem = () => {
-    if (!window.confirm("Remove this item from the huddle board?")) return;
+  const removeItem = async () => {
+    if (!await dialog.confirm("Remove this item from the huddle board?")) return;
     update((s) => {
       s.items.splice(idx, 1);
       if (!s.items.length) s.items = [blank()];
@@ -174,7 +176,7 @@ export default function Pillar4() {
 
   const fileItem = () => {
     if (!item.name.trim()) {
-      alert("This item has no name, nothing to file.");
+      void dialog.alert("This item has no name, nothing to file.");
       return;
     }
     update((s) => {
@@ -201,10 +203,10 @@ export default function Pillar4() {
         <button
           disabled={idx === 0}
           onClick={() => setCur((c) => Math.max(0, c - 1))}
-          className="rounded-[10px] border-[1.5px] px-3.5 py-2.5 min-h-[40px] text-[13px] font-semibold"
+          className="flex h-10 w-10 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
           style={{ borderColor: idx === 0 ? "var(--line)" : BLUE, color: idx === 0 ? "var(--placeholder)" : BLUE }}
         >
-          <ChevronLeft size={15} /> Prev
+          <ChevronLeft size={18} />
         </button>
         <span className="font-heading text-[12px] tracking-wide uppercase" style={{ color: INK }}>
           {`Item ${idx + 1} of ${items.length}`}
@@ -212,10 +214,10 @@ export default function Pillar4() {
         <button
           disabled={idx >= items.length - 1}
           onClick={() => setCur((c) => Math.min(items.length - 1, c + 1))}
-          className="rounded-[10px] border-[1.5px] px-3.5 py-2.5 min-h-[40px] text-[13px] font-semibold"
+          className="flex h-10 w-10 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
           style={{ borderColor: idx >= items.length - 1 ? "var(--line)" : BLUE, color: idx >= items.length - 1 ? "var(--placeholder)" : BLUE }}
         >
-          Next <ChevronRight size={15} />
+          <ChevronRight size={18} />
         </button>
       </div>
 
@@ -373,8 +375,8 @@ export default function Pillar4() {
         empty="Nothing completed and filed yet."
         clearLabel="Clear all filed"
         hasItems={state.filed.length > 0}
-        onClear={() => {
-          if (window.confirm("Delete everything in the filed archive?")) update((s) => { s.filed = []; });
+        onClear={async () => {
+          if (await dialog.confirm("Delete everything in the filed archive?")) update((s) => { s.filed = []; });
         }}
       >
         {state.filed.map((f, i) => (

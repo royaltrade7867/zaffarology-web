@@ -157,6 +157,39 @@ for (const f of ["login", "signup", "forgot-password"]) {
   ck(`${f} stays neutral`, !/emptyTint/.test(src));
 }
 
+/* --------------------------- the app's own dialogs ----------------------- */
+
+/* The browser's alert/confirm/prompt ignore the theme entirely, dock to the top
+   of the window, and print the origin ("localhost:3000 says"), which reads like
+   a security warning on a destructive action. */
+const nativeDialogs: string[] = [];
+for (const f of componentFiles.concat(["src/app/notes/page.tsx", "src/app/profile/page.tsx"])) {
+  // dialog.tsx itself keeps the native calls as a deliberate fallback for a
+  // component rendered outside the provider — it must never lose the ability
+  // to ask.
+  if (f.endsWith("dialog.tsx")) continue;
+  const src = readFileSync(f, "utf8");
+  if (/window\.(confirm|prompt)\(/.test(src) || /(?<![.\w])alert\(/.test(src)) {
+    nativeDialogs.push(f);
+  }
+}
+ck("no screen uses a native browser dialog", nativeDialogs.length === 0,
+   nativeDialogs.slice(0, 3).join(", "));
+
+const dlg = readFileSync("src/components/dialog.tsx", "utf8");
+ck("the dialog sits in the middle of the screen",
+   /fixed inset-0 z-50 flex items-center justify-center/.test(dlg));
+ck("it is built from theme tokens", /bg-surface/.test(dlg) && /border-line/.test(dlg));
+/* A field is white paper in both themes, so the prompt's input takes on-card. */
+ck("its prompt input uses on-card ink", /text-on-card/.test(dlg));
+ck("Escape cancels", /e\.key === "Escape"/.test(dlg));
+ck("focus is trapped inside it", /e\.key !== "Tab"/.test(dlg));
+ck("and returned where it came from", /returnTo\.current\?\.focus/.test(dlg));
+ck("it announces itself as a dialog", /aria-modal="true"/.test(dlg));
+ck("and is labelled by its title", /aria-labelledby="zaff-dialog-title"/.test(dlg));
+/* Clicking inside the panel must not dismiss it — the scrim is a sibling. */
+ck("only a click on the scrim dismisses", /e\.target === e\.currentTarget/.test(dlg));
+
 /* ------------------------------ the toggle ------------------------------- */
 
 const theme = readFileSync("src/lib/theme.tsx", "utf8");

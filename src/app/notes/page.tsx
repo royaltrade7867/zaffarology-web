@@ -21,6 +21,7 @@ import { Back, ChevronLeft, ChevronRight, MeetingIcon, NoteIcon, Pin, Plus, Tras
 import { Loading, TextArea, cx } from "@/components/ui";
 import { useNotes } from "@/lib/use-notes";
 import type { ApiMeeting, ApiNote, NoteTag } from "@/lib/notes-api";
+import { useDialog } from "@/components/dialog";
 
 type Kind = "notes" | "meetings";
 /** `null` = show everything, so the filter is additive rather than a mode. */
@@ -86,6 +87,7 @@ function NotesAndMeetings() {
 
   /** The last delete, offered back for a few seconds. The rows are soft-deleted
    *  server-side, so "undo" really does restore them — recordings included. */
+  const dialog = useDialog();
   const [undo, setUndo] = useState<{ what: "note" | "meeting"; id: number } | null>(null);
 
   const [kind, setKind] = useState<Kind>("notes");
@@ -155,11 +157,11 @@ function NotesAndMeetings() {
     if (kind === "notes") {
       const created = await addNote(tag);
       if (created) setOpenNoteId(created.id);
-      else alert("Couldn't create that note. Check your connection and try again.");
+      else void dialog.alert("Couldn't create that note. Check your connection and try again.");
     } else {
       const created = await addMeeting(tag);
       if (created) setOpenMeetingId(created.id);
-      else alert("Couldn't create that meeting. Check your connection and try again.");
+      else void dialog.alert("Couldn't create that meeting. Check your connection and try again.");
     }
   };
 
@@ -215,8 +217,8 @@ function NotesAndMeetings() {
     [],
   );
 
-  const confirmDelete = (what: "note" | "meeting", id: number) => {
-    if (!window.confirm(`Delete this ${what}?`)) return;
+  const confirmDelete = async (what: "note" | "meeting", id: number) => {
+    if (!await dialog.confirm(`Delete this ${what}?`)) return;
     // Step back one, like mobile. `idx` clamps for rendering, but leaving `cur`
     // stale lands the user on the last item rather than the neighbour of the
     // one they deleted.
@@ -244,7 +246,7 @@ function NotesAndMeetings() {
     const { what, id } = undo;
     setUndo(null);
     (what === "note" ? undoRemoveNote(id) : undoRemoveMeeting(id)).catch(() =>
-      alert("Could not restore that — it may already be gone."),
+      void dialog.alert("Could not restore that — it may already be gone."),
     );
   };
 

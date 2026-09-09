@@ -9,6 +9,7 @@ import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, SectionLabel, AddButton, capFirst } from "@/components/ui";
 import { PersonField, DateField, YesNoRow, PassNote } from "@/components/task";
+import { useDialog } from "@/components/dialog";
 
 /**
  * Types and normalizers come from the SHARED schema, not from local copies.
@@ -52,6 +53,7 @@ const NAVY = Accents.navy;
 type NavState = { level: "biz" | "dept" | "sys" | "detail"; bizId?: string; deptId?: string; sysId?: string };
 
 export default function Pillar8() {
+  const dialog = useDialog();
   const { state, update, loaded } = usePillarState<P8State>(pillar.key, makeInitial, normalizeP8);
   const [view, setView] = useState<NavState>({ level: "biz" });
   if (!loaded) return <Loading />;
@@ -89,7 +91,7 @@ export default function Pillar8() {
             sub: `${b.departments.length} ${b.departments.length === 1 ? "department" : "departments"}`,
             onOpen: () => setView({ level: "dept", bizId: b.id }),
             onDel: () =>
-              confirmDel(`Delete business "${b.name}" and everything inside it?`, () =>
+              confirmDel(dialog, `Delete business "${b.name}" and everything inside it?`, () =>
                 update((st) => { st.businesses = st.businesses.filter((x) => x.id !== b.id); }),
               ),
           }))}
@@ -122,7 +124,7 @@ export default function Pillar8() {
             sub: `${d.systems.length} ${d.systems.length === 1 ? "system" : "systems"}`,
             onOpen: () => setView({ level: "sys", bizId: biz.id, deptId: d.id }),
             onDel: () =>
-              confirmDel(`Delete department "${d.name}" and its systems?`, () =>
+              confirmDel(dialog, `Delete department "${d.name}" and its systems?`, () =>
                 update((st) => {
                   const b = st.businesses.find((x) => x.id === biz.id);
                   if (b) b.departments = b.departments.filter((x) => x.id !== d.id);
@@ -151,7 +153,7 @@ export default function Pillar8() {
             tint: `var(--${ACCENT_VAR[deptAccent(dept.name, 0)]})`,
             onOpen: () => setView({ level: "detail", bizId: biz.id, deptId: dept.id, sysId: s.id }),
             onDel: () =>
-              confirmDel(`Delete system ${s.num} "${s.name}"?`, () =>
+              confirmDel(dialog, `Delete system ${s.num} "${s.name}"?`, () =>
                 update((st) => {
                   const b = st.businesses.find((x) => x.id === biz.id);
                   const d = b?.departments.find((x) => x.id === dept.id);
@@ -311,13 +313,14 @@ function flowText(sys: System, biz: Business, dept: Department): string {
 }
 
 function FlowChart({ sys, biz, dept }: { sys: System; biz: Business; dept: Department }) {
+  const dialog = useDialog();
   const steps = sys.steps.filter((s) => s.trim());
-  const guard = () => alert("Write the steps first, the flow chart is empty.");
+  const guard = () => void dialog.alert("Write the steps first, the flow chart is empty.");
   const copy = () => {
     if (!steps.length) return guard();
     const text = flowText(sys, biz, dept);
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(() => alert("Flow chart copied to clipboard."), () => alert("Could not copy."));
-    else alert("Copy is not available in this browser.");
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(() => void dialog.alert("Flow chart copied to clipboard."), () => void dialog.alert("Could not copy."));
+    else void dialog.alert("Copy is not available in this browser.");
   };
   const email = () => {
     if (!steps.length) return guard();
@@ -352,6 +355,7 @@ function FlowChart({ sys, biz, dept }: { sys: System; biz: Business; dept: Depar
 /* ---------- training / eval / review ---------- */
 
 function TrainingSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: System) => void) => void }) {
+  const dialog = useDialog();
   if (!sys.trainings.length) {
     return <>
       <p className="text-[13px] leading-snug" style={{ color: "var(--placeholder)" }}>No training yet - add the first one below.</p>
@@ -377,7 +381,7 @@ function TrainingSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: S
             </> : null}
             <FLabel>Remarks of the Trainer</FLabel>
             <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.trainings[i].remarks = v; })} placeholder="How did the training go?" />
-            <DelLink onClick={() => confirmDel("Delete this training record?", () => updateSys((s) => { s.trainings.splice(i, 1); }))} />
+            <DelLink onClick={() => confirmDel(dialog, "Delete this training record?", () => updateSys((s) => { s.trainings.splice(i, 1); }))} />
           </div>
         );
       })}
@@ -387,6 +391,7 @@ function TrainingSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: S
 }
 
 function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: System) => void) => void }) {
+  const dialog = useDialog();
   const lastTrainee = sys.trainings[sys.trainings.length - 1]?.trainee ?? "";
   if (!sys.evals.length) {
     return <>
@@ -412,11 +417,11 @@ function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Syste
             </> : null}
             {t.satisfied === "no" ? <>
               <PassNote kind="fail">✗ {name} failed the evaluation, another training session is needed. No implementation date.</PassNote>
-              <AddButton label={`+ Schedule another training for ${t.trainee.trim() || "the trainee"}`} accent={Accents.green} onClick={() => { updateSys((s) => { s.trainings.push({ id: newId(), trainee: t.trainee, trainer: "", date: "", satisfied: "", remarks: `Re-training after failed evaluation ${i + 1}` }); }); alert(`A new training has been added in section 10 for ${t.trainee.trim() || "the trainee"}.`); }} />
+              <AddButton label={`+ Schedule another training for ${t.trainee.trim() || "the trainee"}`} accent={Accents.green} onClick={() => { updateSys((s) => { s.trainings.push({ id: newId(), trainee: t.trainee, trainer: "", date: "", satisfied: "", remarks: `Re-training after failed evaluation ${i + 1}` }); }); void dialog.alert(`A new training has been added in section 10 for ${t.trainee.trim() || "the trainee"}.`); }} />
             </> : null}
             <FLabel>Remarks of Evaluation</FLabel>
             <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.evals[i].remarks = v; })} placeholder="What did the evaluation find?" />
-            <DelLink onClick={() => confirmDel("Delete this evaluation record?", () => updateSys((s) => { s.evals.splice(i, 1); }))} />
+            <DelLink onClick={() => confirmDel(dialog, "Delete this evaluation record?", () => updateSys((s) => { s.evals.splice(i, 1); }))} />
           </div>
         );
       })}
@@ -426,6 +431,7 @@ function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Syste
 }
 
 function ReviewSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: System) => void) => void }) {
+  const dialog = useDialog();
   const lastTrainee = sys.trainings[sys.trainings.length - 1]?.trainee ?? "";
   if (!sys.reviews.length) {
     return <>
@@ -445,7 +451,7 @@ function ReviewSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Sys
           <YesNoRow value={t.satisfied} onChange={(v) => updateSys((s) => { s.reviews[i].satisfied = v; })} yesLabel="✓ Satisfied" noLabel="✗ Not Satisfied" />
           <p className="font-heading text-[9px] mt-2 mb-0.5" style={{ letterSpacing: "1.5px", color: Accents.red }}>🔒 CONFIDENTIAL REMARKS ABOUT THE TRAINEE</p>
           <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.reviews[i].remarks = v; })} placeholder="For the reviewer's eyes, honest, confidential notes on the trainee…" />
-          <DelLink onClick={() => confirmDel("Delete this review record?", () => updateSys((s) => { s.reviews.splice(i, 1); }))} />
+          <DelLink onClick={() => confirmDel(dialog, "Delete this review record?", () => updateSys((s) => { s.reviews.splice(i, 1); }))} />
         </div>
       ))}
       <AddButton label="+ Add fortnightly review" accent={Accents.green} onClick={() => updateSys((s) => { s.reviews.push({ id: newId(), trainee: lastTrainee, reviewer: "", date: "", satisfied: "", remarks: "" }); })} />
@@ -455,8 +461,12 @@ function ReviewSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Sys
 
 /* ---------- small helpers ---------- */
 
-function confirmDel(msg: string, onOk: () => void) {
-  if (window.confirm(msg)) onOk();
+async function confirmDel(
+  dialog: ReturnType<typeof useDialog>,
+  msg: string,
+  onOk: () => void,
+) {
+  if (await dialog.confirm(msg, { danger: true, confirmLabel: "Delete" })) onOk();
 }
 const Crumb = ({ label, onClick }: { label: string; onClick: () => void }) => (
   <button onClick={onClick} className="font-semibold text-[12px]" style={{ color: NAVY }}>{label}</button>
@@ -511,6 +521,7 @@ const ShareBtn = ({ label, color, onClick }: { label: string; color: string; onC
 );
 
 function EditableList({ items, onChange, placeholder, addLabel }: { items: string[]; onChange: (v: string[]) => void; placeholder: (i: number) => string; addLabel: string }) {
+  const dialog = useDialog();
   const list = items.length ? items : [""];
   // Only allow a new row once the last one has been filled in.
   const canAdd = (list[list.length - 1] ?? "").trim().length > 0;
@@ -533,7 +544,7 @@ function EditableList({ items, onChange, placeholder, addLabel }: { items: strin
         </div>
       ))}
       <button
-        onClick={() => { if (!canAdd) { alert("Fill the previous field first."); return; } onChange([...list, ""]); }}
+        onClick={() => { if (!canAdd) { void dialog.alert("Fill the previous field first."); return; } onChange([...list, ""]); }}
         className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border-[1.5px] px-4 py-3 text-[13.5px] font-semibold transition-colors"
         style={{ borderColor: NAVY, color: NAVY, backgroundColor: `${NAVY}10`, opacity: canAdd ? 1 : 0.45 }}
       >
