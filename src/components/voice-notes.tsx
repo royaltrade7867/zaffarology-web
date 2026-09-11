@@ -390,7 +390,7 @@ export function VoiceNotes({
           className={cx(
             "flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border text-[13.5px] font-semibold transition-colors",
             !canRecord
-              ? "cursor-not-allowed border-line text-placeholder"
+              ? "cursor-not-allowed border-line text-muted"
               : recording
                 ? "border-danger text-danger hover:bg-danger/5"
                 : "border-line text-heading hover:bg-line-soft",

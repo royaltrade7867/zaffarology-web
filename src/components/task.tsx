@@ -222,7 +222,7 @@ export function FiledBox({ title, empty, clearLabel, hasItems, onClear, children
       </button>
       {open ? (
         <div>
-          {hasItems ? children : <p className="text-[13px] text-placeholder py-1.5">{empty}</p>}
+          {hasItems ? children : <p className="text-[13px] text-muted py-1.5">{empty}</p>}
           {hasItems ? (
             <button onClick={onClear} className="mt-3 text-[13px] font-semibold text-danger underline">
               {clearLabel}

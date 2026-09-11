@@ -231,7 +231,7 @@ function Reports() {
           disabled={!!busy}
           className={cx(
             "flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition-colors",
-            busy ? "cursor-wait border border-line text-placeholder" : "bg-gold text-on-gold hover:bg-gold-hover",
+            busy ? "cursor-wait border border-line text-muted" : "bg-gold text-on-gold hover:bg-gold-hover",
           )}
         >
           <Share size={18} />
@@ -243,7 +243,7 @@ function Reports() {
           disabled={!!busy}
           className={cx(
             "flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-5 text-[15px] font-semibold transition-colors",
-            busy ? "cursor-wait border-line text-placeholder" : "border-line text-heading hover:bg-line-soft",
+            busy ? "cursor-wait border-line text-muted" : "border-line text-heading hover:bg-line-soft",
           )}
         >
           {busy === "text" ? "Copying…" : "Copy as text"}

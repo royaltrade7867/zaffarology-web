@@ -224,34 +224,65 @@ function docFor(title: string, meta: ReportMeta, body: Node[]) {
   };
 }
 
-type PdfDoc = { download: (name: string) => void };
-type PdfMake = { createPdf: (def: unknown) => PdfDoc };
+/**
+ * `download` is `async` in 0.3 — it awaits `getBlob()` internally. Calling it
+ * without awaiting makes any failure an UNCAUGHT rejection that lands after the
+ * caller has already resolved, which is how a broken font map still produced
+ * "Your PDF has been downloaded." Every call site awaits it.
+ */
+type PdfDoc = { download: (name: string) => Promise<void> };
+type VirtualFs = { existsSync: (name: string) => boolean };
+type PdfMake = {
+  createPdf: (def: unknown) => PdfDoc;
+  addVirtualFileSystem?: (vfs: Record<string, string>) => void;
+  virtualfs?: VirtualFs;
+};
 
 /**
  * Loaded lazily — pdfmake and its fonts are ~1 MB, and nobody should pay for
  * that until they ask for a PDF.
  *
- * Importing `vfs_fonts` for its SIDE EFFECT is the whole point: in 0.3 that
- * module registers the Roboto files into pdfmake's own virtual filesystem by
- * itself. An earlier version of this function tried to wire them across
- * manually from `mod.vfs` — which does not exist in 0.3 — and so replaced the
- * already-correct font map with an empty object. `createPdf` then hung with no
- * error at all. Verified in a real browser: with this import and nothing else,
- * `createPdf(...).getBase64()` resolves to a `%PDF`.
+ * The fonts MUST be wired across by hand. `vfs_fonts` ends with:
+ *
+ *     if (typeof _global.pdfMake !== 'undefined' && ...addVirtualFileSystem...)
+ *       _global.pdfMake.addVirtualFileSystem(vfs)
+ *     module.exports = vfs
+ *
+ * so it self-registers only when a *global* `pdfMake` already exists — true for
+ * a `<script>` tag, false for a bundled ES import, where the module has no
+ * global to find. Importing it for its side effect alone therefore registers
+ * nothing in the browser and `createPdf` throws
+ * "File 'Roboto-Medium.ttf' not found in virtual file system".
+ *
+ * That is easy to get wrong under Node, where `pdfmake.js` assigns
+ * `global.pdfMake` as it loads and so makes the side effect appear to work.
+ * The check below asserts the end state instead of trusting either path.
  */
 let pdfPromise: Promise<PdfMake> | null = null;
 
 async function pdfMake(): Promise<PdfMake> {
   pdfPromise ??= (async () => {
-    const [mod] = await Promise.all([
+    const [mod, fontMod] = await Promise.all([
       import("pdfmake/build/pdfmake"),
-      // Side-effect import: registers the bundled fonts. Do not "clean up".
       import("pdfmake/build/vfs_fonts"),
     ]);
     const raw = mod as unknown as { default?: PdfMake } & PdfMake;
     const pm: PdfMake = typeof raw.createPdf === "function" ? raw : (raw.default as PdfMake);
     if (typeof pm?.createPdf !== "function") {
       throw new Error("pdfmake: no createPdf export — the module shape changed");
+    }
+
+    const rawFonts = fontMod as unknown as { default?: Record<string, string> } & Record<
+      string,
+      unknown
+    >;
+    const fonts = (rawFonts.default ?? rawFonts) as Record<string, string>;
+    pm.addVirtualFileSystem?.(fonts);
+
+    // Fail loudly here rather than inside createPdf, where the message is far
+    // from the cause and the caller has already promised the user a download.
+    if (pm.virtualfs && !pm.virtualfs.existsSync("Roboto-Medium.ttf")) {
+      throw new Error("pdfmake: bundled fonts did not register");
     }
     return pm;
   })();
@@ -274,7 +305,7 @@ export async function downloadPillarPdf(
 ): Promise<void> {
   const title = `Pillar ${loaded.meta.n}, ${loaded.meta.name}`;
   const pm = await pdfMake();
-  pm.createPdf(docFor(title, meta, pillarBody(loaded, range))).download(
+  await pm.createPdf(docFor(title, meta, pillarBody(loaded, range))).download(
     reportFilename(`pillar-${loaded.meta.n}`),
   );
 }
@@ -299,7 +330,7 @@ export async function downloadProgressPdf(
   if (!body.length) body.push({ text: "Nothing to report yet.", style: "muted" });
 
   const pm = await pdfMake();
-  pm.createPdf(docFor("Progress report", meta, body)).download(reportFilename("progress"));
+  await pm.createPdf(docFor("Progress report", meta, body)).download(reportFilename("progress"));
 }
 
 /** Exposed for the fixture: the pillar list a progress report covers. */

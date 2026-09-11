@@ -27,7 +27,10 @@
      light theme and the same white with a DARKER green wash in the dark one.
      So one value has to clear 3:1 against both: 4.38:1 on white, 3.20:1 on the
      dark wash. The original #9fa9b8 was 2.38:1 on plain white. */
-  --placeholder: #6b7a8d;
+  /* Must clear 4.5:1 on ALL THREE field surfaces, the darkest of which is the
+     dark theme's empty-field green #bce6ce. The old #6b7a8d was 3.20:1 there.
+     white 6.80:1 · light-green 6.42:1 · dark-green 4.97:1 */
+  --placeholder: #4f5c6e;
 
   /* Writing surfaces. NOT theme-dependent — see the note at the top. */
   --field: #ffffff;

@@ -272,7 +272,7 @@ export function MeetingEditor({
             "flex h-9 w-9 items-center justify-center rounded-lg border transition-colors",
             canAddDecision
               ? "border-[color:var(--gold)] text-gold hover:bg-gold/8"
-              : "cursor-not-allowed border-line text-placeholder",
+              : "cursor-not-allowed border-line text-muted",
           )}
         >
           <Plus size={18} />

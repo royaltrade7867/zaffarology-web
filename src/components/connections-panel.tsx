@@ -162,7 +162,7 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
           className={cx(
             "flex min-h-[44px] items-center gap-2 rounded-xl px-4 text-[14px] font-semibold transition-colors",
             sending || !email.trim()
-              ? "cursor-not-allowed border border-line text-placeholder"
+              ? "cursor-not-allowed border border-line text-muted"
               : "bg-gold text-on-gold hover:bg-gold-hover",
           )}
         >
@@ -320,7 +320,7 @@ function IconButton({
       className={cx(
         "flex h-9 w-9 items-center justify-center rounded-lg border transition-colors",
         disabled
-          ? "cursor-not-allowed border-line text-placeholder"
+          ? "cursor-not-allowed border-line text-muted"
           : tone === "accept"
             ? "border-[color:var(--gold)] text-gold hover:bg-gold/8"
             : "border-line text-muted hover:border-danger hover:text-danger",

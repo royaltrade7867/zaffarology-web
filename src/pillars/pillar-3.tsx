@@ -178,7 +178,7 @@ export default function Pillar3() {
                 <ReviewItem key={i} tag={`Extra ${i + 1}`} task={t} onToggle={(v) => update((s) => { s.extra[i].done = v; })} />
               ))
             ) : (
-              <p className="text-[12px] italic text-placeholder">(no extra-mile tasks this morning)</p>
+              <p className="text-[12px] italic text-muted">(no extra-mile tasks this morning)</p>
             )}
           </ReviewGroup>
         </div>
@@ -282,7 +282,7 @@ function ReviewItem({ tag, task, onToggle }: { tag: string; task: Task; onToggle
     return (
       <div className="flex items-center gap-2 py-[3px]">
         <span className="font-semibold text-[11px] min-w-[44px]" style={{ color: "var(--muted)" }}>{tag}</span>
-        <span className="text-[12px] italic text-placeholder">(not set this morning)</span>
+        <span className="text-[12px] italic text-muted">(not set this morning)</span>
       </div>
     );
   }

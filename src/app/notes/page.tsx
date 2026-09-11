@@ -520,7 +520,7 @@ function NavButton({ dir, disabled, onClick }: { dir: "prev" | "next"; disabled:
       className={cx(
         "flex h-10 w-10 items-center justify-center rounded-xl border transition-colors",
         disabled
-          ? "cursor-not-allowed border-line text-placeholder"
+          ? "cursor-not-allowed border-line text-muted"
           : "border-line text-heading hover:border-gold hover:text-gold",
       )}
     >
@@ -548,7 +548,7 @@ function NoteCard({ note, onOpen }: { note: ApiNote; onOpen: () => void }) {
           {note.body}
         </p>
       ) : (
-        <p className="mt-1.5 text-[13px] italic text-placeholder">Nothing written yet</p>
+        <p className="mt-1.5 text-[13px] italic text-muted">Nothing written yet</p>
       )}
     </button>
   );
@@ -584,7 +584,7 @@ function MeetingCard({ meeting, onOpen }: { meeting: ApiMeeting; onOpen: () => v
           </ol>
         </div>
       ) : (
-        <p className="mt-1.5 text-[13px] italic text-placeholder">No decisions recorded yet</p>
+        <p className="mt-1.5 text-[13px] italic text-muted">No decisions recorded yet</p>
       )}
     </button>
   );
