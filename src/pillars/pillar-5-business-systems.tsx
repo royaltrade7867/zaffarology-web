@@ -231,6 +231,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
           <button
             onClick={(e) => { e.stopPropagation(); r.onDel(); }}
             aria-label={`Delete ${r.name}`}
+            title={`Delete ${r.name}`}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-danger"
           ><Close size={13} /></button>
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted"><ChevronRight size={16} /></span>

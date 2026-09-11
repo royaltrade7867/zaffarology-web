@@ -234,8 +234,15 @@ function Reports() {
           disabled={!!busy}
           aria-busy={busy === "pdf"}
           className={cx(
-            "flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition-colors",
-            busy ? "cursor-wait border border-line text-muted" : "bg-gold text-on-gold hover:bg-gold-hover",
+            "flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold",
+            /* `bg-surface` explicitly, not "no background": the gold fill EASES
+                 out under `transition-colors` while the text colour swaps
+                 instantly, so mid-fade the muted label sat on a gold-over-navy
+                 blend at ~1.6:1 for the whole transition. A solid surface plus
+                 `transition-none` means there is no blend to be caught in. */
+              busy
+                ? "cursor-wait border border-line bg-surface text-muted transition-none"
+                : "bg-gold text-on-gold hover:bg-gold-hover transition-colors",
           )}
         >
           <Share size={18} />
@@ -247,8 +254,10 @@ function Reports() {
           disabled={!!busy}
           aria-busy={busy === "text"}
           className={cx(
-            "flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-5 text-[15px] font-semibold transition-colors",
-            busy ? "cursor-wait border-line text-muted" : "border-line text-heading hover:bg-line-soft",
+            "flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-5 text-[15px] font-semibold",
+            busy
+                ? "cursor-wait border-line bg-surface text-muted transition-none"
+                : "border-line text-heading hover:bg-line-soft transition-colors",
           )}
         >
           {busy === "text" ? "Copying…" : "Copy as text"}

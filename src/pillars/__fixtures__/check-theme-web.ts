@@ -218,7 +218,12 @@ ck("it is built from theme tokens", /bg-surface/.test(dlg) && /border-line/.test
 ck("its prompt input uses on-card ink", /text-on-card/.test(dlg));
 ck("Escape cancels", /e\.key === "Escape"/.test(dlg));
 ck("focus is trapped inside it", /e\.key !== "Tab"/.test(dlg));
-ck("and returned where it came from", /returnTo\.current\?\.focus/.test(dlg));
+/* Focus must come back, by EITHER dismissal route. Deferring the restore a
+   frame is what makes a scrim click work (mousedown blurs, then the browser
+   moves focus itself as the click completes), so match the behaviour, not one
+   spelling of it. */
+ck("and returned where it came from",
+   /returnTo\.current/.test(dlg) && /\.focus\?\.\(\)/.test(dlg));
 ck("it announces itself as a dialog", /aria-modal="true"/.test(dlg));
 ck("and is labelled by its title", /aria-labelledby="zaff-dialog-title"/.test(dlg));
 /* Clicking inside the panel must not dismiss it — the scrim is a sibling. */

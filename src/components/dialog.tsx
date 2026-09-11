@@ -84,8 +84,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       req?.resolve(result);
       setReq(null);
       setValue("");
-      // Put focus back where it was, or the page loses its place entirely.
-      returnTo.current?.focus?.();
+      /* Put focus back where it was, or the page loses its place entirely.
+         Deferred to the next frame: a scrim dismiss fires on MOUSEDOWN, and the
+         browser then moves focus itself as the click completes — restoring
+         synchronously meant focus landed on the trigger and was immediately
+         taken back to BODY, so only Escape appeared to work. */
+      const back = returnTo.current;
+      requestAnimationFrame(() => back?.focus?.());
     },
     [req],
   );
@@ -204,7 +209,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 className={cx(
                   "min-h-[40px] rounded-xl px-4 text-[13.5px] font-semibold transition-colors",
                   req.danger
-                    ? "bg-danger text-white hover:opacity-90"
+                    ? "bg-danger text-on-danger hover:opacity-90"
                     : "bg-gold text-on-gold hover:bg-gold-hover",
                 )}
               >

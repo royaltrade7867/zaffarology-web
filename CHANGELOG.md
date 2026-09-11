@@ -2,6 +2,37 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-11 - Two contrast regressions from the last round, and the focus gap
+
+**The red confirm button was 2.75:1 in dark** — the consistency fix traded a
+colour problem for a contrast one. `--danger` flips between themes (`#c8102e`
+light, `#ff6b7a` dark) but the label was a hardcoded `text-white`, so on the
+lightened red it was unreadable — on every delete dialog, Delete account
+included. Added `--on-danger`, paired with `--danger` the way `--on-gold` is
+paired with `--gold`: **5.68:1 dark, 5.88:1 light**. Third instance of this bug
+class after `--on-accent` and `--on-selected`; a fixture now pins all of them.
+
+**"Building your PDF…" was unreadable while it worked.** Not a static colour
+bug: the gold fill EASES out under `transition-colors` while the text colour
+swaps instantly, so for the whole transition the muted label sat on a
+gold-over-navy blend — ~1.6:1 at its worst. The busy state now paints a solid
+`bg-surface` with `transition-none`, so there is no blend to be caught in:
+**6.18:1 dark, 5.58:1 light**.
+
+**Dismissing a dialog by clicking the scrim lost keyboard focus.** `close()` did
+restore it, but the scrim fires on *mousedown* and the browser then moves focus
+itself as the click completes, undoing the restore — so only Escape appeared to
+work. Deferred a frame with `requestAnimationFrame`.
+
+**Also:** the Pillar 5 business/department/system row × gained the `title` the
+effort/result rows already had; and the do-or-die tick circles keep their 22px
+ring but are padded to a 24px button (WCAG 2.2) and carry the task's own words
+as an accessible name instead of announcing only "pressed".
+
+`check-a11y-web.ts` is now 42 checks. One of its new guards was itself wrong —
+it matched the sibling button and passed with the bug fully reintroduced — and
+now counts both busy branches and names the offending one.
+
 ## 2026-09-11 - Reachability, Team accuracy, destructive actions
 
 **The nav was unreachable on a phone.** Six links plus the wordmark need ~580px;

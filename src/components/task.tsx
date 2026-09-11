@@ -13,22 +13,36 @@ export function Checkbox({
   onToggle,
   disabled,
   size = 22,
+  label,
 }: {
   checked: boolean;
   onToggle: (v: boolean) => void;
   disabled?: boolean;
   size?: number;
+  /** What this tick is for. Without it a screen reader announces only "pressed". */
+  label?: string;
 }) {
+  /* The RING stays `size` (22px by default, the workbook's proportion), but the
+     button itself is padded out to the WCAG 2.2 minimum of 24px. Growing the
+     circle instead would change the design; growing the hit area does not. */
+  const pad = Math.max(0, (24 - size) / 2);
   return (
     <button
       type="button"
       aria-pressed={checked}
+      aria-label={label}
       disabled={disabled}
       onClick={() => !disabled && onToggle(!checked)}
-      style={{ width: size, height: size, backgroundColor: checked ? HEADING : "transparent", borderColor: Accents.gold, opacity: disabled ? 0.4 : 1 }}
-      className="shrink-0 rounded-full border-2 flex items-center justify-center"
+      style={{ padding: pad, opacity: disabled ? 0.4 : 1 }}
+      className="shrink-0 flex items-center justify-center bg-transparent"
     >
-      {checked ? <Check size={13} className="text-on-accent" /> : null}
+      <span
+        aria-hidden
+        style={{ width: size, height: size, backgroundColor: checked ? HEADING : "transparent", borderColor: Accents.gold }}
+        className="rounded-full border-2 flex items-center justify-center"
+      >
+        {checked ? <Check size={13} className="text-on-accent" /> : null}
+      </span>
     </button>
   );
 }
@@ -82,7 +96,14 @@ export function TaskRow({
         {symbol}
       </span>
       {/* a done task can always be un-checked; empty ones just can't be checked */}
-      <Checkbox checked={done} onToggle={onToggle} disabled={!filled && !done} />
+      <Checkbox
+        checked={done}
+        onToggle={onToggle}
+        disabled={!filled && !done}
+        // The task's own words, so a screen reader says WHICH task is ticked
+        // rather than just "pressed". `symbol` is the row marker (1..5, ✦).
+        label={filled ? `Mark done: ${value.trim()}` : `Mark done: ${placeholder ?? symbol}`}
+      />
       <div className="flex-1 min-w-0 rounded-lg px-2" style={{ backgroundColor: filled ? "transparent" : FIELD_EMPTY }}>
         <input
           value={value}

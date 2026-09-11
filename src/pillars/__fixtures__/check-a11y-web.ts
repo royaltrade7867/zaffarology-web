@@ -156,6 +156,55 @@ const uiFiles = [
   ck("the buttons report their busy state", (rep.match(/aria-busy=/g) ?? []).length >= 2);
 }
 
+/* ------------------------- paired fill/text tokens ----------------------- */
+
+/* A fill that CHANGES LIGHTNESS between themes needs a paired text token.
+   --danger goes #c8102e (light) -> #ff6b7a (dark), so the hardcoded white label
+   on every delete confirm — including Delete account — was 2.75:1 in dark.
+   Same bug class as --on-accent and --on-gold before it. */
+{
+  const css = read("src/app/globals.css");
+  ck("--on-danger exists in all three theme blocks",
+     (css.match(/--on-danger:/g) ?? []).length === 3,
+     String((css.match(/--on-danger:/g) ?? []).length));
+  ck("--on-danger is exported to Tailwind", /--color-on-danger: var\(--on-danger\)/.test(css));
+  const dlg = read("src/components/dialog.tsx");
+  ck("the danger button uses the paired token, not a fixed white",
+     /bg-danger text-on-danger/.test(dlg) && !/bg-danger text-white/.test(dlg));
+}
+
+/* A colour TRANSITION can strand text mid-fade: the gold fill eased out while
+   the text colour swapped instantly, so the busy label sat on a gold-over-navy
+   blend at ~1.6:1 for the whole transition. The busy state paints a solid
+   surface and does not animate. */
+{
+  const rep = read("src/app/reports/page.tsx");
+  // BOTH busy branches, counted. A single `.test()` matched the sibling button
+  // and so passed with the bug fully reintroduced on the first one.
+  const busyBranches = [...rep.matchAll(/"cursor-wait[^"]*"/g)].map((m) => m[0]);
+  ck("both buttons have a busy branch", busyBranches.length === 2, String(busyBranches.length));
+  ck("every busy branch paints a solid surface",
+     busyBranches.every((b) => b.includes("bg-surface")), busyBranches.join(" | "));
+  ck("and none of them fades into it",
+     busyBranches.every((b) => b.includes("transition-none")), busyBranches.join(" | "));
+}
+
+/* Dismissing by CLICK must restore focus too, not only Escape. The scrim fires
+   on mousedown and the browser then moves focus itself as the click completes,
+   so a synchronous restore was immediately undone. */
+{
+  const dlg = read("src/components/dialog.tsx");
+  ck("focus restore survives a scrim click", /requestAnimationFrame\(\(\) => back\?\.focus\?\.\(\)\)/.test(dlg));
+}
+
+/* WCAG 2.2 target size: the ring may stay 22px, the BUTTON may not. */
+{
+  const task = read("src/components/task.tsx");
+  ck("the tick is padded to a 24px target", /const pad = Math\.max\(0, \(24 - size\) \/ 2\)/.test(task));
+  ck("the tick has an accessible name", /aria-label=\{label\}/.test(task));
+  ck("and the call site passes one", /label=\{filled \? `Mark done/.test(task));
+}
+
 if (fails.length) {
   console.error(pass + " passed, " + fails.length + " FAILED");
   fails.forEach((f) => console.error("  FAIL " + f));
