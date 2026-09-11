@@ -159,7 +159,7 @@ export default function Pillar1() {
   };
 
   const removeGoal = async () => {
-    if (!await dialog.confirm(`Delete Exact Goal (Project) ${gi + 1}, its plan, target date and all of its tasks?`)) return;
+    if (!await dialog.confirm(`Delete Exact Goal (Project) ${gi + 1}?`, { body: "Its plan, target date and all of its tasks go too.", confirmLabel: "Delete", danger: true })) return;
     update((s) => {
       s.goals.splice(gi, 1);
       if (!s.goals.length) s.goals.push(emptyGoal());
@@ -202,7 +202,7 @@ export default function Pillar1() {
   const navBtn = (disabled: boolean) =>
     ({
       borderColor: disabled ? "var(--line)" : pillar.accent,
-      color: disabled ? "var(--placeholder)" : pillar.accent,
+      color: disabled ? "var(--muted)" : pillar.accent,
     }) as const;
 
   return (
@@ -214,6 +214,7 @@ export default function Pillar1() {
           disabled={gi === 0}
           onClick={() => setCur((c) => Math.max(0, c - 1))}
           aria-label="Previous goal"
+            title="Previous goal"
           className="flex h-10 w-10 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
           style={navBtn(gi === 0)}
         >
@@ -227,6 +228,7 @@ export default function Pillar1() {
           disabled={gi >= goals.length - 1}
           onClick={() => setCur((c) => Math.min(goals.length - 1, c + 1))}
           aria-label="Next goal"
+            title="Next goal"
           className="flex h-10 w-10 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
           style={navBtn(gi >= goals.length - 1)}
         >
@@ -350,7 +352,7 @@ export default function Pillar1() {
         )}
       />
 
-      <FiledBox title="Filed Tasks" empty="Nothing filed yet." clearLabel="Clear all filed" hasItems={state.filed.length > 0} onClear={async () => { if (await dialog.confirm("Delete everything in the filed archive?")) update((s) => { s.filed = []; }); }}>
+      <FiledBox title="Filed Tasks" empty="Nothing filed yet." clearLabel="Clear all filed" hasItems={state.filed.length > 0} onClear={async () => { if (await dialog.confirm("Delete everything in the filed archive?", { confirmLabel: "Delete all", danger: true })) update((s) => { s.filed = []; }); }}>
         {state.filed.map((f, i) => (
           <div key={i} className="flex items-center gap-2.5 py-2 border-b border-line">
             <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide" style={{ backgroundColor: TAG[f.section].bg, color: TAG[f.section].color }}>{TAG[f.section].label.toUpperCase()}</span>

@@ -313,7 +313,7 @@ export function VoiceNotes({
   };
 
   const remove = async (note: ApiVoiceNote) => {
-    if (!await dialog.confirm(`Delete "${note.title}"?`)) return;
+    if (!await dialog.confirm(`Delete "${note.title}"?`, { confirmLabel: "Delete", danger: true })) return;
     const before = notes;
     setNotes((prev) => prev.filter((n) => n.id !== note.id));
     try {

@@ -173,7 +173,7 @@ export default function Pillar2() {
         clearLabel="Clear all solved"
         hasItems={state.filed.length > 0}
         onClear={async () => {
-          if (await dialog.confirm("Delete all solved problems?")) update((s) => { s.filed = []; });
+          if (await dialog.confirm("Delete all solved problems?", { confirmLabel: "Delete all", danger: true })) update((s) => { s.filed = []; });
         }}
       >
         {state.filed.map((f, i) => (

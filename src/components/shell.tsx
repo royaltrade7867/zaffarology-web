@@ -3,10 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { useAuth } from "@/lib/auth-context";
 import { Loading, cx } from "@/components/ui";
+import { Close, Menu } from "@/components/icons";
 
 /** Brand wordmark: ZAFFAR (gold) · OLOGY (navy). */
 export function Wordmark({ size = 22 }: { size?: number }) {
@@ -68,34 +69,86 @@ const NAV = [
   { href: "/profile", label: "Profile" },
 ];
 
-/** Top navigation bar for authenticated pages. */
+/**
+ * Top navigation for authenticated pages.
+ *
+ * The six links plus the wordmark need ~580px. Below that they used to overlap
+ * the logo and run off the right edge, and because the page does not scroll
+ * horizontally, Team / About / Profile were UNREACHABLE on a phone — half the
+ * app. Under `sm` the links collapse into a menu instead.
+ */
 export function TopNav() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const isActive = (href: string) =>
+    pathname === href || (href === "/home" && pathname.startsWith("/pillar"));
+
+  // Route change closes the menu — otherwise it stays open over the new page.
+  useEffect(() => setOpen(false), [pathname]);
+
+  // Escape closes, matching every other dismissible surface in the app.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-background/95 backdrop-blur">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-        <Link href="/home" className="flex items-center gap-2.5">
+      <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
+        <Link href="/home" className="flex min-w-0 items-center gap-2.5">
           <Eagle size={34} />
           <Wordmark size={18} />
         </Link>
-        <nav className="flex items-center gap-1">
-          {NAV.map((n) => {
-            const active = pathname === n.href || (n.href === "/home" && pathname.startsWith("/pillar"));
-            return (
-              <Link
-                key={n.href}
-                href={n.href}
-                className={cx(
-                  "rounded-lg px-3 py-1.5 text-[13.5px] font-semibold transition-colors",
-                  active ? "bg-selected text-on-selected" : "text-heading hover:bg-line-soft",
-                )}
-              >
-                {n.label}
-              </Link>
-            );
-          })}
+
+        {/* Wide: every destination visible. */}
+        <nav className="hidden items-center gap-1 sm:flex">
+          {NAV.map((n) => (
+            <Link
+              key={n.href}
+              href={n.href}
+              aria-current={isActive(n.href) ? "page" : undefined}
+              className={cx(
+                "rounded-lg px-3 py-1.5 text-[13.5px] font-semibold transition-colors",
+                isActive(n.href) ? "bg-selected text-on-selected" : "text-heading hover:bg-line-soft",
+              )}
+            >
+              {n.label}
+            </Link>
+          ))}
         </nav>
+
+        {/* Narrow: one button, 44px so it is a real touch target. */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          aria-controls="zaff-nav-menu"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-heading transition-colors hover:bg-line-soft sm:hidden"
+        >
+          {open ? <Close size={20} /> : <Menu size={20} />}
+        </button>
       </div>
+
+      {open ? (
+        <nav id="zaff-nav-menu" className="border-t border-line px-4 pb-3 pt-2 sm:hidden">
+          {NAV.map((n) => (
+            <Link
+              key={n.href}
+              href={n.href}
+              aria-current={isActive(n.href) ? "page" : undefined}
+              className={cx(
+                "block rounded-lg px-3 py-3 text-[15px] font-semibold transition-colors",
+                isActive(n.href) ? "bg-selected text-on-selected" : "text-heading hover:bg-line-soft",
+              )}
+            >
+              {n.label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
     </header>
   );
 }

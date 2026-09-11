@@ -25,13 +25,16 @@ import { useDialog } from "@/components/dialog";
 import {
   DEFAULT_DEPARTMENTS,
   blankDepartment,
+  blankPair,
   blankSystem,
   deptAccent,
   deptKind,
   makeInitial,
   normalize as normalizeP8,
+  syncPairMirrors,
   type Business,
   type Department,
+  type EffortPair,
   type Evaluation,
   type P8State,
   type Review,
@@ -203,7 +206,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
       <SectionLabel text={label} small={small} color={NAVY} />
       {rows.length === 0 ? (
         <div className="flex items-center gap-2.5 rounded-2xl border border-dashed border-line px-3.5 py-4 mb-1" >
-          <span className="text-[13px] leading-snug" style={{ color: "var(--placeholder)" }}>{empty}</span>
+          <span className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>{empty}</span>
         </div>
       ) : rows.map((r) => (
         <div
@@ -254,6 +257,20 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
 /* ---------- system detail: 12 headings ---------- */
 
 function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Business; dept: Department; updateSys: (m: (s: System) => void) => void }) {
+  /**
+   * The ONLY way sections 7 and 8 may be edited.
+   *
+   * Every mutation re-derives `efforts`/`results` from `pairs`, so the two flat
+   * mirrors can never drift — and a row deleted from section 7 disappears from
+   * section 8 in the same update, because both render this one array.
+   */
+  const mutatePairs = (mutate: (list: EffortPair[]) => void) =>
+    updateSys((s) => {
+      mutate(s.pairs);
+      if (!s.pairs.length) s.pairs = [blankPair()];
+      syncPairMirrors(s);
+    });
+
   return (
     <div>
       <div className="flex items-center gap-2.5 mb-5">
@@ -279,11 +296,29 @@ function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Busines
       <Section n={6} title="Job Description" small="the most important things to do, add as many as needed" />
       <EditableList items={sys.jobs} onChange={(v) => updateSys((s) => { s.jobs = v; })} placeholder={(i) => `Most important thing ${i}`} addLabel="+ Add another important thing" />
 
-      <Section n={7} title="Effort Questions" small="add as many as needed" />
-      <EditableList items={sys.efforts} onChange={(v) => updateSys((s) => { s.efforts = v; })} placeholder={(i) => `Effort question ${i}`} addLabel="+ Add effort question" />
+      {/* Sections 7 and 8 are two views of ONE `pairs` array — row n of each is
+          one pair. They must never be bound to `efforts`/`results`, which are
+          deprecated mirrors: `fixSystem` rebuilds those FROM `pairs` on load, so
+          writing only the mirror meant the typed answer survived the save, was
+          discarded on the next load, and was then written back as blank. Daily
+          answers are keyed by `pair.id`, so the pairing is load-bearing too. */}
+      <Section n={7} title="Effort Questions" small="each one gets a result question below" />
+      <PairSideList
+        pairs={sys.pairs}
+        side="effort"
+        onChangePairs={mutatePairs}
+        placeholder={(i) => `Effort question ${i}`}
+        addLabel="+ Add effort question"
+      />
 
-      <Section n={8} title="Result Questions" small="add as many as needed" />
-      <EditableList items={sys.results} onChange={(v) => updateSys((s) => { s.results = v; })} placeholder={(i) => `Result question ${i}`} addLabel="+ Add result question" />
+      <Section n={8} title="Result Questions" small="one for each effort question above" />
+      <PairSideList
+        pairs={sys.pairs}
+        side="result"
+        onChangePairs={mutatePairs}
+        placeholder={(i) => `Result question ${i}`}
+        addLabel="+ Add result question"
+      />
 
       <Section n={9} title="How, Step by Step Process" small="the flow chart draws itself as you type" />
       <EditableList items={sys.steps} onChange={(v) => updateSys((s) => { s.steps = v; })} placeholder={(i) => `Step ${i}`} addLabel="+ Add step" />
@@ -357,7 +392,7 @@ function TrainingSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: S
   const dialog = useDialog();
   if (!sys.trainings.length) {
     return <>
-      <p className="text-[13px] leading-snug" style={{ color: "var(--placeholder)" }}>No training yet - add the first one below.</p>
+      <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No training yet - add the first one below.</p>
       <AddButton label="+ Add training / give another training" accent={Accents.green} onClick={() => updateSys((s) => { s.trainings.push({ id: newId(), trainee: "", trainer: "", date: "", satisfied: "", remarks: "" }); })} />
     </>;
   }
@@ -394,7 +429,7 @@ function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Syste
   const lastTrainee = sys.trainings[sys.trainings.length - 1]?.trainee ?? "";
   if (!sys.evals.length) {
     return <>
-      <p className="text-[13px] leading-snug" style={{ color: "var(--placeholder)" }}>No evaluation yet - add the first one below.</p>
+      <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No evaluation yet - add the first one below.</p>
       <AddButton label="+ Add evaluation / evaluate again" accent={Accents.green} onClick={() => updateSys((s) => { s.evals.push({ id: newId(), trainee: lastTrainee, evaluator: "", evalDate: "", satisfied: "", implDate: "", remarks: "" }); })} />
     </>;
   }
@@ -434,7 +469,7 @@ function ReviewSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Sys
   const lastTrainee = sys.trainings[sys.trainings.length - 1]?.trainee ?? "";
   if (!sys.reviews.length) {
     return <>
-      <p className="text-[13px] leading-snug" style={{ color: "var(--placeholder)" }}>No review yet - add the first one below.</p>
+      <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No review yet - add the first one below.</p>
       <AddButton label="+ Add fortnightly review" accent={Accents.green} onClick={() => updateSys((s) => { s.reviews.push({ id: newId(), trainee: lastTrainee, reviewer: "", date: "", satisfied: "", remarks: "" }); })} />
     </>;
   }
@@ -470,7 +505,7 @@ async function confirmDel(
 const Crumb = ({ label, onClick }: { label: string; onClick: () => void }) => (
   <button onClick={onClick} className="font-semibold text-[12px]" style={{ color: NAVY }}>{label}</button>
 );
-const Sep = () => <span className="text-[12px] px-0.5" style={{ color: "var(--placeholder)" }}> › </span>;
+const Sep = () => <span className="text-[12px] px-0.5" style={{ color: "var(--muted)" }}> › </span>;
 const Section = ({ n, title, small }: { n: number; title: string; small?: string }) => (
   <div className="flex items-start gap-2.5 mt-6 mb-2">
     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-on-accent font-heading text-[12px]" style={{ backgroundColor: NAVY }}>{n}</span>
@@ -519,6 +554,84 @@ const ShareBtn = ({ label, color, onClick }: { label: string; color: string; onC
   <button onClick={onClick} className="rounded border-[1.5px] px-2.5 py-1.5 text-[11px] font-semibold" style={{ borderColor: color, color }}>{label}</button>
 );
 
+/**
+ * One side of the shared `pairs` array — section 7 renders `effort`, section 8
+ * renders `result`, and row n of each is the SAME pair. Adding an effort adds a
+ * blank result; deleting either side removes the whole pair, which is why this
+ * cannot be two independent string lists.
+ */
+function PairSideList({
+  pairs,
+  side,
+  onChangePairs,
+  placeholder,
+  addLabel,
+}: {
+  pairs: EffortPair[];
+  side: "effort" | "result";
+  onChangePairs: (mutate: (list: EffortPair[]) => void) => void;
+  placeholder: (i: number) => string;
+  addLabel: string;
+}) {
+  const dialog = useDialog();
+  const list = pairs.length ? pairs : [blankPair()];
+  // A new pair is only allowed once this side's last row has been filled in.
+  const canAdd = (list[list.length - 1]?.[side] ?? "").trim().length > 0;
+  return (
+    <div>
+      {list.map((p, i) => (
+        <div key={p.id} className="flex items-center gap-3 py-2 border-b border-line">
+          <span className="font-heading text-[14px] w-5 text-center" style={{ color: NAVY }}>{i + 1}</span>
+          <input
+            autoCorrect="off"
+            spellCheck={false}
+            value={p[side]}
+            onChange={(e) => {
+              const v = e.target.value;
+              onChangePairs((l) => { if (l[i]) l[i][side] = v; });
+            }}
+            placeholder={placeholder(i + 1)}
+            maxLength={200}
+            style={{ backgroundColor: p[side].trim() ? "var(--field)" : FIELD_EMPTY }}
+            className="flex-1 min-w-0 rounded-md px-2 py-1.5 text-[14px] text-on-card outline-none placeholder:text-placeholder"
+          />
+          <button
+            aria-label={`Delete ${side} question ${i + 1}`}
+            title={`Delete ${side} question ${i + 1}`}
+            onClick={() => {
+              // Deleting removes the PAIR, so the matching row in the other
+              // section goes too. Say so, rather than surprising the user.
+              const other = side === "effort" ? "result" : "effort";
+              void dialog
+                .confirm(`Delete ${side} question ${i + 1}?`, {
+                  body: `Its matching ${other} question will be removed as well.`,
+                  confirmLabel: "Delete",
+                  danger: true,
+                })
+                .then((ok) => { if (ok) onChangePairs((l) => { l.splice(i, 1); }); });
+            }}
+            className="text-[15px] min-h-[24px] min-w-[24px] flex items-center justify-center"
+            style={{ color: "var(--muted)" }}
+          >
+            <Close size={13} />
+          </button>
+        </div>
+      ))}
+      <button
+        onClick={() => {
+          if (!canAdd) { void dialog.alert("Fill the previous field first."); return; }
+          onChangePairs((l) => { l.push(blankPair()); });
+        }}
+        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border-[1.5px] px-4 py-3 text-[13.5px] font-semibold transition-colors"
+        style={{ borderColor: NAVY, color: NAVY, backgroundColor: `${NAVY}10`, opacity: canAdd ? 1 : 0.45 }}
+      >
+        <span className="text-lg leading-none">+</span>
+        {addLabel.replace(/^\+\s*/, "")}
+      </button>
+    </div>
+  );
+}
+
 function EditableList({ items, onChange, placeholder, addLabel }: { items: string[]; onChange: (v: string[]) => void; placeholder: (i: number) => string; addLabel: string }) {
   const dialog = useDialog();
   const list = items.length ? items : [""];
@@ -539,7 +652,17 @@ function EditableList({ items, onChange, placeholder, addLabel }: { items: strin
             style={{ backgroundColor: it.trim() ? "var(--field)" : FIELD_EMPTY }}
             className="flex-1 min-w-0 rounded-md px-2 py-1.5 text-[14px] text-on-card outline-none placeholder:text-placeholder"
           />
-          <button onClick={() => { const n = list.filter((_, x) => x !== i); onChange(n.length ? n : [""]); }} className="text-[15px]" style={{ color: "var(--muted)" }}><Close size={13} /></button>
+          <button
+            aria-label={`Delete ${placeholder(i + 1).toLowerCase()}`}
+            title={`Delete ${placeholder(i + 1).toLowerCase()}`}
+            onClick={() => { const n = list.filter((_, x) => x !== i); onChange(n.length ? n : [""]); }}
+            /* 13px icon in a 24px box: WCAG 2.2 target-size minimum, and the
+               icon alone gave a screen reader nothing to announce. */
+            className="flex min-h-[24px] min-w-[24px] items-center justify-center text-[15px]"
+            style={{ color: "var(--muted)" }}
+          >
+            <Close size={13} />
+          </button>
         </div>
       ))}
       <button

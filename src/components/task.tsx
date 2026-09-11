@@ -154,12 +154,15 @@ export function DateField({ value, onChange, label }: { value: string; onChange:
   return (
     <label className="block mb-1.5">
       {label ? <span className="block text-[13px] text-muted mb-1">{label}</span> : null}
+      {/* `min-w-0`: a date input carries a UA intrinsic width that `w-full`
+          does not override, so inside a flex row it refused to shrink and
+          pushed its picker icon past the card edge on a phone. */}
       <input
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{ backgroundColor: value ? "var(--field)" : FIELD_EMPTY }}
-        className="w-full min-h-[48px] rounded-xl border border-line px-3.5 text-[15px] text-on-card outline-none focus:border-gold"
+        className="w-full min-w-0 min-h-[48px] rounded-xl border border-line px-3.5 text-[15px] text-on-card outline-none focus:border-gold"
       />
     </label>
   );

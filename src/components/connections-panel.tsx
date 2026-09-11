@@ -105,7 +105,7 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
     withBusy(r.id, () => acceptConnection(r.id), "Could not accept that invite.");
 
   const decline = async (r: ApiConnection) => {
-    if (!await dialog.confirm(`Decline the invite from ${nameOf(r)}?`)) return;
+    if (!await dialog.confirm(`Decline the invite from ${nameOf(r)}?`, { confirmLabel: "Decline", danger: true })) return;
     withBusy(r.id, () => removeConnection(r.id), "Could not decline that invite.");
   };
 
@@ -120,7 +120,7 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
   };
 
   const cancelInvite = async (r: ApiConnection) => {
-    if (!await dialog.confirm(`Withdraw the invite to ${r.email}?`)) return;
+    if (!await dialog.confirm(`Withdraw the invite to ${r.email}?`, { confirmLabel: "Withdraw", danger: true })) return;
     withBusy(r.id, () => removeConnection(r.id), "Could not withdraw that invite.");
   };
 

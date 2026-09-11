@@ -22,7 +22,7 @@ function ProfileInner() {
   const [busy, setBusy] = useState(false);
 
   const confirmDelete = async () => {
-    if (!await dialog.confirm("This permanently deletes your account and all your pillar data. This cannot be undone.")) return;
+    if (!await dialog.confirm("Delete your account?", { body: "This permanently deletes your account and all your pillar data. This cannot be undone.", confirmLabel: "Delete account", danger: true })) return;
     setBusy(true);
     try {
       await deleteAccount();

@@ -254,7 +254,7 @@ export default function Pillar3() {
         empty="Nothing filed yet."
         clearLabel="Clear all filed"
         hasItems={state.filed.length > 0}
-        onClear={async () => { if (await dialog.confirm("Delete everything in the filed archive?")) update((s) => { s.filed = []; }); }}
+        onClear={async () => { if (await dialog.confirm("Delete everything in the filed archive?", { confirmLabel: "Delete all", danger: true })) update((s) => { s.filed = []; }); }}
       >
         {state.filed.map((f, i) => (
           <div key={i} className="flex items-center gap-2.5 py-2 border-b border-line">

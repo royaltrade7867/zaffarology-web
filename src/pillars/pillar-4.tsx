@@ -166,7 +166,7 @@ export default function Pillar4() {
   };
 
   const removeItem = async () => {
-    if (!await dialog.confirm("Remove this item from the huddle board?")) return;
+    if (!await dialog.confirm("Remove this item from the huddle board?", { confirmLabel: "Remove", danger: true })) return;
     update((s) => {
       s.items.splice(idx, 1);
       if (!s.items.length) s.items = [blank()];
@@ -202,9 +202,11 @@ export default function Pillar4() {
       <div className="flex items-center justify-between mb-3">
         <button
           disabled={idx === 0}
+          aria-label="Previous item"
+          title="Previous item"
           onClick={() => setCur((c) => Math.max(0, c - 1))}
           className="flex h-10 w-10 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
-          style={{ borderColor: idx === 0 ? "var(--line)" : BLUE, color: idx === 0 ? "var(--placeholder)" : BLUE }}
+          style={{ borderColor: idx === 0 ? "var(--line)" : BLUE, color: idx === 0 ? "var(--muted)" : BLUE }}
         >
           <ChevronLeft size={18} />
         </button>
@@ -213,9 +215,11 @@ export default function Pillar4() {
         </span>
         <button
           disabled={idx >= items.length - 1}
+          aria-label="Next item"
+          title="Next item"
           onClick={() => setCur((c) => Math.min(items.length - 1, c + 1))}
           className="flex h-10 w-10 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
-          style={{ borderColor: idx >= items.length - 1 ? "var(--line)" : BLUE, color: idx >= items.length - 1 ? "var(--placeholder)" : BLUE }}
+          style={{ borderColor: idx >= items.length - 1 ? "var(--line)" : BLUE, color: idx >= items.length - 1 ? "var(--muted)" : BLUE }}
         >
           <ChevronRight size={18} />
         </button>
@@ -248,8 +252,12 @@ export default function Pillar4() {
           className="w-full rounded-lg px-2 py-2 mb-1.5 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder"
         />
 
-        <div className="flex gap-3">
-          <div className="flex-1">
+        {/* `min-w-0` on both columns: a flex item will not shrink below its
+            content's intrinsic width without it, so the date input overflowed
+            the card — and past the viewport — at phone widths. Below `sm` the
+            two fields stack rather than squeezing into half a narrow screen. */}
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="min-w-0 flex-1">
             <PersonTagField
               label="Delegated To"
               value={item.who}
@@ -273,7 +281,7 @@ export default function Pillar4() {
               }
             />
           </div>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <DateField label="Project Due Date" value={item.due} onChange={(iso) => setItem({ due: iso })} />
           </div>
         </div>
@@ -329,7 +337,19 @@ export default function Pillar4() {
           {item.status === "completed" ? (
             <>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  // "Remove" beside this one has always confirmed; Delete threw
+                  // the item away on a single click, which is the more
+                  // destructive of the two (Remove only takes it off the board).
+                  if (
+                    !(await dialog.confirm("Delete this item?", {
+                      body: "It will not be kept in the filed archive.",
+                      confirmLabel: "Delete",
+                      danger: true,
+                    }))
+                  ) {
+                    return;
+                  }
                   update((s) => {
                     s.items.splice(idx, 1);
                     if (!s.items.length) s.items = [blank()];
@@ -386,7 +406,7 @@ export default function Pillar4() {
         clearLabel="Clear all filed"
         hasItems={state.filed.length > 0}
         onClear={async () => {
-          if (await dialog.confirm("Delete everything in the filed archive?")) update((s) => { s.filed = []; });
+          if (await dialog.confirm("Delete everything in the filed archive?", { confirmLabel: "Delete all", danger: true })) update((s) => { s.filed = []; });
         }}
       >
         {state.filed.map((f, i) => (

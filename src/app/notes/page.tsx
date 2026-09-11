@@ -218,7 +218,7 @@ function NotesAndMeetings() {
   );
 
   const confirmDelete = async (what: "note" | "meeting", id: number) => {
-    if (!await dialog.confirm(`Delete this ${what}?`)) return;
+    if (!await dialog.confirm(`Delete this ${what}?`, { confirmLabel: "Delete", danger: true })) return;
     // Step back one, like mobile. `idx` clamps for rendering, but leaving `cur`
     // stale lands the user on the last item rather than the neighbour of the
     // one they deleted.

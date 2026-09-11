@@ -123,6 +123,10 @@ export const Close = (p: IconProps) => (
   <Svg {...p}><path d="M6 6l12 12M18 6L6 18" /></Svg>
 );
 
+export const Menu = (p: IconProps) => (
+  <Svg {...p}><path d="M4 7h16M4 12h16M4 17h16" /></Svg>
+);
+
 export const People = (p: IconProps) => (
   <Svg {...p}>
     <circle cx="9" cy="8" r="3.25" />

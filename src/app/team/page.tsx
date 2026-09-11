@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 
 import { api, apiErrorMessage, type ApiTeamOut } from "@/lib/api";
-import { PILLARS } from "@/lib/pillars";
+import { PILLARS, backendPillarId } from "@/lib/pillars";
 import { useAuth } from "@/lib/auth-context";
 import { AuthGuard } from "@/components/shell";
 import { ConnectionsPanel } from "@/components/connections-panel";
-import { Loading } from "@/components/ui";
+import { Loading, cx } from "@/components/ui";
 
 function TeamInner() {
   const { company } = useAuth();
@@ -65,10 +65,24 @@ function TeamInner() {
                     <div className="text-muted text-[11px]">{m.email}</div>
                   </td>
                   {PILLARS.map((p) => {
-                    const pct = Math.round((m.per_pillar?.[String(p.n)] ?? 0) * 100);
+                    // Keyed by the BACKEND id, not the displayed number — Pillar 5
+                    // is stored and reported as 8. Looking up `p.n` meant Pillar 5
+                    // asked for "5", got nothing, and showed a grey 0% for every
+                    // member no matter how much work they had actually done.
+                    const pct = Math.round((m.per_pillar?.[backendPillarId(p)] ?? 0) * 100);
                     return (
                       <td key={p.n} className="px-2 py-2 text-center">
-                        <span className="inline-block min-w-[34px] rounded-full px-1.5 py-0.5 text-[11px] font-semibold text-on-accent" style={{ backgroundColor: pct ? p.accent : "var(--line)" }}>
+                        {/* A 0% chip is NOT a filled accent, so `on-accent` —
+                            tuned for text ON a colour — landed at 1.63:1 on the
+                            hairline. An unstarted pillar reads as muted text in
+                            an outline instead. */}
+                        <span
+                          className={cx(
+                            "inline-block min-w-[34px] rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
+                            pct ? "text-on-accent" : "border border-line text-muted",
+                          )}
+                          style={pct ? { backgroundColor: p.accent } : undefined}
+                        >
                           {pct}%
                         </span>
                       </td>

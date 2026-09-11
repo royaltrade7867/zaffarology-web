@@ -142,15 +142,18 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={api}>
       {children}
       {req ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          // The scrim is a sibling click target, not a wrapper: wrapping the
-          // panel makes a click inside it bubble out and dismiss the dialog.
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) close(req.kind === "prompt" ? null : false);
-          }}
-        >
-          <div className="absolute inset-0 bg-[rgba(4,16,31,0.55)]" aria-hidden />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* The scrim carries its own handler. It used to rely on the wrapper
+              seeing `e.target === e.currentTarget`, but the scrim is painted
+              ON TOP of the wrapper and so was always the target itself — the
+              condition never held and clicking outside did nothing. A click
+              inside the panel cannot reach this element at all, so the dialog
+              still does not dismiss from its own content. */}
+          <div
+            className="absolute inset-0 bg-[rgba(4,16,31,0.55)]"
+            aria-hidden
+            onMouseDown={() => close(req.kind === "prompt" ? null : false)}
+          />
           <div
             ref={panelRef}
             role={req.kind === "alert" ? "alertdialog" : "dialog"}

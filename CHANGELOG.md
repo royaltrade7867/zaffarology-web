@@ -2,6 +2,75 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-11 - Reachability, Team accuracy, destructive actions
+
+**The nav was unreachable on a phone.** Six links plus the wordmark need ~580px;
+below that they overlapped the logo and ran off the right edge, and the page
+does not scroll horizontally — so Team, About and Profile could not be reached
+at all. They now collapse into a menu button under `sm`, which closes on route
+change and on Escape, and marks the current page with `aria-current`.
+
+**The Team table was showing the wrong numbers, two ways.** `per_pillar` is
+keyed by the BACKEND id, but the table looked up the DISPLAYED number — so
+Pillar 5 (stored as `pillar-8-business-systems`, reported as 8) asked for a key
+that is never sent and showed a grey 0% for every member regardless of their
+work. Backend progress also averaged over `range(1, 9)`, dividing a 5-pillar sum
+by 8: a member with 3 of 5 done read 38% instead of 60%, visibly disagreeing
+with the table's own five columns. `LIVE_PILLAR_IDS` and a derived
+`backendPillarId` fix both; the blob whitelist is untouched, so history and old
+clients still work. A 0% chip no longer paints `on-accent` on the hairline
+(1.63:1 dark / 1.42:1 light) but reads as muted text in an outline (7.20 / 5.58).
+
+**Destructive actions now look and behave destructive.** Pillar 4's "Delete"
+threw an item away on one click while "Remove" beside it asked — the more
+destructive of the two was the unguarded one. Every confirm whose wording
+deletes, removes, withdraws or declines is now styled `danger`; flow steps
+("Start a new day", "File this problem") deliberately stay gold.
+
+**Also:** the dialog scrim now dismisses (it was painted on top of the wrapper
+whose `target === currentTarget` test therefore never held); the Pillar 4 due
+date no longer overflows the card and viewport on a phone (`min-w-0` on both
+columns and on the date input, which carries a UA intrinsic width `w-full` does
+not override, plus stacking under `sm`); all four navigator arrows have an
+accessible name and a tooltip; every 13px row × is a 24px target with a label;
+and a long PDF build announces itself via `aria-busy` and a live region.
+
+New fixture `check-a11y-web.ts` (32 checks) covers all of the above; each guard
+was verified to fail when its bug is reintroduced.
+
+## 2026-09-11 - Pillar 5 sections 7/8 data loss, PDF export, placeholder token
+
+**Sections 7 and 8 destroyed what you typed.** Both were bound to `efforts` /
+`results` — the deprecated flat mirrors. `fixSystem` rebuilds those *from*
+`pairs` on load, so an answer saved correctly, was discarded on the next load,
+and was written back blank by the following save. Because the blob is shared,
+an answer typed on the phone was erased by opening the same system on the web
+and touching any field. Both sections now render one `pairs` array through a
+`mutatePairs` helper that re-syncs the mirrors, matching the mobile app: adding
+an effort adds a blank result, deleting either side removes the whole pair, and
+`pair.id` — which daily answers are keyed by — stays stable. Deleting now says
+the matching question goes too. New fixture `check-effort-pairs-web.ts`
+reproduces the original loss and fails if the binding regresses.
+
+**PDF export was broken and reported success anyway.** `vfs_fonts` only
+self-registers when a global `pdfMake` exists — true for a `<script>` tag,
+false for a bundled ES import — so the browser got no fonts and `createPdf`
+threw "Roboto-Medium.ttf not found". `download()` is async, so the failure
+became an uncaught rejection *after* the page had already said "Your PDF has
+been downloaded." Fonts are now wired explicitly via `addVirtualFileSystem`,
+registration is asserted before the caller is promised a file, and every
+download is awaited. Verified in a browser: valid `%PDF`, embedded
+Roboto-Medium and Roboto-Regular streams, zero console errors.
+
+**`--placeholder` was doing two incompatible jobs.** It is tuned for fields,
+which are white paper in both themes; it was also used for empty-state and hint
+text on cards and the page, which do go dark. Darkening it to fix the fields
+pushed that text to 2.30:1. Hint text now uses `--muted` (2.30 → 7.20:1 dark,
+5.58:1 light) and `--placeholder` is pinned to `::placeholder` only, where it
+clears 4.5:1 on all three field surfaces. A fixture catches both spellings —
+the `text-placeholder` class and an inline `var(--placeholder)`; the second had
+escaped a sweep that only looked for the first.
+
 ## 2026-09-08 - Voice notes join the Notes screen's own filter
 
 Standalone recordings now carry Personal / Business, and **the screen's single

@@ -258,6 +258,32 @@ for (const [what, re_] of [
 ck("a mouse click leaves no focus ring", /:focus:not\(:focus-visible\)/.test(css));
 ck("motion is optional", /prefers-reduced-motion/.test(css));
 
+/* --placeholder is tuned for FIELDS, which are white paper in BOTH themes (white,
+   or white under a green wash when empty). Empty-state and hint text sits on a
+   card or the page, which DO go dark, so the same value lands at 2.30:1 there.
+   Both spellings have shipped as bugs: a `text-placeholder` class, and an inline
+   `var(--placeholder)` that survived a sweep looking only for the class. Hint
+   text on a card uses --muted, which is defined per theme. */
+{
+  const offenders: string[] = [];
+  // componentFiles alone is not enough: the Reports page held one of these and
+  // sits under src/app, so sweep the route files too.
+  const routeFiles = readdirSync("src/app", { recursive: true, encoding: "utf8" })
+    .filter((f) => f.endsWith(".tsx"))
+    .map((f) => `src/app/${f}`);
+  for (const f of componentFiles.concat(routeFiles)) {
+    const src = readFileSync(f, "utf8");
+    for (const m of src.matchAll(/var\(--placeholder\)/g)) offenders.push(`${f}: ${m[0]}`);
+    // `placeholder:text-placeholder` IS the real ::placeholder and is correct;
+    // a bare `text-placeholder` is colour applied to text on a card.
+    for (const m of src.matchAll(/(?<!placeholder:)\btext-placeholder\b/g)) {
+      offenders.push(`${f}: ${m[0]}`);
+    }
+  }
+  ck("--placeholder is never used as text on a card or the page",
+     offenders.length === 0, offenders.slice(0, 3).join(" | "));
+}
+
 if (fails.length) {
   console.error(pass + " passed, " + fails.length + " FAILED");
   fails.forEach((f) => console.error("  FAIL " + f));

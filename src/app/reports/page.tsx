@@ -157,7 +157,7 @@ function Reports() {
                   <span
                     aria-hidden
                     className="font-heading text-[15px]"
-                    style={{ color: on ? p.accent : "var(--placeholder)" }}
+                    style={{ color: on ? p.accent : "var(--muted)" }}
                   >
                     {p.n}
                   </span>
@@ -225,10 +225,14 @@ function Reports() {
 
       {/* Take it away */}
       <div className="mt-8 flex flex-wrap gap-2">
+        {/* `aria-busy` + the live region below: building a PDF takes seconds,
+            and without them a screen-reader user gets no signal that anything
+            is happening, nor that it finished. */}
         <button
           type="button"
           onClick={() => run("pdf")}
           disabled={!!busy}
+          aria-busy={busy === "pdf"}
           className={cx(
             "flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition-colors",
             busy ? "cursor-wait border border-line text-muted" : "bg-gold text-on-gold hover:bg-gold-hover",
@@ -241,6 +245,7 @@ function Reports() {
           type="button"
           onClick={() => run("text")}
           disabled={!!busy}
+          aria-busy={busy === "text"}
           className={cx(
             "flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-5 text-[15px] font-semibold transition-colors",
             busy ? "cursor-wait border-line text-muted" : "border-line text-heading hover:bg-line-soft",
@@ -249,6 +254,11 @@ function Reports() {
           {busy === "text" ? "Copying…" : "Copy as text"}
         </button>
       </div>
+
+      {/* Announces "Building your PDF…", then the result. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {busy === "pdf" ? "Building your PDF" : busy === "text" ? "Copying" : (note ?? error ?? "")}
+      </p>
 
       {note ? (
         <p className="mt-3 text-[13px] font-semibold text-gold" role="status">

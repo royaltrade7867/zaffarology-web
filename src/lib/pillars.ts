@@ -91,3 +91,17 @@ export const PILLARS: PillarMeta[] = [
 ];
 
 export const pillarByNumber = (n: number): PillarMeta | undefined => PILLARS.find((p) => p.n === n);
+
+/**
+ * The id the BACKEND uses for a pillar in `per_pillar` maps — which is not the
+ * number shown in the UI. Pillar 5 is stored as `pillar-8-business-systems` and
+ * reported as 8, because renumbering would orphan every existing blob row.
+ *
+ * Derived from `key` rather than hand-listed so the two cannot drift. The Team
+ * table used to look up `p.n`, so Pillar 5 asked for "5", got nothing, and
+ * showed a grey 0% for every member no matter how much work they had done.
+ */
+export const backendPillarId = (p: PillarMeta): string => {
+  const m = /^pillar-(\d+)/.exec(p.key);
+  return m ? m[1] : String(p.n);
+};
