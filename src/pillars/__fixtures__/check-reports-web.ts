@@ -94,15 +94,33 @@ ck("no app CSS variable leaks into report HTML",
 
 /* ------------------------- the pdfmake wiring ---------------------------- */
 
-/* THE bug this section exists for. pdfmake 0.3's `vfs_fonts` registers its
-   fonts by itself; an earlier version of pdf.ts read a `mod.vfs` that does not
-   exist in 0.3 and assigned `{}` over the working font map. `createPdf` then
-   hung forever — no error, no download, nothing in the console. Verified in a
-   real browser after the fix: createPdf(...).getBase64() resolves to a %PDF. */
-ck("the fonts module is imported for its side effect",
-   /import\("pdfmake\/build\/vfs_fonts"\)/.test(pdf));
-ck("and is NOT hand-wired across", !/\.vfs\b\s*(\?\?|\|\||=[^=])/.test(pdf));
-ck("virtualfs is not written to directly", !/virtualfs\s*[.[]/.test(pdf.replace(/\/\*[\s\S]*?\*\//g, "")));
+/* THE bug this section exists for, in two halves.
+ *
+ * 1. FONTS. `vfs_fonts` ends with
+ *      if (_global.pdfMake && _global.pdfMake.addVirtualFileSystem)
+ *        _global.pdfMake.addVirtualFileSystem(vfs)
+ *      module.exports = vfs
+ *    so it self-registers ONLY when a global `pdfMake` exists — true for a
+ *    <script> tag, false for a bundled ES import. Importing it for its side
+ *    effect alone therefore registered nothing in the browser and createPdf
+ *    threw "File 'Roboto-Medium.ttf' not found in virtual file system".
+ *    This is invisible under Node, where pdfmake.js sets global.pdfMake as it
+ *    loads and the side effect appears to work. An earlier fix in the other
+ *    direction (reading a `mod.vfs` that does not exist in 0.3, and assigning
+ *    {} over the map) is why the wiring must come from the module's own export.
+ *
+ * 2. THE LIE. `download()` is async in 0.3, so calling it unawaited turned the
+ *    failure into an uncaught rejection AFTER the caller resolved — the page
+ *    said "Your PDF has been downloaded." while no file existed. */
+ck("the fonts module is imported", /import\("pdfmake\/build\/vfs_fonts"\)/.test(pdf));
+ck("the fonts are wired across explicitly, not left to a side effect",
+   /addVirtualFileSystem\?\.\(/.test(pdf));
+ck("the font map comes from the module export, never an invented field",
+   /rawFonts\.default \?\? rawFonts/.test(pdf) && !/\bmod\.vfs\b/.test(pdf));
+ck("registration is verified before the caller is promised a file",
+   /existsSync\("Roboto-Medium\.ttf"\)/.test(pdf) && /fonts did not register/.test(pdf));
+ck("every download is awaited so failures reach the caller's catch",
+   !/(?<!await )\bpm\.createPdf\([\s\S]*?\)\.download\(/.test(pdf));
 ck("the module shape is asserted rather than assumed",
    /no createPdf export/.test(pdf));
 /* ~1 MB: it must not land in the main bundle. */
