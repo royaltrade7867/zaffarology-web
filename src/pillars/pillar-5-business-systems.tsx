@@ -202,7 +202,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
     <div>
       <SectionLabel text={label} small={small} color={NAVY} />
       {rows.length === 0 ? (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-dashed border-line px-3.5 py-4 mb-1" style={{ backgroundColor: "rgba(27,58,92,0.02)" }}>
+        <div className="flex items-center gap-2.5 rounded-2xl border border-dashed border-line px-3.5 py-4 mb-1" >
           <span className="text-[13px] leading-snug" style={{ color: "var(--placeholder)" }}>{empty}</span>
         </div>
       ) : rows.map((r) => (
@@ -228,8 +228,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
           <button
             onClick={(e) => { e.stopPropagation(); r.onDel(); }}
             aria-label={`Delete ${r.name}`}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[13px]"
-            style={{ backgroundColor: "rgba(14,28,48,0.05)", color: "var(--placeholder)" }}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-danger"
           ><Close size={13} /></button>
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted"><ChevronRight size={16} /></span>
         </div>

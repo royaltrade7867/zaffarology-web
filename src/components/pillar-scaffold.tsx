@@ -36,10 +36,15 @@ export function PillarScaffold({ pillar, children }: { pillar: PillarMeta; child
                   key={p.n}
                   onClick={() => router.push(`/pillar/${p.n}`)}
                   className="w-9 h-9 shrink-0 rounded-full border-2 font-heading text-[13px] flex items-center justify-center"
+                  /* `--selected` / `--on-selected`, not `--heading` with a fixed
+                     white: `--heading` is navy in light but CREAM in dark, so
+                     white on it was 1.20:1 and the selected chip vanished into
+                     its own fill. These two contrast with each other by
+                     construction, in both themes. */
                   style={{
                     borderColor: "var(--gold)",
-                    backgroundColor: active ? "var(--heading)" : "var(--surface)",
-                    color: active ? "#fff" : "var(--gold)",
+                    backgroundColor: active ? "var(--selected)" : "var(--surface)",
+                    color: active ? "var(--on-selected)" : "var(--gold)",
                   }}
                 >
                   {p.n}

@@ -188,7 +188,7 @@ export function YesNoRow({ value, onChange, yesLabel = "Yes", noLabel = "No" }: 
     <button
       onClick={() => onChange(v)}
       className="flex-1 min-h-[44px] rounded-xl border-[1.5px] text-[13px] font-semibold"
-      style={{ borderColor: value === v ? on : "var(--line)", color: value === v ? "#fff" : "var(--muted)", backgroundColor: value === v ? on : "var(--surface)" }}
+      style={{ borderColor: value === v ? on : "var(--line)", color: value === v ? "var(--on-accent)" : "var(--muted)", backgroundColor: value === v ? on : "var(--surface)" }}
     >
       {label}
     </button>

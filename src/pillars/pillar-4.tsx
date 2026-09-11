@@ -224,7 +224,17 @@ export default function Pillar4() {
       {/* Item card */}
       <div
         className="rounded-lg border-2 p-3.5 shadow-sm"
-        style={{ borderColor: border, backgroundColor: item.status === "completed" ? "rgba(31,107,74,0.03)" : "#FFFFFF" }}
+        /* `--surface`, never a hardcoded white: the card is a CARD, not a
+           writing surface, so it follows the theme. A fixed white stayed white
+           on the navy page while its labels kept the dark-theme muted colour —
+           2.17:1, unreadable. The completed tint is a wash OVER the surface. */
+        style={{
+          borderColor: border,
+          backgroundColor:
+            item.status === "completed"
+              ? "color-mix(in srgb, var(--p3) 6%, var(--surface))"
+              : "var(--surface)",
+        }}
       >
         <FLabel>Project / Task Name</FLabel>
         <input

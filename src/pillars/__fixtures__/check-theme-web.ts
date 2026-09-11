@@ -157,6 +157,40 @@ for (const f of ["login", "signup", "forgot-password"]) {
   ck(`${f} stays neutral`, !/emptyTint/.test(src));
 }
 
+/* ------------- a CARD must follow the theme, unlike a field -------------- */
+
+/* A field is white paper in both themes. A CARD is not — it goes navy in dark.
+   A hardcoded white card keeps its dark-theme muted labels on a white ground:
+   the Pillar 4 huddle card shipped that way at 2.17:1. Equally, a fixed white
+   TEXT on an accent fill breaks when the accent lightens for the dark page —
+   the "Completed" button was 2.21:1. */
+const hardSurfaces: string[] = [];
+for (const f of componentFiles) {
+  const src = readFileSync(f, "utf8");
+  // Any WHITE or near-white literal, wherever it sits. An earlier version of
+  // this check required the hex to follow `backgroundColor:` immediately and so
+  // missed `backgroundColor: cond ? a : "#FFFFFF"` — the exact shape the huddle
+  // card used. Match the literal itself, not its surroundings.
+  for (const m of src.matchAll(/"#(?:[Ff]{3}|[Ff]{6})"/g)) {
+    hardSurfaces.push(`${f}: ${m[0]}`);
+  }
+  // A fixed rgba() fill is the same problem wearing a different hat: it cannot
+  // change with the theme either.
+  for (const m of src.matchAll(/backgroundColor:\s*"rgba\(/g)) {
+    hardSurfaces.push(`${f}: ${m[0]}`);
+  }
+}
+ck("no card or label hardcodes a colour the theme cannot change",
+   hardSurfaces.length === 0, hardSurfaces.slice(0, 3).join(" | "));
+
+/* Text ON a pillar accent uses the flipping token, never a fixed white: the
+   accents lighten for the dark page and white drops to ~2.2:1 on them. */
+for (const f of componentFiles) {
+  const src = readFileSync(f, "utf8");
+  ck(`${f.split("/").pop()} puts no fixed white on an accent fill`,
+     !/color:\s*value === v \? "#fff"/.test(src));
+}
+
 /* --------------------------- the app's own dialogs ----------------------- */
 
 /* The browser's alert/confirm/prompt ignore the theme entirely, dock to the top
