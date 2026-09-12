@@ -8,6 +8,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Loading, cx } from "@/components/ui";
 import { Close, Menu } from "@/components/icons";
+import { PillarChips } from "@/components/pillar-chips";
 
 /** Brand wordmark: ZAFFAR (gold) · OLOGY (navy). */
 export function Wordmark({ size = 22 }: { size?: number }) {
@@ -82,6 +83,7 @@ export function TopNav() {
   const [open, setOpen] = useState(false);
   const isActive = (href: string) =>
     pathname === href || (href === "/home" && pathname.startsWith("/pillar"));
+  const showChips = pathname !== "/home" && !pathname.startsWith("/pillar");
 
   // Route change closes the menu — otherwise it stays open over the new page.
   useEffect(() => setOpen(false), [pathname]);
@@ -131,6 +133,18 @@ export function TopNav() {
           {open ? <Close size={20} /> : <Menu size={20} />}
         </button>
       </div>
+
+      {/* The 1-5 switcher, on every signed-in screen EXCEPT Home and the pillar
+          pages. Home already lays the pillars out as cards, and a pillar page
+          carries its own copy inside PillarScaffold with the current chip
+          marked — rendering it here too would duplicate the control. Without
+          this, Notes / Reports / Team / About / Profile had no way to reach a
+          pillar except by going back to Home first. */}
+      {showChips ? (
+        <div className="mx-auto max-w-3xl px-4">
+          <PillarChips />
+        </div>
+      ) : null}
 
       {open ? (
         <nav id="zaff-nav-menu" className="border-t border-line px-4 pb-3 pt-2 sm:hidden">

@@ -1,17 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { PILLARS, type PillarMeta } from "@/lib/pillars";
+import { type PillarMeta } from "@/lib/pillars";
 import { todayLine } from "@/lib/dates";
 import { Eagle, Wordmark } from "@/components/shell";
+import { PillarChips } from "@/components/pillar-chips";
 
 /** Brand app-bar + pinned pillar title (number, name, date) + pillar chips.
  *  Stays fixed at the top; only the content scrolls — matches the mobile app. */
 export function PillarScaffold({ pillar, children }: { pillar: PillarMeta; children: ReactNode }) {
-  const router = useRouter();
   return (
     <div>
       <div className="sticky top-0 z-40 bg-background shadow-sm">
@@ -27,31 +26,7 @@ export function PillarScaffold({ pillar, children }: { pillar: PillarMeta; child
               ▦ Pillars
             </Link>
           </div>
-          {/* chips */}
-          <div className="flex gap-1.5 overflow-x-auto py-3">
-            {PILLARS.map((p) => {
-              const active = p.n === pillar.n;
-              return (
-                <button
-                  key={p.n}
-                  onClick={() => router.push(`/pillar/${p.n}`)}
-                  className="w-9 h-9 shrink-0 rounded-full border-2 font-heading text-[13px] flex items-center justify-center"
-                  /* `--selected` / `--on-selected`, not `--heading` with a fixed
-                     white: `--heading` is navy in light but CREAM in dark, so
-                     white on it was 1.20:1 and the selected chip vanished into
-                     its own fill. These two contrast with each other by
-                     construction, in both themes. */
-                  style={{
-                    borderColor: "var(--gold)",
-                    backgroundColor: active ? "var(--selected)" : "var(--surface)",
-                    color: active ? "var(--on-selected)" : "var(--gold)",
-                  }}
-                >
-                  {p.n}
-                </button>
-              );
-            })}
-          </div>
+          <PillarChips active={pillar.n} />
           {/* pinned title */}
           <div className="border-b border-line pt-1 pb-3">
             <h1 className="font-heading text-[24px] leading-none text-heading">
