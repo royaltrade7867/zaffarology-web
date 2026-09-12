@@ -57,7 +57,7 @@ type NavState = { level: "biz" | "dept" | "sys" | "detail"; bizId?: string; dept
 
 export default function Pillar8() {
   const dialog = useDialog();
-  const { state, update, loaded } = usePillarState<P8State>(pillar.key, makeInitial, normalizeP8);
+  const { state, update, loaded, status, retrySave } = usePillarState<P8State>(pillar.key, makeInitial, normalizeP8);
   const [view, setView] = useState<NavState>({ level: "biz" });
   if (!loaded) return <Loading />;
 
@@ -74,7 +74,7 @@ export default function Pillar8() {
     });
 
   return (
-    <PillarScaffold pillar={pillar}>
+    <PillarScaffold pillar={pillar} saveStatus={status} onRetrySave={retrySave}>
       {/* Breadcrumb */}
       <div className="flex flex-wrap items-center mb-4">
         <Crumb label="Businesses" onClick={() => setView({ level: "biz" })} />

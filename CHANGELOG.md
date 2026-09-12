@@ -2,6 +2,51 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-12 - QA audit: both Critical findings, and the validation cluster
+
+From the 12 Sep external QA audit (34 defects). Both Critical fixed, plus the
+input-typing and whitespace findings.
+
+**C1 - a failed save was silently discarded.** Every save path ended in
+`.catch(() => {})`: a failed write showed nothing, never retried, and the screen
+kept displaying text the server had never received. Worse, the draft was written
+to the NORMAL cache key before the request - which the load path overwrites from
+the server, so the edit was destroyed on the next reload either way. Routine
+against a backend that sleeps and answers 503 while waking.
+
+Now: an unsaved draft goes to its own `zaff:v3:pending:*` key, written before the
+request and cleared only on success, and it OUTRANKS the server on the next load
+- so reloading mid-failure restores the edit instead of losing it. Failures
+retry with backoff (1s/3s/8s/20s), retry immediately when the tab comes back
+online, and surface a `role="alert"` banner with a "Try now" button. The banner
+is silent while idle on purpose: a permanent "Saved" badge trains people to
+ignore the place the real warning appears.
+
+**C2 - "Delete your account?" opened with the destructive button focused.**
+Pressing Enter is the reflex the instant a dialog appears, and this one is
+irreversible with no history to restore from. Destructive dialogs now focus
+Cancel (fixing N9 across every confirm in the app), and account deletion needs
+the word DELETE typed - typing cannot happen by reflex.
+
+**Input typing and validation.** The money field was `inputMode="text"`, raising
+the alphabetic keyboard on a phone for a number and storing `abc-!@#$` verbatim;
+it is now `inputMode="decimal"`, digits-and-one-point only, and labelled. Meeting
+Time uses a native time input, falling back to text for a legacy free-text value
+so it is neither blanked nor wiped. Every date field is bounded to 1900-2100 - a
+native date input accepts years to 275760, and a deadline had been stored as
+`62028-06-01`. Strings are trimmed on save, which also fixes the whitespace-only
+field that lost its placeholder and rendered as a blank broken box. "To who?" is
+now "To whom?".
+
+New `check-save-failure.ts` (21 checks) and 12 more in `check-a11y-web.ts`; each
+verified to fail when its bug is reintroduced. 566 checks green.
+
+Still open from the audit: M1 global system numbering (may be intended - system
+numbers are identity and appear in emailed reports), M2 Pillar 5 drill-down has
+no URL, M6 Team table 26px overflow, M8 silent Add refusals, M9 unknown-pillar
+dead end, M10 login email format, M11 silent truncation, M12 per-goal vs per-day
+scoping, and the N-series accessible-name gaps.
+
 ## 2026-09-11 - Two contrast regressions from the last round, and the focus gap
 
 **The red confirm button was 2.75:1 in dark** — the consistency fix traded a

@@ -129,7 +129,7 @@ export function TaskRow({
         <input
           value={who ?? ""}
           onChange={(e) => onChangeWho?.(e.target.value)}
-          placeholder="To who?"
+          placeholder="To whom?"
           autoCorrect="off"
           spellCheck={false}
           style={{ color: accent, borderColor: accent, backgroundColor: (who ?? "").trim() ? "transparent" : FIELD_EMPTY }}
@@ -182,6 +182,11 @@ export function DateField({ value, onChange, label }: { value: string; onChange:
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        /* A native date input accepts years up to 275760, so a couple of extra
+           keystrokes in the year segment silently produce nonsense — a deadline
+           was stored as 62028-06-01 with nothing flagging it. */
+        min="1900-01-01"
+        max="2100-12-31"
         style={{ backgroundColor: value ? "var(--field)" : FIELD_EMPTY }}
         className="w-full min-w-0 min-h-[48px] rounded-xl border border-line px-3.5 text-[15px] text-on-card outline-none focus:border-gold"
       />

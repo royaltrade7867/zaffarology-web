@@ -45,8 +45,12 @@ function Field({
   onChange: (v: string) => void;
   placeholder?: string;
   maxLength?: number;
-  type?: "text" | "date";
+  type?: "text" | "date" | "time";
 }) {
+  /* A native date input accepts years up to 275760, so a stray keystroke in the
+     year segment silently produces something like 62028-06-01. Bound it to a
+     range a business meeting can plausibly fall in. */
+  const bounds = type === "date" ? { min: "1900-01-01", max: "2100-12-31" } : {};
   return (
     <label className="block mb-3">
       <span className="block text-[12px] font-semibold text-muted mb-1">{label}</span>
@@ -55,7 +59,9 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        maxLength={maxLength}
+        // A date/time input rejects maxLength and warns in the console.
+        maxLength={type === "text" ? maxLength : undefined}
+        {...bounds}
         autoCorrect="off"
         spellCheck={false}
         style={{ backgroundColor: value.trim() ? "var(--field)" : "var(--field-empty)" }}
@@ -183,7 +189,18 @@ export function MeetingEditor({
           maxLength={10}
         />
         {/* Free text on purpose: people write "after lunch", not 14:30. */}
-        <Field label="Time" value={meeting.time} onChange={(v) => onChange({ time: v })} placeholder="e.g. 2:30pm" maxLength={40} />
+        {/* A `time` input shows NOTHING for a value it cannot parse, so an older
+            free-text time ("2:30pm") would look deleted and would be wiped by
+            the next save. Only use the native picker once the stored value is
+            already in HH:MM, and leave existing text as text. */}
+        <Field
+          label="Time"
+          value={meeting.time}
+          onChange={(v) => onChange({ time: v })}
+          type={!meeting.time || /^\d{2}:\d{2}$/.test(meeting.time) ? "time" : "text"}
+          placeholder="e.g. 14:30"
+          maxLength={40}
+        />
       </div>
       <Field
         label="Place"

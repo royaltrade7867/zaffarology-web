@@ -129,7 +129,10 @@ const uiFiles = [
    not override — so the due date pushed past the card AND the viewport. */
 {
   const task = read("src/components/task.tsx");
-  ck("the date input can shrink", /type="date"[\s\S]{0,400}?min-w-0/.test(task));
+  // Span the whole element, not a fixed budget: adding min/max pushed
+  // `min-w-0` past a 400-char window and failed a correct file.
+  ck("the date input can shrink", /type="date"[\s\S]*?min-w-0/.test(task));
+  ck("and is bounded to a sane year range", /min="1900-01-01"/.test(task) && /max="2100-12-31"/.test(task));
   const p4 = read("src/pillars/pillar-4.tsx");
   ck("the due-date row stacks on narrow screens", /flex flex-col gap-3 sm:flex-row/.test(p4));
   ck("both of its columns can shrink", (p4.match(/min-w-0 flex-1/g) ?? []).length >= 2);
@@ -203,6 +206,43 @@ const uiFiles = [
   ck("the tick is padded to a 24px target", /const pad = Math\.max\(0, \(24 - size\) \/ 2\)/.test(task));
   ck("the tick has an accessible name", /aria-label=\{label\}/.test(task));
   ck("and the call site passes one", /label=\{filled \? `Mark done/.test(task));
+}
+
+/* ------------------- destructive focus & typed confirmation -------------- */
+
+/* Pressing Enter/Space is the reflex the instant a dialog opens. On "Delete
+   your account?" that reflex was irreversible: focus landed on the destructive
+   button and there was no typed confirmation. */
+{
+  const dlg = read("src/components/dialog.tsx");
+  ck("a destructive dialog focuses Cancel", /req\.danger\) cancelRef\.current\?\.focus\(\)/.test(dlg));
+  ck("a safe dialog still focuses the affirmative button", /else confirmRef\.current\?\.focus\(\)/.test(dlg));
+  ck("Cancel is reachable by ref", /ref=\{cancelRef\}/.test(dlg));
+
+  const prof = read("src/app/profile/page.tsx");
+  ck("deleting an account needs the word typed", /Type DELETE to confirm/.test(prof));
+  ck("and checks it exactly", /!== "DELETE"/.test(prof));
+}
+
+/* ----------------------------- input typing ------------------------------ */
+
+{
+  const p3 = read("src/pillars/pillar-3.tsx");
+  // `inputMode="text"` on a money field raises the alphabetic keyboard on a
+  // phone, and the field accepted `abc-!@#$` verbatim.
+  ck("the money field asks for a number", /inputMode="decimal"/.test(p3));
+  ck("and strips anything that is not one", /replace\(\/\[\^\\d\.\]\/g, ""\)/.test(p3));
+  ck("and is labelled", /aria-label="Money made today"/.test(p3));
+
+  const me = read("src/components/meeting-editor.tsx");
+  ck("meeting time uses a time input when it can", /\? "time" : "text"/.test(me));
+  ck("meeting dates are bounded", /min: "1900-01-01"/.test(me));
+
+  const ups = read("src/lib/use-pillar-state.ts");
+  ck("saved strings are trimmed", /const trimDeep/.test(ups) && /trimDeep\(data\)/.test(ups));
+
+  const task = read("src/components/task.tsx");
+  ck("the delegate placeholder is grammatical", /To whom\?/.test(task) && !/To who\?/.test(task));
 }
 
 if (fails.length) {

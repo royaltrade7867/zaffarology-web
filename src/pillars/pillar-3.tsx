@@ -76,7 +76,7 @@ const TAG: Record<Section, { label: string; color: string; bg: string }> = {
 
 export default function Pillar3() {
   const dialog = useDialog();
-  const { state, update, loaded } = usePillarState<P3State>(pillar.key, makeInitial, normalize);
+  const { state, update, loaded, status, retrySave } = usePillarState<P3State>(pillar.key, makeInitial, normalize);
 
   useEffect(() => {
     if (!loaded) return;
@@ -118,7 +118,7 @@ export default function Pillar3() {
   ];
 
   return (
-    <PillarScaffold pillar={pillar}>
+    <PillarScaffold pillar={pillar} saveStatus={status} onRetrySave={retrySave}>
       {/* ☀ AM Planning */}
       <p className="font-heading text-[20px] uppercase" style={{ color: Accents.gold }}>
         ☀ AM <span style={{ color: "var(--heading)" }}>PLANNING</span>
@@ -209,7 +209,17 @@ export default function Pillar3() {
             <span className="font-heading text-[11px] tracking-[0.15em]" style={{ color: GREEN }}>$ MONEY MADE</span>
             <input
               value={state.money}
-              onChange={(e) => update((s) => { s.money = e.target.value; })}
+              /* Money, so keep it to digits and one decimal point. It was
+                   `inputMode="decimal"
+                aria-label="Money made today"`, which raises the full alphabetic keyboard
+                   on a phone for a number, and accepted `abc-!@#$` verbatim. */
+                onChange={(e) =>
+                  update((s) => {
+                    const cleaned = e.target.value.replace(/[^\d.]/g, "");
+                    const [whole, ...rest] = cleaned.split(".");
+                    s.money = rest.length ? `${whole}.${rest.join("").slice(0, 2)}` : whole;
+                  })
+                }
               placeholder="e.g. 250"
               maxLength={20}
               inputMode="text"

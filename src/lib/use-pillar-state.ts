@@ -10,16 +10,86 @@ import { useAuth } from "@/lib/auth-context";
  * mobile app reads/writes, so a user's data is shared across web and mobile.
  * Loads from the backend (localStorage cache fallback) and saves debounced.
  * `update(draft => {...})` deep-clones so nested mutations always take.
+ *
+ * SAVE FAILURES ARE NOT SWALLOWED. Every save path used to end in
+ * `.catch(() => {})`: a failed write showed nothing, never retried, and the
+ * screen kept displaying text the server had never received. The user found out
+ * on reload, when the server's older value replaced it. That is routine against
+ * a backend that sleeps and answers 503 while it wakes.
+ *
+ * Three things make that safe now:
+ *   1. `status` reports "saving" / "error", so a screen can say so.
+ *   2. A failed save retries with backoff, and a success clears the error.
+ *   3. The unsaved draft is kept in `zaff:v3:pending:*` and takes precedence
+ *      over the server on the next load, so a reload mid-failure RESTORES the
+ *      edit instead of destroying it.
+ *
+ * The old code wrote the draft to the normal cache BEFORE the request, which
+ * looked like a safety net but was not one: the load path overwrites that cache
+ * from the server, so the edit was gone either way. The pending key is separate
+ * precisely so the load path can find it and win.
  */
 const cacheKey = (userId: string, key: string) => `zaff:v3:${userId}:${key}`;
+/** An edit the server has NOT accepted. Survives reload; cleared on success. */
+const pendingKey = (userId: string, key: string) => `zaff:v3:pending:${userId}:${key}`;
+
+/** Debounce before a save fires. */
+const SAVE_DEBOUNCE_MS = 400;
+/** Backoff for retries, in ms. The last value repeats until it succeeds. */
+const RETRY_BACKOFF_MS = [1_000, 3_000, 8_000, 20_000];
+
+export type SaveStatus = "idle" | "saving" | "error";
 
 async function loadBlob<T>(key: string): Promise<T | null> {
   const { data } = await api.get<{ data: T | null }>(`/v3/pillars/${key}`);
   return data ?? null;
 }
+/**
+ * Trim every string in the blob, in place on a copy, before it is written.
+ *
+ * A field holding only spaces is "non-empty" to `value.trim() ? … : …` checks
+ * all over the UI, so it loses its placeholder and renders as a blank box that
+ * looks broken. Leading/trailing spaces also survived into reports and emails.
+ * The app ALREADY treats whitespace-only as empty for counting and for enabling
+ * the Add buttons, so this just applies the same rule to what is stored.
+ *
+ * Keys are left alone — only values are trimmed.
+ */
+const trimDeep = (v: unknown): unknown => {
+  if (typeof v === "string") return v.trim();
+  if (Array.isArray(v)) return v.map(trimDeep);
+  if (v && typeof v === "object") {
+    return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, trimDeep(x)]));
+  }
+  return v;
+};
+
 async function saveBlob(key: string, data: unknown): Promise<void> {
-  await api.put(`/v3/pillars/${key}`, { data });
+  await api.put(`/v3/pillars/${key}`, { data: trimDeep(data) });
 }
+
+const readJson = <T,>(k: string): T | null => {
+  try {
+    const raw = window.localStorage.getItem(k);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+};
+const writeJson = (k: string, v: unknown) => {
+  try {
+    window.localStorage.setItem(k, JSON.stringify(v));
+  } catch {
+    /* quota or private mode — the in-memory state is still correct */
+  }
+};
+const drop = (k: string) => {
+  try {
+    window.localStorage.removeItem(k);
+  } catch {
+    /* ignore */
+  }
+};
 
 export function usePillarState<T extends object>(
   key: string,
@@ -30,7 +100,10 @@ export function usePillarState<T extends object>(
   const userId = user?.id;
   const [state, setState] = useState<T>(makeInitial);
   const [loaded, setLoaded] = useState(false);
+  const [status, setStatus] = useState<SaveStatus>("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attempt = useRef(0);
   const pendingRef = useRef<T | null>(null);
   const userIdRef = useRef(userId);
   userIdRef.current = userId;
@@ -43,36 +116,39 @@ export function usePillarState<T extends object>(
     let active = true;
     if (!userId) return undefined;
     setLoaded(false);
+    setStatus("idle");
 
-    const readCache = (): T | null => {
-      try {
-        const raw = window.localStorage.getItem(cacheKey(userId, key));
-        return raw ? (JSON.parse(raw) as T) : null;
-      } catch {
-        return null;
-      }
-    };
+    const hydrate = (v: T) => setState(norm({ ...makeInitial(), ...v }));
 
     loadBlob<T>(key)
       .then((remote) => {
         if (!active) return;
-        if (remote) {
-          setState(norm({ ...makeInitial(), ...remote }));
-          try {
-            window.localStorage.setItem(cacheKey(userId, key), JSON.stringify(remote));
-          } catch {
-            /* ignore */
-          }
+        // An edit the server never accepted outranks what the server holds —
+        // it is strictly newer. Without this, reloading during an outage
+        // silently discarded the user's work.
+        const unsaved = readJson<T>(pendingKey(userId, key));
+        if (unsaved) {
+          hydrate(unsaved);
+          pendingRef.current = unsaved;
+          setStatus("error");
+        } else if (remote) {
+          hydrate(remote);
+          writeJson(cacheKey(userId, key), remote);
         } else {
-          const cached = readCache();
-          if (cached) setState(norm({ ...makeInitial(), ...cached }));
+          const cached = readJson<T>(cacheKey(userId, key));
+          if (cached) hydrate(cached);
         }
         setLoaded(true);
       })
       .catch(() => {
         if (!active) return;
-        const cached = readCache();
-        if (cached) setState(norm({ ...makeInitial(), ...cached }));
+        const unsaved = readJson<T>(pendingKey(userId, key));
+        const cached = unsaved ?? readJson<T>(cacheKey(userId, key));
+        if (cached) hydrate(cached);
+        if (unsaved) {
+          pendingRef.current = unsaved;
+          setStatus("error");
+        }
         setLoaded(true);
       });
 
@@ -82,22 +158,45 @@ export function usePillarState<T extends object>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, key]);
 
+  /** Send what is pending; on failure keep it and schedule a retry. */
+  const flush = useCallback(() => {
+    const uid = userIdRef.current;
+    const k = keyRef.current;
+    const next = pendingRef.current;
+    if (!uid || !next) return;
+
+    setStatus("saving");
+    saveBlob(k, next)
+      .then(() => {
+        // Only now is the edit really persisted.
+        if (pendingRef.current === next) {
+          pendingRef.current = null;
+          drop(pendingKey(uid, k));
+          setStatus("idle");
+        }
+        writeJson(cacheKey(uid, k), next);
+        attempt.current = 0;
+      })
+      .catch(() => {
+        setStatus("error");
+        const wait = RETRY_BACKOFF_MS[Math.min(attempt.current, RETRY_BACKOFF_MS.length - 1)];
+        attempt.current += 1;
+        if (retryTimer.current) clearTimeout(retryTimer.current);
+        retryTimer.current = setTimeout(flush, wait);
+      });
+  }, []);
+
   const persist = useCallback(
     (next: T) => {
       if (!userId) return;
       pendingRef.current = next;
+      // Written BEFORE the request and cleared only on success, so a reload
+      // mid-flight restores the edit rather than losing it.
+      writeJson(pendingKey(userId, key), next);
       if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        pendingRef.current = null;
-        try {
-          window.localStorage.setItem(cacheKey(userId, key), JSON.stringify(next));
-        } catch {
-          /* ignore */
-        }
-        saveBlob(key, next).catch(() => {});
-      }, 400);
+      saveTimer.current = setTimeout(flush, SAVE_DEBOUNCE_MS);
     },
-    [userId, key],
+    [userId, key, flush],
   );
 
   const replace = useCallback(
@@ -120,22 +219,37 @@ export function usePillarState<T extends object>(
     [persist],
   );
 
-  // flush a pending change on unmount so a quick navigation never drops the last edit
+  /** Retry now, for a "Try again" control. */
+  const retrySave = useCallback(() => {
+    if (retryTimer.current) clearTimeout(retryTimer.current);
+    attempt.current = 0;
+    flush();
+  }, [flush]);
+
+  // A tab coming back online is the likeliest moment for a stuck save to work.
+  useEffect(() => {
+    const onOnline = () => {
+      if (pendingRef.current) retrySave();
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [retrySave]);
+
+  // Flush a pending change on unmount so a quick navigation never drops the
+  // last edit. `keepalive` so the browser completes it after teardown.
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (retryTimer.current) clearTimeout(retryTimer.current);
       const pending = pendingRef.current;
       const uid = userIdRef.current;
       if (pending && uid) {
-        try {
-          window.localStorage.setItem(cacheKey(uid, keyRef.current), JSON.stringify(pending));
-        } catch {
-          /* ignore */
-        }
-        saveBlob(keyRef.current, pending).catch(() => {});
+        // The pending key is already written, so even if this never lands the
+        // next load restores it.
+        void api.putBeacon(`/v3/pillars/${keyRef.current}`, { data: pending });
       }
     };
   }, []);
 
-  return { state, setState, replace, update, loaded };
+  return { state, setState, replace, update, loaded, status, retrySave };
 }

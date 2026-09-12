@@ -68,6 +68,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
   /** What had focus before the dialog opened, so it can be given back. */
   const returnTo = useRef<HTMLElement | null>(null);
 
@@ -95,12 +96,19 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     [req],
   );
 
-  // Focus the sensible control on open: the input for a prompt, otherwise the
-  // affirmative button.
+  /* Focus the SAFE control on open.
+   *
+   * A prompt focuses its input. A DESTRUCTIVE confirm focuses Cancel, not the
+   * destructive button: pressing Enter or Space is the reflex the moment a
+   * dialog appears, and on "Delete your account?" that reflex was irreversible
+   * — it destroyed the account and every pillar with no typed confirmation.
+   * Anything non-destructive still focuses the affirmative button, which is
+   * where the user wants to be. */
   useEffect(() => {
     if (!req) return;
     const t = setTimeout(() => {
       if (req.kind === "prompt") inputRef.current?.select();
+      else if (req.danger) cancelRef.current?.focus();
       else confirmRef.current?.focus();
     }, 0);
     return () => clearTimeout(t);
@@ -195,6 +203,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
             <div className="mt-4 flex justify-end gap-2">
               {req.kind !== "alert" ? (
                 <button
+                  ref={cancelRef}
                   type="button"
                   onClick={() => close(req.kind === "prompt" ? null : false)}
                   className="min-h-[40px] rounded-xl border border-line px-4 text-[13.5px] font-semibold text-muted transition-colors hover:bg-line-soft"

@@ -101,7 +101,7 @@ function rollover(s: P1State, closingDate: string) {
 
 export default function Pillar1() {
   const dialog = useDialog();
-  const { state, update, loaded } = usePillarState<P1State>(pillar.key, makeInitial, normalize);
+  const { state, update, loaded, status, retrySave } = usePillarState<P1State>(pillar.key, makeInitial, normalize);
   const [cur, setCur] = useState(0);
 
   useEffect(() => {
@@ -206,7 +206,7 @@ export default function Pillar1() {
     }) as const;
 
   return (
-    <PillarScaffold pillar={pillar}>
+    <PillarScaffold pillar={pillar} saveStatus={status} onRetrySave={retrySave}>
       {/* Project navigator — one goal at a time, like the huddle board */}
       <div className="flex items-center justify-between mb-3">
         <button

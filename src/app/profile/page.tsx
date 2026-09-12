@@ -21,8 +21,36 @@ function ProfileInner() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
+  /**
+   * Two steps on purpose. This is the only irreversible action in the app — it
+   * hard-deletes the account and every pillar, with no history to restore from
+   * (App Store policy requires the hard delete). A single confirm put the
+   * destructive button under the Enter key the instant the dialog opened, which
+   * is the reflex after any dialog appears.
+   *
+   * So: confirm, then TYPE the word. Typing cannot happen by reflex.
+   */
   const confirmDelete = async () => {
-    if (!await dialog.confirm("Delete your account?", { body: "This permanently deletes your account and all your pillar data. This cannot be undone.", confirmLabel: "Delete account", danger: true })) return;
+    if (
+      !(await dialog.confirm("Delete your account?", {
+        body: "This permanently deletes your account and all your pillar data. This cannot be undone.",
+        confirmLabel: "Continue",
+        danger: true,
+      }))
+    ) {
+      return;
+    }
+    const typed = await dialog.prompt("Type DELETE to confirm", {
+      placeholder: "DELETE",
+      confirmLabel: "Delete account",
+    });
+    // Cancelling the prompt returns null; anything but the exact word aborts.
+    if (typed?.trim().toUpperCase() !== "DELETE") {
+      if (typed !== null) {
+        await dialog.alert("Account not deleted.", "You need to type DELETE exactly.");
+      }
+      return;
+    }
     setBusy(true);
     try {
       await deleteAccount();

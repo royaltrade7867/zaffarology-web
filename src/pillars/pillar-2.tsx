@@ -34,7 +34,7 @@ const GREEN = Accents.green;
 
 export default function Pillar2() {
   const dialog = useDialog();
-  const { state, update, loaded } = usePillarState<P2State>(pillar.key, makeInitial, normalize);
+  const { state, update, loaded, status, retrySave } = usePillarState<P2State>(pillar.key, makeInitial, normalize);
   if (!loaded) return <Loading />;
 
   const sols = state.sols.length ? state.sols : [{ text: "", done: false }];
@@ -101,7 +101,7 @@ export default function Pillar2() {
   ];
 
   return (
-    <PillarScaffold pillar={pillar}>
+    <PillarScaffold pillar={pillar} saveStatus={status} onRetrySave={retrySave}>
       {/* Exact Problem */}
       <section className="mb-8">
         <SectionLabel

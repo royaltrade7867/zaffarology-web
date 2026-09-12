@@ -80,7 +80,7 @@ function FLabel({ children }: { children: React.ReactNode }) {
 
 export default function Pillar4() {
   const dialog = useDialog();
-  const { state, update, loaded } = usePillarState<P4State>(pillar.key, makeInitial, normalize);
+  const { state, update, loaded, status, retrySave } = usePillarState<P4State>(pillar.key, makeInitial, normalize);
   const [cur, setCur] = useState(0);
   // Assignments live on server rows, never in the blob — see use-connections.ts.
   const { partners } = usePartners();
@@ -193,7 +193,7 @@ export default function Pillar4() {
   };
 
   return (
-    <PillarScaffold pillar={pillar}>
+    <PillarScaffold pillar={pillar} saveStatus={status} onRetrySave={retrySave}>
       <AssignedToMe rows={incoming.rows} onToggle={incoming.markDone} accent={BLUE} />
 
       <SectionLabel text="Huddle Board" small="one project at a time, 2 minutes each" color={BLUE} />

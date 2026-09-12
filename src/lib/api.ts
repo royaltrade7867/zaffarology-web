@@ -99,6 +99,9 @@ export const api = {
   /** PATCH that survives the page being torn down. Only for a save flushed
    *  from an unload handler — see `keepalive` above. */
   patchBeacon: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body, true),
+  /** PUT that survives the page being torn down — the pillar blob flushed on
+   *  unmount. Same rules as `patchBeacon`. */
+  putBeacon: <T>(path: string, body?: unknown) => request<T>("PUT", path, body, true),
   del: <T>(path: string) => request<T>("DELETE", path),
 };
 

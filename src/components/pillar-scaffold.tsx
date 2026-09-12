@@ -7,10 +7,23 @@ import { type PillarMeta } from "@/lib/pillars";
 import { todayLine } from "@/lib/dates";
 import { Eagle, Wordmark } from "@/components/shell";
 import { PillarChips } from "@/components/pillar-chips";
+import { SaveStatusBar } from "@/components/save-status";
+import type { SaveStatus } from "@/lib/use-pillar-state";
 
 /** Brand app-bar + pinned pillar title (number, name, date) + pillar chips.
  *  Stays fixed at the top; only the content scrolls — matches the mobile app. */
-export function PillarScaffold({ pillar, children }: { pillar: PillarMeta; children: ReactNode }) {
+export function PillarScaffold({
+  pillar,
+  children,
+  saveStatus = "idle",
+  onRetrySave,
+}: {
+  pillar: PillarMeta;
+  children: ReactNode;
+  /** Surfaced by every pillar so a failed write cannot pass unnoticed. */
+  saveStatus?: SaveStatus;
+  onRetrySave?: () => void;
+}) {
   return (
     <div>
       <div className="sticky top-0 z-40 bg-background shadow-sm">
@@ -40,7 +53,10 @@ export function PillarScaffold({ pillar, children }: { pillar: PillarMeta; child
           </div>
         </div>
       </div>
-      <div className="mx-auto max-w-3xl px-4 py-4">{children}</div>
+      <div className="mx-auto max-w-3xl px-4 py-4">
+        <SaveStatusBar status={saveStatus} onRetry={onRetrySave ?? (() => {})} />
+        {children}
+      </div>
     </div>
   );
 }
