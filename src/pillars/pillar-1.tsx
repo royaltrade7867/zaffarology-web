@@ -7,7 +7,7 @@ import { friendlyISO, shortDate, todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { PillarScaffold } from "@/components/pillar-scaffold";
-import { Loading, MiwBox, SectionLabel, AddButton, TextArea } from "@/components/ui";
+import { Loading, MiwBox, SectionLabel, AddButton, TextArea, CharsLeft } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
 import {
   TaskRow,
@@ -199,10 +199,15 @@ export default function Pillar1() {
     setG((x) => { x.extra.push(blankTask()); });
   };
 
+  /* A disabled arrow must LOOK disabled. Recolouring alone left it reading as
+     active — `--muted` is ordinary secondary text — so at the first or last
+     item clicking appeared to do nothing for no visible reason. */
   const navBtn = (disabled: boolean) =>
     ({
       borderColor: disabled ? "var(--line)" : pillar.accent,
       color: disabled ? "var(--muted)" : pillar.accent,
+      opacity: disabled ? 0.45 : 1,
+      cursor: disabled ? "not-allowed" : "pointer",
     }) as const;
 
   return (
@@ -265,7 +270,8 @@ export default function Pillar1() {
             style={{ backgroundColor: g.goal.trim() ? "var(--field)" : "var(--field-empty)" }}
             className="w-full rounded-lg px-2 py-2 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder"
           />
-        </MiwBox>
+          <CharsLeft value={g.goal} max={GOAL_MAX} />
+          </MiwBox>
 
         <div className="mt-4">
           <SectionLabel text={`Exact Plan ${gi + 1}`} small="how you'll get there" color={pillar.accent} />
@@ -275,6 +281,7 @@ export default function Pillar1() {
             placeholder={`Write the plan for goal ${gi + 1} — the steps, the order, the deadlines…`}
             maxLength={GOAL_MAX}
           />
+            <CharsLeft value={g.plan} max={GOAL_MAX} />
         </div>
 
         <div className="mt-4">

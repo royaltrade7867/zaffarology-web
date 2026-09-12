@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { ChevronRight, Close } from "@/components/icons";
 
 import { pillarByNumber, Accents, HEADING, FIELD_EMPTY } from "@/lib/pillars";
@@ -199,8 +199,21 @@ interface RowSpec {
   onDel: () => void;
 }
 function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label: string; small: string; empty: string; rows: RowSpec[]; addPlaceholder: string; onAdd: (name: string) => void }) {
+  const dialog = useDialog();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [val, setVal] = useState("");
-  const submit = () => { if (val.trim()) { onAdd(val.trim()); setVal(""); } };
+  /* Say why, and put the cursor where the fix is. This used to be a bare
+     `if (val.trim())` with no else: pressing ADD on an empty name did nothing
+     at all and explained nothing. */
+  const submit = () => {
+    if (!val.trim()) {
+      void dialog.alert(`Give it a name first — ${addPlaceholder.toLowerCase()}`);
+      inputRef.current?.focus();
+      return;
+    }
+    onAdd(val.trim());
+    setVal("");
+  };
   return (
     <div>
       <SectionLabel text={label} small={small} color={NAVY} />
@@ -241,6 +254,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
         <input
           autoCorrect="off"
           spellCheck={false}
+          ref={inputRef}
           value={val}
           onChange={(e) => setVal(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") submit(); }}

@@ -107,6 +107,9 @@ export function TaskRow({
       <div className="flex-1 min-w-0 rounded-lg px-2" style={{ backgroundColor: filled ? "transparent" : FIELD_EMPTY }}>
         <input
           value={value}
+          // A long value is clipped mid-character with no ellipsis, so hovering
+          // is the only way to read the rest without clicking in.
+          title={value.trim() || undefined}
           onChange={(e) => {
             const v = e.target.value;
             onChange(v);
@@ -163,7 +166,11 @@ export function Footer({ progress, resetLabel, onReset }: { progress: string; re
   return (
     <div className="flex items-center justify-between mt-3">
       <span className="text-[13px] text-muted">{progress}</span>
-      <button onClick={onReset} className="text-[13.5px] font-semibold text-heading underline">
+      {/* A 24px-tall target (WCAG 2.2) for an action that clears the day. */}
+      <button
+        onClick={onReset}
+        className="flex min-h-[24px] items-center rounded px-1 text-[13.5px] font-semibold text-heading underline"
+      >
         {resetLabel}
       </button>
     </div>

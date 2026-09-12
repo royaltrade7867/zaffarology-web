@@ -80,6 +80,9 @@ export function TextField({
       {label ? <span className="block text-[13px] text-muted mb-1">{label}</span> : null}
       <input
         {...rest}
+        // Same fallback as TextArea: a placeholder-only field would otherwise
+        // announce its own value, or nothing.
+        aria-label={rest["aria-label"] ?? (label ? undefined : rest.placeholder)}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoCorrect="off"
@@ -117,8 +120,13 @@ export function TextArea({ label, value, onChange, className, maxBreaks = MAX_IN
   return (
     <label className="block mb-3">
       {label ? <span className="block text-[13px] text-muted mb-1">{label}</span> : null}
+      {/* With no `label`, this wrapper contains no text — so the accessible name
+          fell back to the field's OWN VALUE, and to nothing at all when empty.
+          The placeholder is the next best description, and unlike the visible
+          placeholder it does not vanish the moment the user types. */}
       <textarea
         {...rest}
+        aria-label={rest["aria-label"] ?? (label ? undefined : rest.placeholder)}
         value={value}
         onChange={(e) => {
           const t = e.target.value;
@@ -185,5 +193,31 @@ export function Loading({ full = true }: { full?: boolean }) {
     <div className={cx("flex items-center justify-center", full ? "min-h-[60vh]" : "py-12")}>
       <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-line border-t-gold" />
     </div>
+  );
+}
+
+/**
+ * "142 left" — shown only once a field is nearly full.
+ *
+ * Long fields were capped by `maxLength` alone, which truncates in silence:
+ * typing 650 characters into a 600-character goal kept 600 and dropped 50 with
+ * no counter, no colour change and nothing said. A permanent counter on every
+ * field would be noise, so this stays invisible until the last ~15% and turns
+ * danger-coloured at the limit. Modelled on Pillar 4's sentence hint, which is
+ * the one piece of inline validation feedback the app already had.
+ */
+export function CharsLeft({ value, max }: { value: string; max: number }) {
+  const left = max - value.length;
+  if (left > Math.max(20, Math.round(max * 0.15))) return null;
+  return (
+    <span
+      className={cx("block text-[11.5px] mt-1", left <= 0 ? "text-danger" : "text-muted")}
+      // Announced politely so a screen-reader user hears it before running out,
+      // rather than being interrupted on every keystroke.
+      role="status"
+      aria-live="polite"
+    >
+      {left > 0 ? `${left} character${left === 1 ? "" : "s"} left` : "Limit reached — no more will be saved"}
+    </span>
   );
 }

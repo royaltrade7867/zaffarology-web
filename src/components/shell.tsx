@@ -174,8 +174,13 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) router.replace("/login");
-    else if (!user.isVerified) router.replace("/verify-email");
+    if (!user) {
+      // Keep where they were going, so signing in lands them there rather than
+      // dumping them on Home and making them navigate again.
+      const here = window.location.pathname + window.location.search;
+      const next = here && here !== "/" ? `?next=${encodeURIComponent(here)}` : "";
+      router.replace(`/login${next}`);
+    } else if (!user.isVerified) router.replace("/verify-email");
   }, [user, loading, router]);
 
   if (loading || !user || !user.isVerified) return <Loading />;

@@ -14,6 +14,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { friendlyISO } from "@/lib/dates";
 import { AuthGuard } from "@/components/shell";
 import { MeetingEditor } from "@/components/meeting-editor";
 import { VoiceNotes } from "@/components/voice-notes";
@@ -563,7 +564,7 @@ function MeetingCard({ meeting, onOpen }: { meeting: ApiMeeting; onOpen: () => v
           {meeting.tag}
         </span>
         {meeting.date ? (
-          <span className="ml-auto text-[11px] tabular-nums text-muted">{meeting.date}</span>
+          <span className="ml-auto text-[11px] tabular-nums text-muted">{friendlyISO(meeting.date) ?? meeting.date}</span>
         ) : null}
       </div>
       <h2 className="font-heading text-[19px] leading-snug text-heading">

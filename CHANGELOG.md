@@ -2,6 +2,49 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-12 - QA audit, round 2: the rest of the M and N series
+
+**A build-breaking bug came out of this.** `useSearchParams` (added for the
+login redirect) opts the tree into client rendering, so `/login` needs a Suspense
+boundary or the static export fails outright. Caught by running the build, not
+by typecheck — it would have broken the Vercel deploy.
+
+**M6** the Team table declared `min-w-[760px]` inside a 734px container, clipping
+its own Overall column to "Overal" at every desktop width; it needs 560.
+**M8** every Add button that refused did so in silence — Pillar 2 and the Pillar 5
+ADD now say why and focus the field to fix. **M9** a mistyped pillar URL rendered
+the bare words "Unknown pillar." with no nav and no link; it keeps the chrome and
+offers a way back. **M10** a malformed email reported "Invalid credentials",
+blaming the password — caught client-side now, with `required`, `maxLength={254}`,
+`autoComplete="current-password"` and autofocus alongside (N12-N14).
+**M11** `maxLength` truncated in silence; `CharsLeft` appears in the last ~15% and
+turns danger-coloured at the limit, modelled on the Pillar 4 sentence hint.
+
+**N15 and the open redirect it could have been.** Signing in now returns you to
+where you were headed — but only ever an in-app path. A full URL there would make
+the login form an open redirect; ten cases tested, every external form rejected.
+
+**Also:** raw ISO dates on the meeting card and report period are formatted (N5);
+the report success message clears when the form changes, so it cannot describe a
+config you are no longer looking at (N6); disabled navigator arrows look disabled
+(N8); "Remove" says how it differs from "Delete" (N10 — and the first wording I
+wrote was wrong: `removeItem` discards, only `fileItem` keeps a record); the
+Team gold header uses the deeper token to clear 4.41:1 in light (N16); a clipped
+task row can be read on hover (N18); the AM plan-check toggle is named, exposes
+`aria-pressed` and is a 24px target (N3); the reset link is 24px (N4); and the
+shared inputs fall back to their placeholder for an accessible name, instead of
+announcing their own value or nothing (N1, N2).
+
+Not changed: **M12** per-goal `work`/`dod` is deliberate — flattening it to the
+top level previously destroyed per-goal data for phone users. **M1** global system
+numbering matches CLAUDE.md, where system numbers are identity and appear in
+emailed reports. **N20** Notes already reports saving/error correctly; what the
+audit saw was C1 on the pillar screens.
+
+`check-a11y-web.ts` is now 78 checks; 589 across the suite. Each new guard was
+verified to fail when its bug is reintroduced — one of them caught a stale
+comment mentioning the old 760px value and had to be taught to ignore comments.
+
 ## 2026-09-12 - QA audit: both Critical findings, and the validation cluster
 
 From the 12 Sep external QA audit (34 defects). Both Critical fixed, plus the

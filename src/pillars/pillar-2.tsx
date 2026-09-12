@@ -4,7 +4,7 @@ import { pillarByNumber, Accents } from "@/lib/pillars";
 import { shortDate } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
-import { Loading, MiwBox, SectionLabel, AddButton, Hint } from "@/components/ui";
+import { Loading, MiwBox, SectionLabel, AddButton, Hint, CharsLeft } from "@/components/ui";
 import { TaskRow, Footer, FiledBox, type TaskAction } from "@/components/task";
 import { useDialog } from "@/components/dialog";
 /**
@@ -43,7 +43,13 @@ export default function Pillar2() {
   // Only from a filled last row, so the list cannot grow blank rows.
   const lastSolFilled = !sols.length || !!sols[sols.length - 1].text.trim();
   const addSol = () => {
-    if (!lastSolFilled) return;
+    // Say why. This used to `return` silently: the button dimmed but clicking it
+    // did nothing and told the user nothing, so the rule ("fill the last one
+    // first") was invisible. Pillar 1 already explains itself here.
+    if (!lastSolFilled) {
+      void dialog.alert(`Fill in Possible solution ${sols.length} before adding another.`);
+      return;
+    }
     update((s) => { s.sols.push({ text: "", done: false }); });
   };
 
@@ -121,6 +127,7 @@ export default function Pillar2() {
             style={{ backgroundColor: state.problem.trim() ? "var(--field)" : "var(--field-empty)" }}
             className="w-full resize-y rounded-lg px-2 py-2 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder min-h-[60px]"
           />
+            <CharsLeft value={state.problem} max={300} />
         </MiwBox>
       </section>
 

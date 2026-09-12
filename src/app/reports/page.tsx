@@ -12,6 +12,8 @@
  */
 import { useState } from "react";
 
+import { friendlyISO } from "@/lib/dates";
+
 import { AuthGuard } from "@/components/shell";
 import { Check, Share } from "@/components/icons";
 import { Loading, SectionLabel, cx } from "@/components/ui";
@@ -62,6 +64,10 @@ function Reports() {
   const setPreset = (n: number) => {
     setDays(n);
     setRange(lastNDays(n));
+    // Otherwise "Your PDF has been downloaded." keeps describing a period the
+    // user has since changed.
+    setNote(null);
+    setError(null);
   };
 
   const run = async (format: ReportFormat) => {
@@ -118,7 +124,7 @@ function Reports() {
                 key={k}
                 type="button"
                 aria-pressed={on}
-                onClick={() => setKind(k)}
+                onClick={() => { setKind(k); setNote(null); setError(null); }}
                 className={cx(
                   "rounded-xl border px-3.5 py-2 text-[13.5px] font-semibold transition-colors",
                   on ? "border-selected bg-selected text-on-selected" : "border-line text-heading hover:bg-line-soft",
@@ -142,7 +148,7 @@ function Reports() {
                 <button
                   key={p.n}
                   type="button"
-                  onClick={() => setPillarNumber(p.n)}
+                  onClick={() => { setPillarNumber(p.n); setNote(null); setError(null); }}
                   aria-pressed={on}
                   // The visible label is a number in a coloured badge, which a
                   // screen reader would read as a bare digit.
@@ -192,7 +198,7 @@ function Reports() {
               })}
             </div>
             <p className="mt-2 text-[12px] tabular-nums text-muted">
-              {range.from} to {range.to}
+              {friendlyISO(range.from) ?? range.from} to {friendlyISO(range.to) ?? range.to}
             </p>
           </div>
 
@@ -201,7 +207,7 @@ function Reports() {
             type="button"
             role="switch"
             aria-checked={excludeP5}
-            onClick={() => setExcludeP5((v) => !v)}
+            onClick={() => { setExcludeP5((v) => !v); setNote(null); setError(null); }}
             className="mt-4 flex w-full items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-3 text-left transition-colors hover:bg-line-soft"
           >
             <span

@@ -166,7 +166,7 @@ export default function Pillar4() {
   };
 
   const removeItem = async () => {
-    if (!await dialog.confirm("Remove this item from the huddle board?", { confirmLabel: "Remove", danger: true })) return;
+    if (!await dialog.confirm("Remove this item from the huddle board?", { body: "It will not be kept in the filed archive. To keep a record, use File instead.", confirmLabel: "Remove", danger: true })) return;
     update((s) => {
       s.items.splice(idx, 1);
       if (!s.items.length) s.items = [blank()];
@@ -206,7 +206,7 @@ export default function Pillar4() {
           title="Previous item"
           onClick={() => setCur((c) => Math.max(0, c - 1))}
           className="flex h-10 w-10 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
-          style={{ borderColor: idx === 0 ? "var(--line)" : BLUE, color: idx === 0 ? "var(--muted)" : BLUE }}
+          style={{ borderColor: idx === 0 ? "var(--line)" : BLUE, color: idx === 0 ? "var(--muted)" : BLUE, opacity: idx === 0 ? 0.45 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
         >
           <ChevronLeft size={18} />
         </button>
@@ -219,7 +219,7 @@ export default function Pillar4() {
           title="Next item"
           onClick={() => setCur((c) => Math.min(items.length - 1, c + 1))}
           className="flex h-10 w-10 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
-          style={{ borderColor: idx >= items.length - 1 ? "var(--line)" : BLUE, color: idx >= items.length - 1 ? "var(--muted)" : BLUE }}
+          style={{ borderColor: idx >= items.length - 1 ? "var(--line)" : BLUE, color: idx >= items.length - 1 ? "var(--muted)" : BLUE, opacity: idx >= items.length - 1 ? 0.45 : 1, cursor: idx >= items.length - 1 ? "not-allowed" : "pointer" }}
         >
           <ChevronRight size={18} />
         </button>

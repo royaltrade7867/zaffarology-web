@@ -6,7 +6,7 @@ import { pillarByNumber, Accents, INK, FIELD_EMPTY } from "@/lib/pillars";
 import { mdDate, todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
-import { Loading, MiwBox, SectionLabel, AddButton } from "@/components/ui";
+import { Loading, MiwBox, SectionLabel, AddButton, CharsLeft } from "@/components/ui";
 import { TaskRow, Footer, FiledBox, PassNote, DayReport, DayGroup, DayTask, DayField, type TaskAction } from "@/components/task";
 import { useDialog } from "@/components/dialog";
 /**
@@ -205,6 +205,7 @@ export default function Pillar3() {
             style={{ backgroundColor: state.pm.trim() ? "var(--field)" : FIELD_EMPTY }}
             className="w-full min-h-[80px] rounded-lg px-2 py-1.5 text-[15px] text-on-card outline-none resize-y placeholder:text-placeholder"
           />
+            <CharsLeft value={state.pm} max={600} />
           <div className="flex items-center gap-2.5 mt-3">
             <span className="font-heading text-[11px] tracking-[0.15em]" style={{ color: GREEN }}>$ MONEY MADE</span>
             <input
@@ -298,13 +299,24 @@ function ReviewItem({ tag, task, onToggle }: { tag: string; task: Task; onToggle
   }
   return (
     <div className="flex items-center gap-2 py-[3px]">
+      {/* 20px glyph in a 24px button (WCAG 2.2 target size), with the task's own
+          words as its name — it announced only "✗ button", with no indication of
+          which task or what it toggles. */}
       <button
         type="button"
         onClick={() => onToggle(!task.done)}
-        className="w-5 h-5 shrink-0 rounded-[2px] border-[1.5px] flex items-center justify-center font-bold text-[12px]"
-        style={{ borderColor: task.done ? GREEN : RED, color: task.done ? GREEN : RED }}
+        aria-pressed={task.done}
+        aria-label={`${task.done ? "Achieved" : "Not achieved"}: ${task.text.trim()}`}
+        title={task.done ? "Achieved — click to undo" : "Not achieved — click to mark done"}
+        className="shrink-0 flex min-h-[24px] min-w-[24px] items-center justify-center bg-transparent"
       >
-        {task.done ? "✓" : "✗"}
+        <span
+          aria-hidden
+          className="w-5 h-5 rounded-[2px] border-[1.5px] flex items-center justify-center font-bold text-[12px]"
+          style={{ borderColor: task.done ? GREEN : RED, color: task.done ? GREEN : RED }}
+        >
+          {task.done ? "✓" : "✗"}
+        </span>
       </button>
       <span className="font-semibold text-[11px] min-w-[44px]" style={{ color: "var(--muted)" }}>{tag}</span>
       <span className="flex-1 truncate text-[13px]" style={{ color: task.done ? "var(--muted)" : INK, textDecorationLine: task.done ? "line-through" : "none" }}>

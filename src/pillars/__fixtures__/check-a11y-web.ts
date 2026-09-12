@@ -245,6 +245,66 @@ const uiFiles = [
   ck("the delegate placeholder is grammatical", /To whom\?/.test(task) && !/To who\?/.test(task));
 }
 
+/* ---------------------- QA round 2: the M/N series ----------------------- */
+
+{
+  // M9 — a mistyped pillar URL stranded the user on a bare sentence.
+  const route = read("src/app/pillar/[id]/page.tsx");
+  ck("an unknown pillar keeps the app chrome", /There is no Pillar/.test(route) && /<AuthGuard>/.test(route));
+  ck("and offers a way back", /Back to the pillars/.test(route));
+
+  // M10 / N12 / N13 / N14 — login.
+  const login = read("src/app/login/page.tsx");
+  ck("a malformed email is caught before the request", /does not look like an email address/.test(login));
+  ck("the password field can be autofilled", /autoComplete="current-password"/.test(login));
+  ck("the email field is capped", /maxLength=\{254\}/.test(login));
+  ck("the first field is focused", /autoFocus/.test(login));
+  // `useSearchParams` needs a Suspense boundary or the static export FAILS.
+  ck("the page is inside a Suspense boundary", /<Suspense/.test(login));
+  // N15 — and the redirect cannot leave the origin.
+  ck("the next path is honoured", /search\.get\("next"\)/.test(login));
+  ck("but only as an in-app path", /startsWith\("\/"\) && !raw\.startsWith\("\/\/"\)/.test(login));
+
+  // M6 — the Team table clipped its own Overall column.
+  const team = read("src/app/team/page.tsx");
+  // Strip comments: the file EXPLAINS the old 760px value, and matching the
+  // explanation reported a fixed file as broken.
+  const teamCode = team.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+  ck("the team table fits its container",
+     /min-w-\[560px\]/.test(teamCode) && !/min-w-\[760px\]/.test(teamCode));
+  ck("the gold header clears contrast in light", /text-gold-deep/.test(team));
+
+  // M8 — Add buttons refused in silence.
+  const p2 = read("src/pillars/pillar-2.tsx");
+  ck("adding a solution explains a refusal", /before adding another/.test(p2));
+  const p5 = read("src/pillars/pillar-5-business-systems.tsx");
+  ck("the Pillar 5 ADD explains a refusal", /Give it a name first/.test(p5));
+
+  // M11 — silent truncation.
+  const ui = read("src/components/ui.tsx");
+  ck("a near-full field says how much is left", /export function CharsLeft/.test(ui));
+  for (const f of ["pillar-1", "pillar-2", "pillar-3"]) {
+    ck(`${f} shows the counter`, /<CharsLeft /.test(read(`src/pillars/${f}.tsx`)));
+  }
+
+  // N1 / N2 — a placeholder-only field announced its own value, or nothing.
+  ck("shared inputs fall back to the placeholder for a name",
+     (ui.match(/aria-label=\{rest\["aria-label"\] \?\? \(label \? undefined : rest\.placeholder\)\}/g) ?? []).length === 2);
+
+  // N3 — the AM plan check toggle.
+  const p3 = read("src/pillars/pillar-3.tsx");
+  ck("the achievement toggle is named", /aria-label=\{`\$\{task\.done \? "Achieved" : "Not achieved"\}/.test(p3));
+  ck("and exposes its pressed state", /aria-pressed=\{task\.done\}/.test(p3));
+
+  // N5 — raw ISO dates leaked into the UI.
+  ck("the meeting card date is formatted", /friendlyISO\(meeting\.date\)/.test(read("src/app/notes/page.tsx")));
+  ck("the report period is formatted", /friendlyISO\(range\.from\)/.test(read("src/app/reports/page.tsx")));
+
+  // N8 — a disabled arrow looked enabled.
+  ck("disabled arrows look disabled",
+     /opacity: disabled \? 0\.45 : 1/.test(read("src/pillars/pillar-1.tsx")));
+}
+
 if (fails.length) {
   console.error(pass + " passed, " + fails.length + " FAILED");
   fails.forEach((f) => console.error("  FAIL " + f));

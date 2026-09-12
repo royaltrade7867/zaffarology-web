@@ -3,7 +3,10 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import Link from "next/link";
+
 import { useAuth } from "@/lib/auth-context";
+import { AuthGuard } from "@/components/shell";
 import { Loading } from "@/components/ui";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { pillarByNumber } from "@/lib/pillars";
@@ -43,8 +46,28 @@ export default function PillarPage() {
     default: {
       const pillar = pillarByNumber(n);
       if (!pillar)
+        /* Keep the app chrome. This used to render the bare words "Unknown
+           pillar." on an otherwise empty page — no header, no nav, no link
+           home — so a mistyped URL stranded the user with nothing to click.
+           `AuthGuard` supplies the nav; the guard above has already checked the
+           session, so this only renders for a signed-in user. */
         return (
-          <div className="mx-auto max-w-3xl px-4 py-10 text-center text-muted">Unknown pillar.</div>
+          <AuthGuard>
+            <div className="py-12 text-center">
+              <p className="font-heading text-[20px] text-heading">
+                There is no Pillar {String(params.id)}
+              </p>
+              <p className="mx-auto mt-2 max-w-[42ch] text-[14px] leading-relaxed text-muted">
+                Zaffarology has five pillars. Pick one above, or go back to the list.
+              </p>
+              <Link
+                href="/home"
+                className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-gold px-5 text-[14px] font-semibold text-on-gold transition-colors hover:bg-gold-hover"
+              >
+                Back to the pillars
+              </Link>
+            </div>
+          </AuthGuard>
         );
       return (
         <PillarScaffold pillar={pillar}>

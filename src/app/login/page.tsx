@@ -1,16 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthShell, Eagle } from "@/components/shell";
 import { Button, TextField } from "@/components/ui";
 
-export default function Login() {
+/* `useSearchParams` opts the tree into client rendering, so the page needs a
+   Suspense boundary or the static export fails at build time. */
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<AuthShell><div className="py-16" /></AuthShell>}>
+      <Login />
+    </Suspense>
+  );
+}
+
+function Login() {
   const { signIn } = useAuth();
   const router = useRouter();
+  const search = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -21,12 +32,29 @@ export default function Login() {
       setError("Enter your email and password.");
       return;
     }
+    /* Catch a malformed address here rather than sending it. The server can only
+       answer "Invalid credentials", which tells the user their PASSWORD is wrong
+       when the real problem is the email — and that message must stay vague, so
+       it cannot be made specific server-side without leaking which accounts
+       exist. Deliberately loose: `x@y` is valid, and real addresses are stranger
+       than most patterns allow. */
+    if (!/^[^\s@]+@[^\s@]+$/.test(email.trim())) {
+      setError("That does not look like an email address.");
+      return;
+    }
     setBusy(true);
     setError(null);
     const err = await signIn(email, password);
     setBusy(false);
     if (err) setError(err);
-    else router.replace("/home");
+    else {
+      /* Only ever an in-app PATH. Taking a full URL here would turn the login
+         form into an open redirect — a phishing link could bounce a freshly
+         authenticated user to another origin. */
+      const raw = search.get("next") ?? "";
+      const safe = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/home";
+      router.replace(safe);
+    }
   };
 
   return (
@@ -43,8 +71,31 @@ export default function Login() {
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
-        <TextField label="Email" value={email} onChange={setEmail} type="email" autoComplete="email" placeholder="you@company.com" />
-        <TextField label="Password" value={password} onChange={setPassword} type="password" placeholder="Your password" error={error ?? undefined} />
+        <TextField
+          label="Email"
+          value={email}
+          onChange={setEmail}
+          type="email"
+          autoComplete="email"
+          // The longest address the RFC allows is 254 characters; a 573-char one
+          // was being accepted and sent.
+          maxLength={254}
+          required
+          autoFocus
+          placeholder="you@company.com"
+        />
+        <TextField
+          label="Password"
+          value={password}
+          onChange={setPassword}
+          type="password"
+          // Without this a password manager cannot reliably fill the field.
+          autoComplete="current-password"
+          maxLength={200}
+          required
+          placeholder="Your password"
+          error={error ?? undefined}
+        />
         <Button type="submit" label="Log in" onClick={submit} loading={busy} />
       </form>
 

@@ -45,12 +45,26 @@ function TeamInner() {
         <p className="text-muted mt-6">No team members yet. Share your invite code so they can join.</p>
       ) : (
         <div className="mt-5 overflow-x-auto rounded-xl border border-line">
-          <table className="min-w-[760px] w-full text-left text-[13px] whitespace-nowrap">
+          {/* `min-w-[760px]` against a 734px container clipped the Overall column —
+              the most important number on the page — at every desktop width,
+              rendering it as "Overal". The pillar columns hold a single digit
+              and a percentage, so the table fits well under 640px; the wrapper
+              keeps its scroller for genuinely narrow phones. */}
+          <table className="min-w-[560px] w-full text-left text-[13px] whitespace-nowrap">
             <thead className="bg-line-soft">
               <tr>
                 <th className="px-3 py-2 font-semibold text-heading">Member</th>
+                {/* The header sits on `bg-line-soft`, a tint — which drops gold
+                    to 4.41:1 in light while every other accent clears 4.5. The
+                    deeper gold token fixes only that one, and is already the
+                    same value in dark. */}
                 {PILLARS.map((p) => (
-                  <th key={p.n} className="px-2 py-2 text-center font-semibold" style={{ color: p.accent }} title={p.name}>
+                  <th
+                    key={p.n}
+                    className={cx("px-2 py-2 text-center font-semibold", p.n === 1 && "text-gold-deep")}
+                    style={p.n === 1 ? undefined : { color: p.accent }}
+                    title={p.name}
+                  >
                     {p.n}
                   </th>
                 ))}
