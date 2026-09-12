@@ -149,3 +149,79 @@ export const Inbox = (p: IconProps) => (
     <path d="M5 5h14l2 8v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5z" />
   </Svg>
 );
+
+/* ------------------------------ brand marks ------------------------------ */
+
+/**
+ * Social logos are FILLED marks on their own geometry, not members of the
+ * stroked 24-grid family above — a brand mark redrawn at 1.75 stroke stops
+ * being recognisable, which is the only thing it has to be. They keep
+ * `currentColor` so they still inherit the control's colour.
+ *
+ * Drawn here rather than pulled from a CDN: the app's CSP allows no external
+ * stylesheets or images, so an icon font or a remote SVG sprite would fail
+ * silently and leave empty buttons.
+ */
+function Brand({ size = 18, className, style, title, children }: IconProps & { children: React.ReactNode }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      style={style}
+      aria-hidden={title ? undefined : true}
+      role={title ? "img" : undefined}
+      focusable="false"
+    >
+      {title ? <title>{title}</title> : null}
+      {children}
+    </svg>
+  );
+}
+
+export const Globe = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" />
+  </Svg>
+);
+
+export const Instagram = (p: IconProps) => (
+  <Brand {...p}>
+    <path d="M12 2.2c3.2 0 3.6 0 4.8.07 1.2.05 1.8.25 2.2.42.6.22 1 .48 1.4.9.43.42.7.83.92 1.4.17.42.37 1.05.42 2.2.06 1.2.07 1.6.07 4.8s0 3.6-.07 4.8c-.05 1.2-.25 1.8-.42 2.2-.22.6-.5 1-.92 1.4-.42.43-.83.7-1.4.92-.42.17-1.05.37-2.2.42-1.2.06-1.6.07-4.8.07s-3.6 0-4.8-.07c-1.2-.05-1.8-.25-2.2-.42-.6-.22-1-.5-1.4-.92-.43-.42-.7-.83-.92-1.4-.17-.42-.37-1.05-.42-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.07-4.8c.05-1.2.25-1.8.42-2.2.22-.6.5-1 .92-1.4.42-.43.83-.7 1.4-.92.42-.17 1.05-.37 2.2-.42C8.4 2.2 8.8 2.2 12 2.2Zm0 1.8c-3.1 0-3.5 0-4.7.07-1.1.05-1.7.24-2.1.4-.5.2-.9.44-1.3.83-.4.4-.64.8-.84 1.3-.15.4-.34 1-.39 2.1C2.6 9.9 2.6 10.3 2.6 12s0 2.1.07 3.3c.05 1.1.24 1.7.39 2.1.2.5.44.9.84 1.3.4.4.8.64 1.3.84.4.15 1 .34 2.1.39 1.2.06 1.6.07 4.7.07s3.5 0 4.7-.07c1.1-.05 1.7-.24 2.1-.39.5-.2.9-.44 1.3-.84.4-.4.64-.8.84-1.3.15-.4.34-1 .39-2.1.06-1.2.07-1.6.07-3.3s0-2.1-.07-3.3c-.05-1.1-.24-1.7-.39-2.1-.2-.5-.44-.9-.84-1.3-.4-.4-.8-.64-1.3-.83-.4-.16-1-.35-2.1-.4C15.5 4 15.1 4 12 4Z" />
+    <path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 8.25a3.25 3.25 0 1 1 0-6.5 3.25 3.25 0 0 1 0 6.5Z" />
+    <circle cx="17.2" cy="6.8" r="1.2" />
+  </Brand>
+);
+
+export const Facebook = (p: IconProps) => (
+  <Brand {...p}>
+    <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.51 1.5-3.89 3.77-3.89 1.1 0 2.24.19 2.24.19v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.45 2.89h-2.33v6.99A10 10 0 0 0 22 12Z" />
+  </Brand>
+);
+
+export const TikTok = (p: IconProps) => (
+  <Brand {...p}>
+    <path d="M16.6 2h-3.1v13.2a2.6 2.6 0 1 1-2.6-2.6c.27 0 .53.04.78.12V9.5a6 6 0 0 0-.78-.05 5.75 5.75 0 1 0 5.75 5.75V8.9a7 7 0 0 0 4.1 1.32V7.1a4.1 4.1 0 0 1-4.15-4.1V2Z" />
+  </Brand>
+);
+
+export const LinkedIn = (p: IconProps) => (
+  <Brand {...p}>
+    <path d="M20.45 2H3.55A1.53 1.53 0 0 0 2 3.5v17A1.53 1.53 0 0 0 3.55 22h16.9A1.53 1.53 0 0 0 22 20.5v-17A1.53 1.53 0 0 0 20.45 2ZM8.1 18.7H5.16V9.53H8.1v9.17ZM6.63 8.25a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4Zm12.08 10.45h-2.93v-4.46c0-1.06-.02-2.43-1.48-2.43-1.48 0-1.71 1.16-1.71 2.36v4.53H9.66V9.53h2.81v1.25h.04a3.08 3.08 0 0 1 2.77-1.52c2.97 0 3.52 1.95 3.52 4.5v4.94Z" />
+  </Brand>
+);
+
+export const YouTube = (p: IconProps) => (
+  <Brand {...p}>
+    <path d="M21.58 7.2a2.51 2.51 0 0 0-1.77-1.78C18.25 5 12 5 12 5s-6.25 0-7.81.42A2.51 2.51 0 0 0 2.42 7.2 26.2 26.2 0 0 0 2 12a26.2 26.2 0 0 0 .42 4.8 2.51 2.51 0 0 0 1.77 1.78C5.75 19 12 19 12 19s6.25 0 7.81-.42a2.51 2.51 0 0 0 1.77-1.78A26.2 26.2 0 0 0 22 12a26.2 26.2 0 0 0-.42-4.8ZM10 15V9l5.2 3L10 15Z" />
+  </Brand>
+);
+
+export const XTwitter = (p: IconProps) => (
+  <Brand {...p}>
+    <path d="M17.53 3h3.02l-6.6 7.54L21.7 21h-6.07l-4.76-6.22L5.42 21H2.4l7.06-8.07L2.3 3h6.23l4.3 5.69L17.53 3Zm-1.06 16.19h1.67L7.6 4.72H5.8l10.67 14.47Z" />
+  </Brand>
+);
