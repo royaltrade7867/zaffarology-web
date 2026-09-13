@@ -208,26 +208,34 @@ export default function Pillar3() {
             <CharsLeft value={state.pm} max={600} />
           <div className="flex items-center gap-2.5 mt-3">
             <span className="font-heading text-[11px] tracking-[0.15em]" style={{ color: GREEN }}>$ MONEY MADE</span>
+            {/* Money, so keep it to digits and one decimal point: this was
+                `inputMode="text"`, which raises the full alphabetic keyboard on
+                a phone for a number, and accepted `abc-!@#$` verbatim.
+
+                `min-w-0` and `size={1}` are what let it SHRINK. A flex item
+                keeps `min-width: auto`, which for an input resolves to its
+                intrinsic width from the default `size="20"` — about 241px at
+                this font. At a 320px viewport that pushed the field 7px past
+                the edge, and since the page never scrolls sideways the overflow
+                was unreachable rather than merely ugly. */}
             <input
               value={state.money}
-              /* Money, so keep it to digits and one decimal point. It was
-                   `inputMode="decimal"
-                aria-label="Money made today"`, which raises the full alphabetic keyboard
-                   on a phone for a number, and accepted `abc-!@#$` verbatim. */
-                onChange={(e) =>
-                  update((s) => {
-                    const cleaned = e.target.value.replace(/[^\d.]/g, "");
-                    const [whole, ...rest] = cleaned.split(".");
-                    s.money = rest.length ? `${whole}.${rest.join("").slice(0, 2)}` : whole;
-                  })
-                }
+              onChange={(e) =>
+                update((s) => {
+                  const cleaned = e.target.value.replace(/[^\d.]/g, "");
+                  const [whole, ...rest] = cleaned.split(".");
+                  s.money = rest.length ? `${whole}.${rest.join("").slice(0, 2)}` : whole;
+                })
+              }
               placeholder="e.g. 250"
               maxLength={20}
-              inputMode="text"
+              size={1}
+              inputMode="decimal"
+              aria-label="Money made today"
               autoCorrect="off"
               spellCheck={false}
               style={{ color: GREEN, borderColor: GREEN, backgroundColor: state.money.trim() ? "transparent" : FIELD_EMPTY }}
-              className="flex-1 rounded border-2 px-2.5 py-1.5 font-heading text-[16px] outline-none placeholder:text-placeholder"
+              className="min-w-0 flex-1 rounded border-2 px-2.5 py-1.5 font-heading text-[16px] outline-none placeholder:text-placeholder"
             />
           </div>
         </MiwBox>

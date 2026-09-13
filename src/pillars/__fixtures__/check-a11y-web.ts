@@ -305,6 +305,46 @@ const uiFiles = [
      /opacity: disabled \? 0\.45 : 1/.test(read("src/pillars/pillar-1.tsx")));
 }
 
+/* -------------------- responsive audit, 13 Sep 2026 ---------------------- */
+
+{
+  const p3 = read("src/pillars/pillar-3.tsx");
+  /* The money field regressed ONCE already: a scripted edit dropped the
+     replacement inside a comment, so `inputMode="decimal"` was commented out
+     and `inputMode="text"` shipped. Assert on code with comments stripped. */
+  const p3code = p3.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+  ck("the money field asks for a number", /inputMode="decimal"/.test(p3code));
+  ck("and never for text", !/inputMode="text"/.test(p3code));
+  /* A flex item keeps `min-width:auto`, which for an input resolves to its
+     intrinsic width from `size="20"` — about 241px. At 320px that pushed the
+     field 7px past the viewport, unreachable because the page never scrolls. */
+  ck("the money field can shrink below its intrinsic width",
+     /min-w-0[^"]*flex-1|flex-1[^"]*min-w-0/.test(p3code) && /size=\{1\}/.test(p3code));
+
+  // Pillar 5 rows: a keyboard user could DELETE a business but not OPEN one.
+  const p5 = read("src/pillars/pillar-5-business-systems.tsx");
+  ck("a Pillar 5 row opens from the keyboard", /onClick=\{r\.onOpen\}/.test(p5) && /aria-label=\{`Open \$\{r\.name\}/.test(p5));
+  ck("and is a real button, not a clickable div",
+     !/<div[^>]*\n?\s*key=\{r\.key\}\s*\n?\s*onClick=\{r\.onOpen\}/.test(p5));
+
+  // WCAG 2.2 target size on the controls the audit measured under 24px.
+  const task = read("src/components/task.tsx");
+  ck("row action buttons are 24px tall", /min-h-\[24px\][^"]*rounded border/.test(task));
+  ck("the bare remove button is a 24px target", /min-h-\[24px\] min-w-\[24px\] shrink-0/.test(task));
+  ck("breadcrumbs are 24px tall", /min-h-\[24px\][^"]*font-semibold text-\[12px\]/.test(p5));
+  ck("the recording tag chip is 24px tall",
+     /min-h-\[24px\][^"]*uppercase/.test(read("src/components/voice-notes.tsx")));
+  const login = read("src/app/login/page.tsx");
+  ck("the login links are 24px tall", (login.match(/min-h-\[24px\] items-center justify-center/g) ?? []).length === 2);
+  ck("the header logo link is a 24px target",
+     /min-h-\[24px\] min-w-0 items-center/.test(read("src/components/shell.tsx")));
+
+  // The team table scrolls inside its own box; say so where it cannot fit.
+  const team = read("src/app/team/page.tsx");
+  ck("a narrow team table says it scrolls", /Scroll sideways to see every pillar/.test(team));
+  ck("and the hint is hidden once it fits", /sm:hidden/.test(team));
+}
+
 if (fails.length) {
   console.error(pass + " passed, " + fails.length + " FAILED");
   fails.forEach((f) => console.error("  FAIL " + f));

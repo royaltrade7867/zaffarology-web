@@ -142,10 +142,12 @@ export function TaskRow({
       {done && actions ? (
         <div className="flex gap-1.5 shrink-0">
           {actions.map((a) => (
+            /* 24px tall, the WCAG 2.2 minimum. These were 21x13 — about a
+               quarter of the required area, on a destructive control. */
             <button
               key={a.label}
               onClick={a.onClick}
-              className="rounded border-[1.5px] px-2 py-1 text-[11px] font-semibold"
+              className="flex min-h-[24px] items-center rounded border-[1.5px] px-2 text-[11px] font-semibold"
               style={{ borderColor: a.kind === "delete" ? Accents.red : "var(--ink)", color: a.kind === "delete" ? Accents.red : "var(--ink)" }}
             >
               {a.label}
@@ -153,7 +155,11 @@ export function TaskRow({
           ))}
         </div>
       ) : onDelete ? (
-        <button onClick={onDelete} className="shrink-0 text-muted px-1" aria-label="Remove">
+        <button
+          onClick={onDelete}
+          className="flex min-h-[24px] min-w-[24px] shrink-0 items-center justify-center text-muted"
+          aria-label="Remove"
+        >
           <Close size={13} />
         </button>
       ) : null}

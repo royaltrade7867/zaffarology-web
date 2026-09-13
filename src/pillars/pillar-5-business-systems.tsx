@@ -222,32 +222,45 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
           <span className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>{empty}</span>
         </div>
       ) : rows.map((r) => (
+        /* This row used to be a clickable <div>, so Tab reached its Delete
+           button but never the row itself: a keyboard user could DELETE a
+           business but not OPEN one, leaving every department, system and the
+           12 sections beneath unreachable without a pointer.
+           Delete cannot sit inside the row button (a button may not nest), so
+           the row's content IS the button and Delete is its sibling. */
         <div
           key={r.key}
-          onClick={r.onOpen}
-          className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3 py-3 mb-2.5 cursor-pointer shadow-sm transition-colors hover:bg-line-soft"
+          className="flex items-center gap-1 rounded-2xl border border-line bg-surface pr-2 mb-2.5 shadow-sm transition-colors hover:bg-line-soft focus-within:border-gold"
         >
-          {/* The number IS the identity — D1, S1 — exactly as on the phone. A
-              letter avatar cannot tell three departments starting with "A"
-              apart. Outlined in the row's own accent, so the five standard
-              departments read as one family in every business. */}
-          <div
-            className="flex h-11 min-w-[44px] shrink-0 items-center justify-center rounded-xl border-[1.5px] px-2 font-heading text-[12px] tracking-wide"
-            style={{ borderColor: r.tint ?? NAVY, color: r.tint ?? NAVY }}
-          >
-            {r.badge ?? (r.name.trim()[0] ?? "•").toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-[15.5px] text-ink truncate">{r.name}</p>
-            {r.sub ? <p className="text-[12.5px] mt-0.5" style={{ color: "var(--muted)" }}>{r.sub}</p> : null}
-          </div>
           <button
-            onClick={(e) => { e.stopPropagation(); r.onDel(); }}
+            type="button"
+            onClick={r.onOpen}
+            aria-label={`Open ${r.name}${r.sub ? `, ${r.sub}` : ""}`}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-transparent px-3 py-3 text-left"
+          >
+            {/* The number IS the identity — D1, S1 — exactly as on the phone. A
+                letter avatar cannot tell three departments starting with "A"
+                apart. Outlined in the row's own accent, so the five standard
+                departments read as one family in every business. */}
+            <span
+              aria-hidden
+              className="flex h-11 min-w-[44px] shrink-0 items-center justify-center rounded-xl border-[1.5px] px-2 font-heading text-[12px] tracking-wide"
+              style={{ borderColor: r.tint ?? NAVY, color: r.tint ?? NAVY }}
+            >
+              {r.badge ?? (r.name.trim()[0] ?? "•").toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-bold text-[15.5px] text-ink">{r.name}</span>
+              {r.sub ? <span className="mt-0.5 block text-[12.5px]" style={{ color: "var(--muted)" }}>{r.sub}</span> : null}
+            </span>
+            <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted"><ChevronRight size={16} /></span>
+          </button>
+          <button
+            onClick={r.onDel}
             aria-label={`Delete ${r.name}`}
             title={`Delete ${r.name}`}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-danger"
           ><Close size={13} /></button>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted"><ChevronRight size={16} /></span>
         </div>
       ))}
       <div className="flex gap-2 mt-2">
@@ -517,8 +530,16 @@ async function confirmDel(
 ) {
   if (await dialog.confirm(msg, { danger: true, confirmLabel: "Delete" })) onOk();
 }
+/* 24px tall (WCAG 2.2 target size). These were 18px — the text height alone,
+   with no padding, on the app's primary "go back up a level" control. */
 const Crumb = ({ label, onClick }: { label: string; onClick: () => void }) => (
-  <button onClick={onClick} className="font-semibold text-[12px]" style={{ color: NAVY }}>{label}</button>
+  <button
+    onClick={onClick}
+    className="inline-flex min-h-[24px] items-center rounded px-0.5 font-semibold text-[12px]"
+    style={{ color: NAVY }}
+  >
+    {label}
+  </button>
 );
 const Sep = () => <span className="text-[12px] px-0.5" style={{ color: "var(--muted)" }}> › </span>;
 const Section = ({ n, title, small }: { n: number; title: string; small?: string }) => (

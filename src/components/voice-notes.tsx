@@ -459,7 +459,9 @@ export function VoiceNotes({
                     n.tag === "personal" ? "business" : "personal"
                   }.`}
                   title={`Move to ${n.tag === "personal" ? "Business" : "Personal"}`}
-                  className="shrink-0 rounded-full border border-line px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted transition-colors hover:border-gold hover:text-gold"
+                  // 24px tall (WCAG 2.2). It was 21px, and it is a control that
+                  // moves the recording between Personal and Business.
+                  className="flex min-h-[24px] shrink-0 items-center rounded-full border border-line px-2 text-[10px] font-bold uppercase tracking-wide text-muted transition-colors hover:border-gold hover:text-gold"
                 >
                   {n.tag}
                 </button>

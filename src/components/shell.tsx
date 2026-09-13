@@ -99,7 +99,7 @@ export function TopNav() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
-        <Link href="/home" className="flex min-w-0 items-center gap-2.5">
+        <Link href="/home" className="flex min-h-[24px] min-w-0 items-center gap-2.5">
           <Eagle size={34} />
           <Wordmark size={18} />
         </Link>

@@ -2,6 +2,43 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-13 - Responsive audit: 320px, tap targets, and a keyboard dead end
+
+**The money field's earlier fix had never actually shipped.** A scripted edit
+dropped the replacement INSIDE a comment, so `inputMode="decimal"` was commented
+out and `inputMode="text"` stayed live — the phone kept raising an alphabetic
+keyboard for a money amount. The fixture now strips comments before asserting,
+so a fix that lands in a comment fails loudly instead of passing.
+
+The same field also overflowed a 320px viewport by 7px, unreachable because the
+page never scrolls sideways. A flex item keeps `min-width: auto`, which for an
+input resolves to its intrinsic width from the default `size="20"` — about
+241px. `min-w-0` plus `size={1}` lets it shrink; it now ends 31px inside the
+edge at 320px.
+
+**Pillar 5 rows were a keyboard dead end.** Each row was a clickable `<div>`
+holding a Delete button, so Tab reached Delete but never the row: a keyboard
+user could DELETE a business but not OPEN one, leaving every department, system
+and the 12 sections beneath unreachable without a pointer. A button may not nest
+inside a button, so the row's content is now the button and Delete is its
+sibling. Verified with a real Enter keypress: the view moves into the business,
+the breadcrumb updates, and each department row is individually named.
+
+**Tap targets.** Everything the audit measured under the WCAG 2.2 minimum is now
+at least 24px: Pillar 2's "Remove" (was 21x13, a destructive control at roughly
+a quarter of the required area), the recording tag chips, the Pillar 5
+breadcrumbs (18px — the text height alone), the header logo links, and the two
+login links.
+
+**The Team table** scrolls inside its own box on a phone, which is correct, but
+nothing said so and "Overall" sat up to 286px out of view at 320px. A one-line
+hint appears below `sm` and disappears once the table fits.
+
+Measured in a real browser rather than inferred: **33 page-width combinations**
+(11 routes at 320, 768 and 1280) report no page-level horizontal scroll, no
+element past the viewport, and zero targets under 24px. 602 checks green; each
+new guard verified to fail when its bug is reintroduced.
+
 ## 2026-09-12 - QA audit, round 2: the rest of the M and N series
 
 **A build-breaking bug came out of this.** `useSearchParams` (added for the

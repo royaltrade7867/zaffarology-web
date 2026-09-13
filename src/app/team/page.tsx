@@ -44,7 +44,15 @@ function TeamInner() {
       ) : !data || data.members.length <= 1 ? (
         <p className="text-muted mt-6">No team members yet. Share your invite code so they can join.</p>
       ) : (
-        <div className="mt-5 overflow-x-auto rounded-xl border border-line">
+        <div className="mt-5 rounded-xl border border-line">
+          {/* On a phone the table scrolls INSIDE this box — the page itself
+              never scrolls sideways. That is right, but nothing said so, and
+              "Overall" (the number people actually want) sat up to 286px out of
+              view at 320px. The hint appears only where the table cannot fit. */}
+          <p className="border-b border-line px-3 py-1.5 text-[11px] text-muted sm:hidden">
+            Scroll sideways to see every pillar and the overall score.
+          </p>
+          <div className="overflow-x-auto">
           {/* `min-w-[760px]` against a 734px container clipped the Overall column —
               the most important number on the page — at every desktop width,
               rendering it as "Overal". The pillar columns hold a single digit
@@ -106,7 +114,8 @@ function TeamInner() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
     </div>
