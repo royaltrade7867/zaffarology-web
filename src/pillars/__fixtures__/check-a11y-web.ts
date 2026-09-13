@@ -103,7 +103,7 @@ const uiFiles = [
   ck("every 13px Close button was found", closeButtons.length === 3, String(closeButtons.length));
   // 24px can be spelled `min-h-[24px]` or a Tailwind `h-8 w-8` (32px). Both are
   // fine; requiring the literal spelling flagged a correct button.
-  const sized = (s: string) => /min-h-\[24px\]/.test(s) || /\bh-(?:[89]|1[0-9])\b/.test(s);
+  const sized = (s: string) => /\btap-target\b/.test(s) || /\bh-(?:[89]|1[0-9])\b/.test(s);
   const bad = closeButtons.filter((m) => !sized(m[0]) || !/aria-label=/.test(m[0]));
   ck("each is >= 24px and has an accessible name", bad.length === 0, String(bad.length) + " without");
 }
@@ -203,7 +203,7 @@ const uiFiles = [
 /* WCAG 2.2 target size: the ring may stay 22px, the BUTTON may not. */
 {
   const task = read("src/components/task.tsx");
-  ck("the tick is padded to a 24px target", /const pad = Math\.max\(0, \(24 - size\) \/ 2\)/.test(task));
+  ck("the tick is padded to the minimum target", /const pad = Math\.max\(0, \(MIN_TAP - size\) \/ 2\)/.test(task));
   ck("the tick has an accessible name", /aria-label=\{label\}/.test(task));
   ck("and the call site passes one", /label=\{filled \? `Mark done/.test(task));
 }
@@ -329,20 +329,36 @@ const uiFiles = [
 
   // WCAG 2.2 target size on the controls the audit measured under 24px.
   const task = read("src/components/task.tsx");
-  ck("row action buttons are 24px tall", /min-h-\[24px\][^"]*rounded border/.test(task));
-  ck("the bare remove button is a 24px target", /min-h-\[24px\] min-w-\[24px\] shrink-0/.test(task));
-  ck("breadcrumbs are 24px tall", /min-h-\[24px\][^"]*font-semibold text-\[12px\]/.test(p5));
-  ck("the recording tag chip is 24px tall",
-     /min-h-\[24px\][^"]*uppercase/.test(read("src/components/voice-notes.tsx")));
+  ck("row action buttons carry the tap class", /tap-row[^"]*rounded border/.test(task));
+  ck("the bare remove button carries the tap class", /shrink-0 tap-target|tap-target shrink-0/.test(task));
+  ck("breadcrumbs carry the tap class", /tap-row[^"]*font-semibold text-\[12px\]/.test(p5));
+  ck("the recording tag chip carries the tap class",
+     /tap-row[^"]*uppercase/.test(read("src/components/voice-notes.tsx")));
   const login = read("src/app/login/page.tsx");
-  ck("the login links are 24px tall", (login.match(/min-h-\[24px\] items-center justify-center/g) ?? []).length === 2);
-  ck("the header logo link is a 24px target",
-     /min-h-\[24px\] min-w-0 items-center/.test(read("src/components/shell.tsx")));
+  ck("the login links carry the tap class", (login.match(/\btap-row\b/g) ?? []).length === 2);
+  ck("the header logo link carries the tap class",
+     /tap-row min-w-0/.test(read("src/components/shell.tsx")));
 
   // The team table scrolls inside its own box; say so where it cannot fit.
   const team = read("src/app/team/page.tsx");
   ck("a narrow team table says it scrolls", /Scroll sideways to see every pillar/.test(team));
   ck("and the hint is hidden once it fits", /sm:hidden/.test(team));
+}
+
+/* The target-size floor lives in ONE place. Thirteen call sites each hardcoding
+   `min-h-[24px]` all landed on EXACTLY 24px with no headroom, so any later
+   padding or line-height change would silently drop them back under. */
+{
+  const css = read("src/app/globals.css");
+  const px = (name: string) =>
+    Number(css.match(new RegExp(`\\.${name}\\s*\\{[^}]*min-height:\\s*(\\d+)px`))?.[1] ?? 0);
+  ck("the icon target clears 24px with slack", px("tap-target") >= 26, String(px("tap-target")));
+  ck("the text target clears 24px with slack", px("tap-row") >= 26, String(px("tap-row")));
+  ck("an icon target constrains width too", /\.tap-target\s*\{[^}]*min-width:\s*26px/.test(css));
+  // A text control gets its width from its label; a min-width would stretch it.
+  ck("a text target does not", !/\.tap-row\s*\{[^}]*min-width:/.test(css));
+  ck("the TS constant agrees with the CSS",
+     new RegExp(`export const MIN_TAP = ${px("tap-target")}`).test(read("src/components/task.tsx")));
 }
 
 if (fails.length) {

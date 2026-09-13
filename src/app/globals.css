@@ -214,6 +214,33 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* The smallest a control may be, per WCAG 2.2 target size (2.5.8).
+ *
+ * One definition, because thirteen call sites each hardcoding `min-h-[24px]`
+ * all landed on EXACTLY 24px with no headroom — a later line-height or padding
+ * change would have quietly dropped them back under, which is how they got
+ * there in the first place. 26px buys two pixels of slack without changing any
+ * visual weight, and a fixture pins every icon-only control to this class.
+ *
+ * `inline-flex` so it works on a link inside a line of text as well as a button.
+ */
+/* Icon-only: constrain BOTH dimensions, since there is no text to give width. */
+.tap-target {
+  min-height: 26px;
+  min-width: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Text controls: height only. Their label already supplies the width, and a
+   `min-width` here would stretch a short link or break a flex row. */
+.tap-row {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+}
+
 /* Utility helpers used across pillar screens */
 .font-heading {
   font-family: var(--font-archivo), system-ui, sans-serif;

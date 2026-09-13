@@ -316,7 +316,7 @@ function ReviewItem({ tag, task, onToggle }: { tag: string; task: Task; onToggle
         aria-pressed={task.done}
         aria-label={`${task.done ? "Achieved" : "Not achieved"}: ${task.text.trim()}`}
         title={task.done ? "Achieved — click to undo" : "Not achieved — click to mark done"}
-        className="shrink-0 flex min-h-[24px] min-w-[24px] items-center justify-center bg-transparent"
+        className="shrink-0 tap-target bg-transparent"
       >
         <span
           aria-hidden

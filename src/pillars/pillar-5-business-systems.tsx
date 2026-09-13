@@ -530,12 +530,12 @@ async function confirmDel(
 ) {
   if (await dialog.confirm(msg, { danger: true, confirmLabel: "Delete" })) onOk();
 }
-/* 24px tall (WCAG 2.2 target size). These were 18px — the text height alone,
+/* `tap-row` for the WCAG 2.2 target size. These were 18px — the text height alone,
    with no padding, on the app's primary "go back up a level" control. */
 const Crumb = ({ label, onClick }: { label: string; onClick: () => void }) => (
   <button
     onClick={onClick}
-    className="inline-flex min-h-[24px] items-center rounded px-0.5 font-semibold text-[12px]"
+    className="tap-row rounded px-0.5 font-semibold text-[12px]"
     style={{ color: NAVY }}
   >
     {label}
@@ -646,7 +646,7 @@ function PairSideList({
                 })
                 .then((ok) => { if (ok) onChangePairs((l) => { l.splice(i, 1); }); });
             }}
-            className="text-[15px] min-h-[24px] min-w-[24px] flex items-center justify-center"
+            className="text-[15px] tap-target flex items-center justify-center"
             style={{ color: "var(--muted)" }}
           >
             <Close size={13} />
@@ -692,9 +692,9 @@ function EditableList({ items, onChange, placeholder, addLabel }: { items: strin
             aria-label={`Delete ${placeholder(i + 1).toLowerCase()}`}
             title={`Delete ${placeholder(i + 1).toLowerCase()}`}
             onClick={() => { const n = list.filter((_, x) => x !== i); onChange(n.length ? n : [""]); }}
-            /* 13px icon in a 24px box: WCAG 2.2 target-size minimum, and the
+            /* 13px icon in a `tap-target` box: WCAG 2.2 target size, and the
                icon alone gave a screen reader nothing to announce. */
-            className="flex min-h-[24px] min-w-[24px] items-center justify-center text-[15px]"
+            className="tap-target text-[15px]"
             style={{ color: "var(--muted)" }}
           >
             <Close size={13} />

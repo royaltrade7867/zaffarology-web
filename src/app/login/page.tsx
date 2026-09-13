@@ -100,8 +100,8 @@ function Login() {
       </form>
 
       <div className="mt-3 space-y-2">
-        <Link href="/forgot-password" className="flex min-h-[24px] items-center justify-center text-center text-[14px] font-semibold text-heading">Forgot password?</Link>
-        <Link href="/signup" className="flex min-h-[24px] items-center justify-center text-center text-[14px] font-semibold text-heading">New here? Create account</Link>
+        <Link href="/forgot-password" className="tap-row text-center text-[14px] font-semibold text-heading">Forgot password?</Link>
+        <Link href="/signup" className="tap-row text-center text-[14px] font-semibold text-heading">New here? Create account</Link>
       </div>
     </AuthShell>
   );

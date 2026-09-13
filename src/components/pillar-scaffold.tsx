@@ -31,11 +31,11 @@ export function PillarScaffold({
         <div className="h-[3px] rounded mx-4 mt-2 mb-2" style={{ backgroundColor: pillar.accent }} />
         <div className="mx-auto max-w-3xl px-4">
           <div className="flex items-center justify-between">
-            <Link href="/home" className="flex min-h-[24px] items-center gap-2.5">
+            <Link href="/home" className="tap-row gap-2.5">
               <Eagle size={30} />
               <Wordmark size={15} />
             </Link>
-            <Link href="/home" className="flex min-h-[24px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-heading">
+            <Link href="/home" className="tap-row gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-heading">
               ▦ Pillars
             </Link>
           </div>

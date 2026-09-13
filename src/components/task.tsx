@@ -7,6 +7,11 @@ import { friendlyISO } from "@/lib/dates";
 import { cx } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
 
+/** WCAG 2.2 target size, in px. Matches `.tap-target` / `.tap-row` in
+ *  globals.css — two pixels over the 24px floor, so a later padding or
+ *  line-height change cannot silently drop a control back under it. */
+export const MIN_TAP = 26;
+
 /* ---------------- Checkbox (gold ring, navy fill when checked) ---------------- */
 export function Checkbox({
   checked,
@@ -23,9 +28,9 @@ export function Checkbox({
   label?: string;
 }) {
   /* The RING stays `size` (22px by default, the workbook's proportion), but the
-     button itself is padded out to the WCAG 2.2 minimum of 24px. Growing the
+     button itself is padded out to the WCAG 2.2 minimum. Growing the
      circle instead would change the design; growing the hit area does not. */
-  const pad = Math.max(0, (24 - size) / 2);
+  const pad = Math.max(0, (MIN_TAP - size) / 2);
   return (
     <button
       type="button"
@@ -142,12 +147,12 @@ export function TaskRow({
       {done && actions ? (
         <div className="flex gap-1.5 shrink-0">
           {actions.map((a) => (
-            /* 24px tall, the WCAG 2.2 minimum. These were 21x13 — about a
+            /* `tap-row` carries the WCAG 2.2 minimum. These were 21x13 — about a
                quarter of the required area, on a destructive control. */
             <button
               key={a.label}
               onClick={a.onClick}
-              className="flex min-h-[24px] items-center rounded border-[1.5px] px-2 text-[11px] font-semibold"
+              className="tap-row rounded border-[1.5px] px-2 text-[11px] font-semibold"
               style={{ borderColor: a.kind === "delete" ? Accents.red : "var(--ink)", color: a.kind === "delete" ? Accents.red : "var(--ink)" }}
             >
               {a.label}
@@ -157,7 +162,7 @@ export function TaskRow({
       ) : onDelete ? (
         <button
           onClick={onDelete}
-          className="flex min-h-[24px] min-w-[24px] shrink-0 items-center justify-center text-muted"
+          className="shrink-0 tap-target text-muted"
           aria-label="Remove"
         >
           <Close size={13} />
@@ -172,10 +177,10 @@ export function Footer({ progress, resetLabel, onReset }: { progress: string; re
   return (
     <div className="flex items-center justify-between mt-3">
       <span className="text-[13px] text-muted">{progress}</span>
-      {/* A 24px-tall target (WCAG 2.2) for an action that clears the day. */}
+      {/* A real target (`tap-row`) for an action that clears the day. */}
       <button
         onClick={onReset}
-        className="flex min-h-[24px] items-center rounded px-1 text-[13.5px] font-semibold text-heading underline"
+        className="tap-row rounded px-1 text-[13.5px] font-semibold text-heading underline"
       >
         {resetLabel}
       </button>
