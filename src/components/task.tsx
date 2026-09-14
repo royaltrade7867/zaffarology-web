@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { Check, Close } from "@/components/icons";
-import { Accents, FIELD_EMPTY, HEADING } from "@/lib/pillars";
+import { Accents, FIELD_EMPTY, FIELD_RED, FIELD_RED_BORDER, HEADING } from "@/lib/pillars";
 import { friendlyISO, shortDate } from "@/lib/dates";
 import { cx } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
@@ -109,7 +109,10 @@ export function TaskRow({
         // rather than just "pressed". `symbol` is the row marker (1..5, ✦).
         label={filled ? `Mark done: ${value.trim()}` : `Mark done: ${placeholder ?? symbol}`}
       />
-      <div className="flex-1 min-w-0 rounded-lg px-2" style={{ backgroundColor: filled ? "transparent" : FIELD_EMPTY }}>
+      {/* The pillar rule: red while it still wants writing, green once written
+          in. Green rather than transparent when filled — a transparent fill
+          paints `--on-card` ink on the navy card at 1.30:1. */}
+      <div className="flex-1 min-w-0 rounded-lg px-2" style={{ backgroundColor: filled ? FIELD_EMPTY : FIELD_RED }}>
         <input
           value={value}
           // A long value is clipped mid-character with no ellipsis, so hovering
@@ -144,7 +147,7 @@ export function TaskRow({
              the accent. The dark-theme accents are lightened for the navy page and
              sit at 1.6-2.2:1 on the empty green wash — Pillar 1's delegation rows
              pass BLUE here, which was 1.65:1 and unreadable while empty. */
-          style={{ borderColor: accent, backgroundColor: (who ?? "").trim() ? "var(--field)" : FIELD_EMPTY }}
+          style={{ borderColor: accent, backgroundColor: (who ?? "").trim() ? FIELD_EMPTY : FIELD_RED }}
           className="w-24 shrink-0 border-b py-1 text-[13px] text-on-card outline-none placeholder:text-placeholder"
         />
       ) : null}
@@ -287,8 +290,8 @@ export function DateField({ value, onChange, label }: { value: string; onChange:
         aria-label={label ?? "Date"}
         aria-invalid={bad || undefined}
         style={{
-          backgroundColor: value ? "var(--field)" : FIELD_EMPTY,
-          borderColor: bad ? "var(--danger)" : value ? "var(--line)" : "var(--field-empty-border)",
+          backgroundColor: value ? FIELD_EMPTY : FIELD_RED,
+          borderColor: bad ? "var(--danger)" : value ? "var(--field-empty-border)" : FIELD_RED_BORDER,
         }}
         className="w-full min-w-0 min-h-[40px] rounded-xl border px-3 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
       />
@@ -306,7 +309,10 @@ export function PersonField({ label, value, placeholder, onChange, accent }: { l
         placeholder={placeholder}
         autoCorrect="off"
         spellCheck={false}
-        style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: accent ?? "var(--line)" }}
+        style={{
+          backgroundColor: value.trim() ? FIELD_EMPTY : FIELD_RED,
+          borderColor: accent ?? (value.trim() ? "var(--field-empty-border)" : FIELD_RED_BORDER),
+        }}
         className="w-full min-h-[40px] rounded-xl border px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
       />
     </label>

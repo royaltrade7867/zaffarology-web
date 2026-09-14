@@ -1,6 +1,8 @@
 "use client";
 
-import { FIELD_EMPTY } from "@/lib/pillars";
+import { useEffect, useRef } from "react";
+
+import { FIELD_EMPTY, FIELD_RED, FIELD_RED_BORDER } from "@/lib/pillars";
 import type { ReactNode, TextareaHTMLAttributes, InputHTMLAttributes } from "react";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
@@ -121,10 +123,20 @@ type AreaProps = {
   onChange: (v: string) => void;
   /** most hard line breaks (Enter) allowed; wrapping is never restricted */
   maxBreaks?: number;
+  /**
+   * The empty-state wash. Defaults to green, which is what Notes, meetings and
+   * the auth screens use. `"red"` is the PILLAR workbook rule — red while
+   * empty, green once written in — and is opted into per callsite rather than
+   * switched on here, because a red sign-in form reads as an error state.
+   */
+  tone?: "green" | "red";
 } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange">;
 
-export function TextArea({ label, value, onChange, className, maxBreaks = MAX_INPUT_BREAKS, ...rest }: AreaProps) {
+export function TextArea({ label, value, onChange, className, maxBreaks = MAX_INPUT_BREAKS, tone = "green", ...rest }: AreaProps) {
   const countBreaks = (t: string) => (t.match(/\n/g) ?? []).length;
+  const empty = !value.trim();
+  const red = tone === "red";
+  const grow = useAutoGrow(value);
   return (
     <label className="block mb-3">
       {label ? <span className="block text-[13px] text-muted mb-1">{label}</span> : null}
@@ -134,6 +146,7 @@ export function TextArea({ label, value, onChange, className, maxBreaks = MAX_IN
           placeholder it does not vanish the moment the user types. */}
       <textarea
         {...rest}
+        ref={grow}
         aria-label={rest["aria-label"] ?? (label ? undefined : rest.placeholder)}
         value={value}
         onChange={(e) => {
@@ -146,17 +159,52 @@ export function TextArea({ label, value, onChange, className, maxBreaks = MAX_IN
         autoCorrect="off"
         spellCheck={false}
         // Border pairs with the wash — see TextField above.
+        /* Filled is GREEN on a red-tone field, not white: the pillar rule is
+           red while it still wants filling, green once it has been. */
         style={{
-          backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY,
-          borderColor: value.trim() ? "var(--line)" : "var(--field-empty-border)",
+          backgroundColor: empty ? (red ? FIELD_RED : FIELD_EMPTY) : red ? FIELD_EMPTY : "var(--field)",
+          borderColor: empty
+            ? red
+              ? FIELD_RED_BORDER
+              : "var(--field-empty-border)"
+            : red
+              ? "var(--field-empty-border)"
+              : "var(--line)",
         }}
         className={cx(
-          "w-full min-h-[96px] rounded-xl border px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold resize-y",
+          "w-full min-h-[96px] rounded-xl border px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold",
           className,
         )}
       />
     </label>
   );
+}
+
+/**
+ * Grow a textarea to fit its text, up to a ceiling, then scroll.
+ *
+ * The phone app's boxes grow as you type; the web ones were a fixed height with
+ * a drag handle, so a long answer hid behind a scrollbar in a box the size of
+ * three lines. The cap stops one very long entry pushing the rest of the page
+ * off screen — past it the box scrolls as before.
+ *
+ * Runs on every render, not just on input: the value also changes when a pillar
+ * loads from the server, and a box that only grew on keystroke opened collapsed
+ * over text that was already there.
+ */
+export function useAutoGrow(value: string, maxPx = 320) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Reset first, or the box can only ever get taller: scrollHeight includes
+    // the height we set last time.
+    el.style.height = "auto";
+    const next = Math.min(el.scrollHeight, maxPx);
+    el.style.height = `${next}px`;
+    el.style.overflowY = el.scrollHeight > maxPx ? "auto" : "hidden";
+  }, [value, maxPx]);
+  return ref;
 }
 
 /* ---------------- Section label + hint ---------------- */
@@ -176,9 +224,14 @@ export function Hint({ children }: { children: ReactNode }) {
 }
 
 /* ---------------- Card + accent box ---------------- */
-export function MiwBox({ accent, children }: { accent: string; children: ReactNode }) {
+export function MiwBox({ accent, children, filled }: { accent: string; children: ReactNode; filled?: boolean }) {
+  /* `filled` turns the border green: the workbook's Work of the Day is red
+     while it still wants writing and green once it has been written. Left
+     undefined the box keeps its fixed accent, which is what every other
+     caller wants. */
+  const border = filled === undefined ? accent : filled ? "var(--p3)" : "var(--field-red-border)";
   return (
-    <div className="rounded-xl border bg-surface p-3.5 shadow-sm" style={{ borderColor: accent }}>
+    <div className="rounded-xl border-2 bg-surface p-3.5 shadow-sm transition-colors" style={{ borderColor: border }}>
       {children}
     </div>
   );

@@ -54,6 +54,13 @@
   --field: #ffffff;
   --field-empty: #f3faf6; /* very light green on an empty input */
   --field-empty-border: #cfe8db;
+  /* The workbook's red "still to fill" wash, used by the PILLAR screens only:
+     a pillar field starts red and turns green once written in. Notes, meetings
+     and the auth screens keep the green-when-empty rule — a red sign-in form
+     reads as an error on the first screen anyone sees.
+     Ink on it is --on-card at 15.87:1; the border clears 3:1 on white paper. */
+  --field-red: #fdf2f3;
+  --field-red-border: #cc6f7a;
   --on-card: #191a1e; /* the ONLY colour for text on a field */
 
   /* Darkened from #9A6A00, which scored 4.38:1 as text on paper — the only
@@ -117,6 +124,11 @@
     --field: #ffffff;
     --field-empty: #bce6ce;
     --field-empty-border: #7fc49b;
+    /* Deeper than the light wash for the same reason the green one is: a field
+       is white paper in both themes, so the wash must read against the ink, not
+       against the navy page. on-card 11.55:1, border 3.87:1 on the card. */
+    --field-red: #f0c9ce;
+    --field-red-border: #c8707a;
     --on-card: #191a1e;
 
     --gold: #d9a441; /* lightened: #8F6200 is 1.6:1 on navy */
@@ -161,6 +173,11 @@
   --field: #ffffff;
   --field-empty: #bce6ce;
   --field-empty-border: #7fc49b;
+  /* Deeper than the light wash for the same reason the green one is: a field
+     is white paper in both themes, so the wash must read against the ink, not
+     against the navy page. on-card 11.55:1, border 3.87:1 on the card. */
+  --field-red: #f0c9ce;
+  --field-red-border: #c8707a;
   --on-card: #191a1e;
 
   --gold: #d9a441;
@@ -200,6 +217,8 @@
   --color-field: var(--field);
   --color-field-empty: var(--field-empty);
   --color-field-empty-border: var(--field-empty-border);
+  --color-field-red: var(--field-red);
+  --color-field-red-border: var(--field-red-border);
   --color-on-card: var(--on-card);
   --color-gold: var(--gold);
   --color-gold-hover: var(--gold-hover);

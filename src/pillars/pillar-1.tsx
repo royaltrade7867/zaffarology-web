@@ -313,7 +313,7 @@ export default function Pillar1() {
             maxLength={GOAL_MAX}
             autoCorrect="off"
             spellCheck={false}
-            style={{ backgroundColor: g.goal.trim() ? "var(--field)" : "var(--field-empty)" }}
+            style={{ backgroundColor: g.goal.trim() ? "var(--field-empty)" : "var(--field-red)" }}
             className="w-full rounded-lg px-2 py-2 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder"
           />
           <CharsLeft value={g.goal} max={GOAL_MAX} />
@@ -326,6 +326,7 @@ export default function Pillar1() {
             onChange={(v) => setG((x) => { x.plan = v; })}
             placeholder={`Write the plan for goal ${gi + 1}: the steps, the order, the deadlines…`}
             maxLength={GOAL_MAX}
+            tone="red"
           />
             <CharsLeft value={g.plan} max={GOAL_MAX} />
         </div>
@@ -344,7 +345,7 @@ export default function Pillar1() {
 
       <section className="mb-8">
         <SectionLabel text="Work of the Day" small="only one, the thing that matters most" />
-        <MiwBox accent={RED}>
+        <MiwBox accent={RED} filled={!!g.work.text.trim()}>
           <TaskRow accent={RED} symbol="★" value={g.work.text} done={g.work.done} onChange={(t) => setG((x) => { x.work.text = t; })} onToggle={(v) => setG((x) => { x.work.done = v; })} placeholder="If you do nothing else, do this…" noBorder actions={workActions()} />
         </MiwBox>
       </section>

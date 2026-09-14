@@ -4,7 +4,7 @@ import { pillarByNumber, Accents } from "@/lib/pillars";
 import { shortDate } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
-import { Loading, MiwBox, SectionLabel, AddButton, Hint, CharsLeft } from "@/components/ui";
+import { Loading, MiwBox, SectionLabel, AddButton, Hint, CharsLeft, useAutoGrow } from "@/components/ui";
 import { TaskRow, Footer, FiledBox, type TaskAction } from "@/components/task";
 import { useDialog } from "@/components/dialog";
 /**
@@ -35,6 +35,7 @@ const GREEN = Accents.green;
 export default function Pillar2() {
   const dialog = useDialog();
   const { state, update, loaded, status, retrySave } = usePillarState<P2State>(pillar.key, makeInitial, normalize);
+  const problemRef = useAutoGrow(state.problem);
   if (!loaded) return <Loading />;
 
   const sols = state.sols.length ? state.sols : [{ text: "", done: false }];
@@ -124,8 +125,9 @@ export default function Pillar2() {
             rows={2}
             autoCorrect="off"
             spellCheck={false}
-            style={{ backgroundColor: state.problem.trim() ? "var(--field)" : "var(--field-empty)" }}
-            className="w-full resize-y rounded-lg px-2 py-2 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder min-h-[60px]"
+            ref={problemRef}
+            style={{ backgroundColor: state.problem.trim() ? "var(--field-empty)" : "var(--field-red)" }}
+            className="w-full rounded-lg px-2 py-2 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder min-h-[60px]"
           />
             <CharsLeft value={state.problem} max={300} />
         </MiwBox>

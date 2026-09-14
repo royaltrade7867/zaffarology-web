@@ -6,7 +6,7 @@ import { pillarByNumber, Accents, INK, FIELD_EMPTY } from "@/lib/pillars";
 import { shortDate, todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
-import { Loading, MiwBox, SectionLabel, AddButton, CharsLeft } from "@/components/ui";
+import { Loading, MiwBox, SectionLabel, AddButton, CharsLeft, useAutoGrow } from "@/components/ui";
 import { TaskRow, Footer, FiledBox, PassNote, DayReport, DayGroup, DayTask, DayField, type TaskAction } from "@/components/task";
 import { useDialog } from "@/components/dialog";
 /**
@@ -77,6 +77,7 @@ const TAG: Record<Section, { label: string; color: string; bg: string }> = {
 export default function Pillar3() {
   const dialog = useDialog();
   const { state, update, loaded, status, retrySave } = usePillarState<P3State>(pillar.key, makeInitial, normalize);
+  const pmRef = useAutoGrow(state.pm);
 
   useEffect(() => {
     if (!loaded) return;
@@ -135,7 +136,7 @@ export default function Pillar3() {
 
       <section className="mb-8">
         <SectionLabel text="Work of the Day" small="only one, the money move that matters most" />
-        <MiwBox accent={RED}>
+        <MiwBox accent={RED} filled={!!state.work.text.trim()}>
           <TaskRow accent={RED} symbol="★" value={state.work.text} done={state.work.done} onChange={(t) => update((s) => { s.work.text = t; })} onToggle={(v) => update((s) => { s.work.done = v; })} placeholder="If you do nothing else, do this…" noBorder actions={workActions()} />
         </MiwBox>
       </section>
@@ -208,8 +209,9 @@ export default function Pillar3() {
             maxLength={600}
             autoCorrect="off"
             spellCheck={false}
-            style={{ backgroundColor: state.pm.trim() ? "var(--field)" : FIELD_EMPTY }}
-            className="w-full min-h-[80px] rounded-lg px-2 py-1.5 text-[15px] text-on-card outline-none resize-y placeholder:text-placeholder"
+            ref={pmRef}
+            style={{ backgroundColor: state.pm.trim() ? FIELD_EMPTY : "var(--field-red)" }}
+            className="w-full min-h-[80px] rounded-lg px-2 py-1.5 text-[15px] text-on-card outline-none placeholder:text-placeholder"
           />
             <CharsLeft value={state.pm} max={600} />
           <div className="flex items-center gap-2.5 mt-3">
@@ -247,7 +249,10 @@ export default function Pillar3() {
                  That is what "money made is not working" was. `--on-card` gives
                  12.71:1 empty and 17.39:1 filled. The accent stays on the border,
                  where it is decoration rather than text. */
-              style={{ borderColor: GREEN, backgroundColor: state.money.trim() ? "var(--field)" : FIELD_EMPTY }}
+              style={{
+                borderColor: state.money.trim() ? GREEN : "var(--field-red-border)",
+                backgroundColor: state.money.trim() ? FIELD_EMPTY : "var(--field-red)",
+              }}
               className="min-w-0 flex-1 rounded border-2 px-2.5 py-1.5 font-heading text-[16px] text-on-card outline-none placeholder:text-placeholder"
             />
           </div>

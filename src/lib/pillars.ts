@@ -46,6 +46,17 @@ export const AccentHex = {
 export const HEADING = "var(--heading)";
 export const INK = "var(--ink)";
 export const FIELD_EMPTY = "var(--field-empty)";
+/**
+ * The "still to fill" wash for PILLAR screens: red while empty, green once
+ * written in.
+ *
+ * Deliberately not applied outside the five pillars. The shared `TextField` /
+ * `TextArea` are used by Notes, meetings and the auth screens too, and a red
+ * sign-in form reads as an error state on the first screen anyone sees — so
+ * those keep the green-when-empty rule and this is opted into per callsite.
+ */
+export const FIELD_RED = "var(--field-red)";
+export const FIELD_RED_BORDER = "var(--field-red-border)";
 
 export interface PillarMeta {
   n: number;

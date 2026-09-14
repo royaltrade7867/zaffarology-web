@@ -12,7 +12,7 @@ import { PersonTagField } from "@/components/person-tag-field";
 import { assignTask, unassignTask } from "@/lib/connections-api";
 import { apiErrorMessage } from "@/lib/api";
 import { usePartners, useIncomingAssignments, useOutgoingAssignments, type Partner } from "@/lib/use-connections";
-import { Loading, SectionLabel, AddButton } from "@/components/ui";
+import { Loading, SectionLabel, AddButton, useAutoGrow } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
 /**
  * Types come from the SHARED schema, not local copies.
@@ -105,6 +105,7 @@ export default function Pillar4() {
   const border = item.status === "completed" ? Accents.green : isOverdue(item) ? Accents.red : "var(--line)";
 
   const setItem = (patch: Partial<Item>) => update((s) => { s.items[idx] = { ...s.items[idx], ...patch }; });
+  const noteRef = useAutoGrow(item.note);
 
   /** The status of THIS item's assignment, if it was sent to someone. */
   const sent = outgoing.byTaskId[item.id];
@@ -248,7 +249,7 @@ export default function Pillar4() {
           maxLength={100}
           autoCorrect="off"
           spellCheck={false}
-          style={{ backgroundColor: item.name.trim() ? "var(--field)" : FIELD_EMPTY }}
+          style={{ backgroundColor: item.name.trim() ? FIELD_EMPTY : "var(--field-red)" }}
           className="w-full rounded-lg px-2 py-2 mb-1.5 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder"
         />
 
@@ -320,8 +321,9 @@ export default function Pillar4() {
               maxLength={280}
               autoCorrect="off"
               spellCheck={false}
-              style={{ backgroundColor: item.note.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: item.note.trim() ? "var(--line)" : "var(--field-empty-border)" }}
-              className="w-full min-h-[64px] rounded-[10px] border-[1.5px] border-line px-3 py-3 text-[15px] text-on-card outline-none focus:border-gold resize-y placeholder:text-placeholder"
+              ref={noteRef}
+              style={{ backgroundColor: item.note.trim() ? FIELD_EMPTY : "var(--field-red)", borderColor: item.note.trim() ? "var(--field-empty-border)" : "var(--field-red-border)" }}
+              className="w-full min-h-[64px] rounded-[10px] border-[1.5px] px-3 py-3 text-[15px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
             />
             <p className="text-[12px] font-semibold mt-1.5" style={{ color: countSentences(item.note) > 3 ? Accents.red : "var(--muted)" }}>
               {countSentences(item.note)} / 3 sentences{countSentences(item.note) > 3 ? ", too long, cut it down" : ""}

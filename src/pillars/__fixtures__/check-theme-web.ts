@@ -71,6 +71,19 @@ for (const [themeName, block] of [["light", lightBlock], ["dark", darkBlock]] as
   ck(`${themeName}: placeholder on a field`, ratio(t("placeholder"), t("field")) >= 3,
      `${ratio(t("placeholder"), t("field")).toFixed(2)}:1`);
 
+  /* The RED "still to fill" wash used by the pillar screens. Same rules as the
+     green one: it is paper in both themes, so the ink on it is --on-card, and
+     the border has to be visible against the white card behind it. */
+  ck(`${themeName}: on-card ink on the red wash`,
+     ratio(t("on-card"), t("field-red")) >= 4.5,
+     `${ratio(t("on-card"), t("field-red")).toFixed(2)}:1`);
+  ck(`${themeName}: placeholder on the red wash`,
+     ratio(t("placeholder"), t("field-red")) >= 4.5,
+     `${ratio(t("placeholder"), t("field-red")).toFixed(2)}:1`);
+  ck(`${themeName}: the red border is visible on a card`,
+     ratio(t("field-red-border"), t("field")) >= 3,
+     `${ratio(t("field-red-border"), t("field")).toFixed(2)}:1`);
+
   /* The paired tokens. */
   ck(`${themeName}: on-gold on gold`, ratio(t("on-gold"), t("gold")) >= 4.5,
      `${ratio(t("on-gold"), t("gold")).toFixed(2)}:1`);

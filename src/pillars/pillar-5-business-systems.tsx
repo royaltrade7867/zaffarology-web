@@ -7,7 +7,7 @@ import { pillarByNumber, Accents, HEADING, FIELD_EMPTY } from "@/lib/pillars";
 import { newId } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
-import { Loading, SectionLabel, AddButton, capFirst } from "@/components/ui";
+import { Loading, SectionLabel, AddButton, capFirst, useAutoGrow } from "@/components/ui";
 import { PersonField, DateField, YesNoRow, PassNote } from "@/components/task";
 import { useDialog } from "@/components/dialog";
 
@@ -311,7 +311,7 @@ function AddRow({ placeholder, onAdd }: { placeholder: string; onAdd: (name: str
         onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
         placeholder={placeholder}
         maxLength={80}
-        style={{ backgroundColor: val.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: val.trim() ? "var(--line)" : "var(--field-empty-border)" }}
+        style={{ backgroundColor: val.trim() ? FIELD_EMPTY : "var(--field-red)", borderColor: val.trim() ? "var(--field-empty-border)" : "var(--field-red-border)" }}
         className="min-h-[40px] flex-1 rounded-xl border-[1.5px] border-line px-3.5 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
       />
       <button onClick={submit} style={{ backgroundColor: NAVY }} className="min-h-[40px] rounded-xl px-4 font-heading text-[11.5px] tracking-widest text-on-accent">ADD</button>
@@ -825,22 +825,29 @@ const TextField = ({ value, onChange, placeholder }: { value: string; onChange: 
        fill paints that ink on the navy CARD at 1.30:1, which is invisible. The
        `Area` below already did this correctly; this input was missed, and it is
        what makes sections 1-5 of the system editor unreadable in dark mode. */
-    style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: value.trim() ? "var(--line)" : "var(--field-empty-border)" }}
+    style={{ backgroundColor: value.trim() ? FIELD_EMPTY : "var(--field-red)", borderColor: value.trim() ? "var(--field-empty-border)" : "var(--field-red-border)" }}
     className="w-full min-h-[40px] rounded-xl border-[1.5px] px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
   />
 );
-const Area = ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (
-  <textarea
-    autoCorrect="off"
-    spellCheck={false}
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    placeholder={placeholder}
-    maxLength={400}
-    style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY }}
-    className="w-full min-h-[52px] rounded-xl border-[1.5px] border-line px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold resize-y mb-1.5 placeholder:text-placeholder"
-  />
-);
+const Area = ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => {
+  const ref = useAutoGrow(value);
+  return (
+    <textarea
+      ref={ref}
+      autoCorrect="off"
+      spellCheck={false}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      maxLength={400}
+      style={{
+        backgroundColor: value.trim() ? FIELD_EMPTY : "var(--field-red)",
+        borderColor: value.trim() ? "var(--field-empty-border)" : "var(--field-red-border)",
+      }}
+      className="w-full min-h-[52px] rounded-xl border-[1.5px] px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
+    />
+  );
+};
 const DelLink = ({ onClick }: { onClick: () => void }) => (
   <button onClick={onClick} className="mt-1 block text-[12px] font-semibold underline" style={{ color: Accents.red }}>Delete</button>
 );
@@ -886,7 +893,7 @@ function PairSideList({
             }}
             placeholder={placeholder(i + 1)}
             maxLength={200}
-            style={{ backgroundColor: p[side].trim() ? "var(--field)" : FIELD_EMPTY }}
+            style={{ backgroundColor: p[side].trim() ? FIELD_EMPTY : "var(--field-red)" }}
             className="flex-1 min-w-0 rounded-md px-2 py-1.5 text-[14px] text-on-card outline-none placeholder:text-placeholder"
           />
           <button
@@ -943,7 +950,7 @@ function EditableList({ items, onChange, placeholder, addLabel }: { items: strin
             onChange={(e) => { const n = [...list]; n[i] = e.target.value; onChange(n); }}
             placeholder={placeholder(i + 1)}
             maxLength={200}
-            style={{ backgroundColor: it.trim() ? "var(--field)" : FIELD_EMPTY }}
+            style={{ backgroundColor: it.trim() ? FIELD_EMPTY : "var(--field-red)" }}
             className="flex-1 min-w-0 rounded-md px-2 py-1.5 text-[14px] text-on-card outline-none placeholder:text-placeholder"
           />
           <button
