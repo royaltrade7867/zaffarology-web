@@ -40,6 +40,14 @@
      both themes and hit 2.13:1 on the dark header. */
   --gold-header: #8a5b13;
 
+  /* The outlined "30 YEARS" in the Home headline. It is struck out, so it must
+     read as SUBORDINATE to the solid lines beside it (10.75:1 light / 13.06:1
+     dark) without becoming invisible — this is the page's main heading, not a
+     decorative flourish. `--muted` sits at 5.16:1 / 7.20:1: clearly present,
+     clearly secondary. A paler ghost matching the print reference measured
+     1.31:1, which is a texture rather than a word. */
+  --stroke-ghost: #4e6a8c;
+
   --placeholder: #4f5c6e;
 
   /* Writing surfaces. NOT theme-dependent — see the note at the top. */
@@ -115,6 +123,7 @@
     --gold-hover: #eec06a;
     --gold-deep: #8a5b13;
     --gold-header: #d9a441; /* the lightened accent; deep gold is 2.13:1 here */
+    --stroke-ghost: #9db2cc;
     --on-gold: #0d2440;
     --danger: #ff6b7a;
     --on-danger: #0d2440; /* 5.68:1 on the lightened red */
@@ -158,6 +167,7 @@
   --gold-hover: #eec06a;
   --gold-deep: #8a5b13;
   --gold-header: #d9a441; /* the lightened accent; deep gold is 2.13:1 here */
+  --stroke-ghost: #9db2cc;
   --on-gold: #0d2440;
   --danger: #ff6b7a;
   --on-danger: #0d2440; /* 5.68:1 on the lightened red */

@@ -84,7 +84,12 @@ export function TopNav() {
   const [open, setOpen] = useState(false);
   const isActive = (href: string) =>
     pathname === href || (href === "/home" && pathname.startsWith("/pillar"));
-  const showChips = pathname !== "/home" && !pathname.startsWith("/pillar");
+  /* The five pillars are reachable from every page, at every width. They used
+     to be hidden on Home (which listed them itself) and on a pillar page
+     (which had the rail) — but below `lg` the rail is gone, so those two
+     screens had no pillar row at all. The chips now mirror the rail: whenever
+     the rail is not showing, the chips are. */
+  const activePillar = /^\/pillar\/(\d+)/.exec(pathname)?.[1];
 
   // Route change closes the menu — otherwise it stays open over the new page.
   useEffect(() => setOpen(false), [pathname]);
@@ -135,21 +140,12 @@ export function TopNav() {
         </button>
       </div>
 
-      {/* The 1-5 switcher, on every signed-in screen EXCEPT Home and the pillar
-          pages. Home already lays the pillars out as cards, and a pillar page
-          carries its own copy inside PillarScaffold with the current chip
-          marked — rendering it here too would duplicate the control. Without
-          this, Notes / Reports / Team / About / Profile had no way to reach a
-          pillar except by going back to Home first. */}
-      {/* Below `lg` the rail is hidden, so the chips remain the only way to
-          reach a pillar from Notes / Reports / Team / About / Profile. From
-          `lg` the rail carries it, with the pillar's NAME rather than a bare
-          digit, so showing both would be two copies of one control. */}
-      {showChips ? (
-        <div className="mx-auto max-w-6xl px-4 lg:hidden">
-          <PillarChips />
-        </div>
-      ) : null}
+      {/* The 1-5 switcher, on EVERY signed-in screen below `lg`. From `lg` the
+          left rail carries the same five with their names, so the two never
+          show at once — that would be one control rendered twice. */}
+      <div className="mx-auto max-w-6xl px-4 lg:hidden">
+        <PillarChips active={activePillar ? Number(activePillar) : undefined} />
+      </div>
 
       {open ? (
         <nav id="zaff-nav-menu" className="border-t border-line px-4 pb-3 pt-2 sm:hidden">

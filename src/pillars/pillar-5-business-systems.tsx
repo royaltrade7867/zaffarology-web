@@ -274,9 +274,9 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
           placeholder={addPlaceholder}
           maxLength={80}
           style={{ backgroundColor: val.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: val.trim() ? "var(--line)" : "var(--field-empty-border)" }}
-          className="flex-1 min-h-[48px] rounded-xl border-[1.5px] border-line px-3.5 text-[15px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
+          className="flex-1 min-h-[40px] rounded-xl border-[1.5px] border-line px-3.5 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
         />
-        <button onClick={submit} style={{ backgroundColor: NAVY }} className="min-h-[48px] rounded-xl px-5 text-on-accent font-heading text-[12px] tracking-widest">ADD</button>
+        <button onClick={submit} style={{ backgroundColor: NAVY }} className="min-h-[40px] rounded-xl px-4 text-on-accent font-heading text-[11.5px] tracking-widest">ADD</button>
       </div>
     </div>
   );
@@ -568,7 +568,7 @@ const TextField = ({ value, onChange, placeholder }: { value: string; onChange: 
        `Area` below already did this correctly; this input was missed, and it is
        what makes sections 1-5 of the system editor unreadable in dark mode. */
     style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: value.trim() ? "var(--line)" : "var(--field-empty-border)" }}
-    className="w-full min-h-[48px] rounded-xl border-[1.5px] px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
+    className="w-full min-h-[40px] rounded-xl border-[1.5px] px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
   />
 );
 const Area = ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (
@@ -580,7 +580,7 @@ const Area = ({ value, onChange, placeholder }: { value: string; onChange: (v: s
     placeholder={placeholder}
     maxLength={400}
     style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY }}
-    className="w-full min-h-[60px] rounded-xl border-[1.5px] border-line px-3 py-3 text-[15px] text-on-card outline-none focus:border-gold resize-y mb-1.5 placeholder:text-placeholder"
+    className="w-full min-h-[52px] rounded-xl border-[1.5px] border-line px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold resize-y mb-1.5 placeholder:text-placeholder"
   />
 );
 const DelLink = ({ onClick }: { onClick: () => void }) => (

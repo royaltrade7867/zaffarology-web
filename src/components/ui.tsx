@@ -100,7 +100,7 @@ export function TextField({
           ...(tinted ? { borderColor: "var(--field-empty-border)" } : {}),
         }}
         className={cx(
-          "w-full min-h-[48px] rounded-xl border px-3.5 py-3 text-[15px] outline-none transition-colors",
+          "w-full min-h-[40px] rounded-xl border px-3 py-2 text-[14.5px] outline-none transition-colors",
           "focus:border-gold",
           error ? "border-danger" : tinted ? "" : "border-line",
           className,

@@ -1,12 +1,8 @@
 "use client";
 
-import Link from "next/link";
-
-import { PILLARS } from "@/lib/pillars";
 import { todayLine } from "@/lib/dates";
 import { useAuth } from "@/lib/auth-context";
 import { AuthGuard } from "@/components/shell";
-import { ChevronRight } from "@/components/icons";
 import { TodaysReportsCard } from "@/components/todays-reports-card";
 import { TodayPanel } from "@/components/today-panel";
 
@@ -29,9 +25,9 @@ export default function HomePage() {
  * me?". On a wide screen the odd fifth card left a hole, and everything below
  * it was dead page.
  *
- * Now it is a page with a subject: today's work leads, and the pillars are a
- * quiet index beside it. The left rail already carries the pillars as
- * navigation, so repeating them here as five slabs would be the third copy of
+ * Now it is a page with a subject: the workbook's claim, then today's work.
+ * The pillars are navigation and live in the chrome — the 1-5 chips below `lg`
+ * and the left rail above it — so listing them here would be a third copy of
  * one control.
  */
 function Home() {
@@ -41,18 +37,54 @@ function Home() {
   return (
     <>
       <header className="mb-8">
-        <h1 className="font-heading text-[32px] leading-[1.05] text-heading sm:text-[40px]">
-          {name ? `Good to see you, ${name}.` : "Master your mind."}
+        {/* The workbook's claim, set the way the book sets it: the forty years
+            are struck out because the whole promise is that you skip them.
+
+            Two things this cannot be. It cannot be `line-through`, because the
+            struck line is OUTLINED — its fill is transparent, and a
+            text-decoration inherits that transparency and disappears. So the
+            rule is drawn as an element. And it cannot be one <p>: a screen
+            reader would read "achieve 40 years of business success in 3 years",
+            which states the opposite of the claim. `<s>` carries the deletion,
+            and the heading names itself. */}
+        <h1
+          aria-label="Achieve 40 years of business success in 3 years."
+          className="font-heading uppercase leading-[0.92] tracking-[-0.01em] text-[34px] sm:text-[46px] lg:text-[54px]"
+        >
+          <span aria-hidden className="block text-heading">Achieve</span>
+
+          <span aria-hidden className="relative block w-fit">
+            <span
+              className="block"
+              style={{
+                color: "transparent",
+                WebkitTextStroke: "1.5px var(--stroke-ghost)",
+              }}
+            >
+              <s className="no-underline">40 Years</s>
+            </span>
+            {/* The strike, drawn. Centred on the cap height rather than the line
+                box, so it crosses the letterforms and not the descender space. */}
+            <span
+              className="pointer-events-none absolute inset-x-0 top-[0.52em] h-[3px] rounded-full bg-gold"
+            />
+          </span>
+
+          <span aria-hidden className="block text-heading">Of Business Success</span>
+          <span aria-hidden className="block text-gold">In 3 Years.</span>
         </h1>
-        {/* The promise the workbook makes, under the greeting: what the five
-            pillars are FOR. The motto closes it, as it does on About. */}
-        <p className="mt-3 max-w-[54ch] text-[14.5px] leading-relaxed text-ink">
-          Forty years of business success in three years, structured as five pillars.
-        </p>
-        <p className="mt-1.5 font-heading text-[12px] tracking-[0.16em] text-gold">
+
+        <p className="mt-4 font-heading text-[12px] tracking-[0.16em] text-gold">
           MASTER YOUR MIND — BUILD YOUR LEGACY
         </p>
-        <p className="mt-2.5 text-[13.5px] text-muted">{todayLine()}</p>
+
+        {/* The greeting steps down: the headline is the page's one large
+            Archivo Black moment, and two competing display lines would halve
+            the force of both. */}
+        <p className="mt-5 text-[15px] text-ink">
+          {name ? `Good to see you, ${name}.` : "Master your mind."}
+        </p>
+        <p className="mt-1 text-[13.5px] text-muted">{todayLine()}</p>
       </header>
 
       <div className="space-y-8">
@@ -66,45 +98,10 @@ function Home() {
           <TodaysReportsCard />
         </div>
 
-        {/* The pillars, ONLY below `lg`. From `lg` the left rail carries them
-            with the same names and accents, and showing both put the identical
-            list on screen twice — the rail on the left and a column on the
-            right, three feet apart. */}
-        <nav aria-label="Pillars" className="lg:hidden">
-          <h2 className="font-heading text-[11px] uppercase tracking-[0.18em] text-muted">
-            The five pillars
-          </h2>
-          <ul className="mt-3 space-y-0.5">
-            {PILLARS.map((p) => (
-              <li key={p.n}>
-                <Link
-                  href={`/pillar/${p.n}`}
-                  className="group flex items-start gap-3 rounded-xl px-2.5 py-2.5 transition-colors hover:bg-line-soft"
-                >
-                  <span
-                    aria-hidden
-                    className="font-heading text-[16px] leading-6 tabular-nums"
-                    style={{ color: p.accent }}
-                  >
-                    {p.n}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13.5px] font-semibold leading-tight text-heading">
-                      {p.name}
-                    </span>
-                    <span className="mt-0.5 block text-[12px] leading-snug text-muted">
-                      {p.tag}
-                    </span>
-                  </span>
-                  <ChevronRight
-                    size={15}
-                    className="mt-1 shrink-0 text-muted transition-transform duration-150 group-hover:translate-x-0.5"
-                  />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {/* Home no longer lists the pillars itself. The top bar now carries the
+            1-5 chips on EVERY page below `lg`, and the left rail carries them
+            from `lg` up — so a list here was the same control a third time, and
+            at phone width it sat directly beneath the chips row. */}
       </div>
     </>
   );

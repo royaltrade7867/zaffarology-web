@@ -206,7 +206,7 @@ export function DateField({ value, onChange, label }: { value: string; onChange:
         min="1900-01-01"
         max="2100-12-31"
         style={{ backgroundColor: value ? "var(--field)" : FIELD_EMPTY, borderColor: value ? "var(--line)" : "var(--field-empty-border)" }}
-        className="w-full min-w-0 min-h-[48px] rounded-xl border border-line px-3.5 text-[15px] text-on-card outline-none focus:border-gold"
+        className="w-full min-w-0 min-h-[40px] rounded-xl border border-line px-3 text-[14.5px] text-on-card outline-none focus:border-gold"
       />
     </label>
   );
@@ -223,7 +223,7 @@ export function PersonField({ label, value, placeholder, onChange, accent }: { l
         autoCorrect="off"
         spellCheck={false}
         style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: accent ?? "var(--line)" }}
-        className="w-full min-h-[48px] rounded-xl border px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
+        className="w-full min-h-[40px] rounded-xl border px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
       />
     </label>
   );

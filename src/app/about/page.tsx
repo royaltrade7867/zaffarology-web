@@ -95,7 +95,7 @@ export default function About() {
         <h2 className="font-heading text-[18px] text-heading">About Zaffar Khan</h2>
         <p className="text-ink mt-2 leading-relaxed">
           Zaffar Khan is a serial entrepreneur, business coach and author. His 5-Success-Pillars system
-          distils decades of hard-won lessons into a simple daily practice — <em>&ldquo;30 Years of Business
+          distils decades of hard-won lessons into a simple daily practice — <em>&ldquo;40 Years of Business
           Success in Just 3 Years.&rdquo;</em>
         </p>
         <p className="text-ink mt-3 leading-relaxed">
