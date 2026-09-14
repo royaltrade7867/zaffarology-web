@@ -62,27 +62,41 @@ function ProfileInner() {
 
   return (
     <div>
-      <p className="text-[12px] tracking-widest font-heading text-gold">PROFILE</p>
-      <h1 className="font-heading text-[28px] text-ink">{user?.fullName}</h1>
-      <p className="text-dim">{user?.email}</p>
-      <p className="text-muted">
-        {ROLE_LABELS[user?.role ?? ""] ?? ""}
+      <h1 className="font-heading text-[30px] leading-tight text-heading">{user?.fullName}</h1>
+      <p className="mt-1.5 text-[13.5px] text-muted">
+        {user?.email}
+        {ROLE_LABELS[user?.role ?? ""] ? ` · ${ROLE_LABELS[user?.role ?? ""]}` : ""}
         {user?.companyName ? ` · ${user.companyName}` : ""}
       </p>
 
-      {company && user?.role === "company_admin" ? (
-        <div className="mt-5 rounded-xl border-[1.5px] border-gold bg-surface p-4">
-          <p className="text-[12px] tracking-widest font-heading text-gold">TEAM INVITE CODE</p>
-          <p className="font-heading text-[24px] tracking-widest text-gold mt-1">{company.inviteCode}</p>
-          <p className="text-muted text-[13px] mt-1">Share this code with your employees. They choose &ldquo;Join a company&rdquo; at sign-up.</p>
+      {/* Two errands, not one stack: what this account IS on the left, what you
+          can change about it on the right. Stacked full-width buttons in an
+          840px column were a phone's settings screen. */}
+      <div className="mt-8 grid gap-x-10 gap-y-8 lg:grid-cols-2">
+        <div>
+          {company && user?.role === "company_admin" ? (
+            <div className="rounded-2xl border-[1.5px] border-gold bg-surface p-5">
+              <h2 className="font-heading text-[12px] uppercase tracking-widest text-gold">
+                Team invite code
+              </h2>
+              <p className="mt-1.5 font-heading text-[26px] tracking-widest text-gold">
+                {company.inviteCode}
+              </p>
+              <p className="mt-1.5 max-w-[44ch] text-[13px] leading-relaxed text-muted">
+                Share this code with your employees. They choose &ldquo;Join a company&rdquo; at sign-up.
+              </p>
+            </div>
+          ) : null}
         </div>
-      ) : null}
 
-      <ThemePicker />
+        <div>
+          <ThemePicker />
 
-      <div className="mt-8 space-y-2 max-w-sm">
-        <Button label="Log out" variant="ghost" onClick={async () => { await signOut(); router.replace("/"); }} />
-        <Button label="Delete account" variant="danger" onClick={confirmDelete} loading={busy} />
+          <div className="mt-8 space-y-2">
+            <Button label="Log out" variant="ghost" onClick={async () => { await signOut(); router.replace("/"); }} />
+            <Button label="Delete account" variant="danger" onClick={confirmDelete} loading={busy} />
+          </div>
+        </div>
       </div>
     </div>
   );

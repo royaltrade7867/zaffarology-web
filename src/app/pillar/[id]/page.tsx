@@ -31,18 +31,25 @@ export default function PillarPage() {
 
   if (loading || !user || !user.isVerified) return <Loading />;
 
+  /* Every pillar renders INSIDE `AuthGuard`, which supplies the top bar, the
+     left rail and the page grid. They used to be returned bare, so a pillar
+     page had no container at all: content ran edge to edge from x=0 while
+     every other screen sat in a centred column. The guard above has already
+     checked the session, so `AuthGuard` re-checking is a no-op. */
+  const inShell = (body: React.ReactNode) => <AuthGuard>{body}</AuthGuard>;
+
   switch (n) {
     case 1:
-      return <Pillar1 />;
+      return inShell(<Pillar1 />);
     case 2:
-      return <Pillar2 />;
+      return inShell(<Pillar2 />);
     case 3:
-      return <Pillar3 />;
+      return inShell(<Pillar3 />);
     case 4:
-      return <Pillar4 />;
+      return inShell(<Pillar4 />);
     // Business Systems is pillar 5 now; 6-8 (Loyalty, AI, Records) are gone.
     case 5:
-      return <BusinessSystems />;
+      return inShell(<BusinessSystems />);
     default: {
       const pillar = pillarByNumber(n);
       if (!pillar)

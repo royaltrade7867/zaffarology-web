@@ -100,8 +100,11 @@ function Reports() {
     }
   };
 
+  /* The form is a column, not the full width of the page. Report type, pillar
+     and period are short controls; stretched across 840px they read as a phone
+     screen scaled up, with every group a full-width band. */
   return (
-    <div>
+    <div className="max-w-[46rem]">
       <h1 className="font-heading text-[26px] leading-tight text-heading">SHARE YOUR WORK</h1>
       <p className="mt-1 max-w-[62ch] text-[13.5px] leading-relaxed text-muted">
         Send your pillars to your coach or a business partner, or keep a copy for
@@ -229,7 +232,10 @@ function Reports() {
         </>
       )}
 
-      {/* Take it away */}
+      {/* Take it away.
+          `sm:inline-flex` rather than `flex-1`: a primary action stretched to
+          the full width of an 840px column is a phone's bottom button. On a
+          wide screen a button is as wide as its label. */}
       <div className="mt-8 flex flex-wrap gap-2">
         {/* `aria-busy` + the live region below: building a PDF takes seconds,
             and without them a screen-reader user gets no signal that anything
@@ -240,7 +246,7 @@ function Reports() {
           disabled={!!busy}
           aria-busy={busy === "pdf"}
           className={cx(
-            "flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold",
+            "flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold sm:flex-none sm:px-7",
             /* `bg-surface` explicitly, not "no background": the gold fill EASES
                  out under `transition-colors` while the text colour swaps
                  instantly, so mid-fade the muted label sat on a gold-over-navy

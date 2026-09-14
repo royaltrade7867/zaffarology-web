@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Loading, cx } from "@/components/ui";
 import { Close, Menu } from "@/components/icons";
 import { PillarChips } from "@/components/pillar-chips";
+import { PillarRail } from "@/components/pillar-rail";
 
 /** Brand wordmark: ZAFFAR (gold) · OLOGY (navy). */
 export function Wordmark({ size = 22 }: { size?: number }) {
@@ -98,7 +99,7 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-background/95 backdrop-blur">
-      <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 lg:px-6">
         <Link href="/home" className="tap-row min-w-0 gap-2.5">
           <Eagle size={34} />
           <Wordmark size={18} />
@@ -140,8 +141,12 @@ export function TopNav() {
           marked — rendering it here too would duplicate the control. Without
           this, Notes / Reports / Team / About / Profile had no way to reach a
           pillar except by going back to Home first. */}
+      {/* Below `lg` the rail is hidden, so the chips remain the only way to
+          reach a pillar from Notes / Reports / Team / About / Profile. From
+          `lg` the rail carries it, with the pillar's NAME rather than a bare
+          digit, so showing both would be two copies of one control. */}
       {showChips ? (
-        <div className="mx-auto max-w-3xl px-4">
+        <div className="mx-auto max-w-6xl px-4 lg:hidden">
           <PillarChips />
         </div>
       ) : null}
@@ -187,7 +192,19 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   return (
     <>
       <TopNav />
-      <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
+      {/* The page grid. Every authenticated screen used to be `max-w-3xl` —
+          768px on a 1440px monitor, so nearly half the screen was dead margin
+          and the whole app read as a phone in a browser. The rail takes the
+          left column from `lg`, and the content column still caps its own
+          reading measure internally; a wide page is not a wide paragraph. */}
+      <div className="mx-auto flex max-w-6xl gap-10 px-4 py-6 lg:px-6">
+        <aside className="hidden w-56 shrink-0 lg:block">
+          <div className="sticky top-24">
+            <PillarRail />
+          </div>
+        </aside>
+        <main className="min-w-0 flex-1">{children}</main>
+      </div>
     </>
   );
 }

@@ -38,19 +38,27 @@ export default function About() {
 
   return (
     <AuthGuard>
-      <div className="flex flex-col items-center text-center">
-        <Eagle size={90} />
-        <h1 className="font-heading mt-3 text-[26px]">
-          <span className="text-gold">ZAFFAR</span>
-          <span className="text-heading">OLOGY</span>
-        </h1>
-        <p className="text-[13px] tracking-widest text-gold font-semibold mt-1">MASTER YOUR MIND — BUILD YOUR LEGACY</p>
+      {/* The brand sits BESIDE the content, not stacked above it and centred.
+          A centred eagle over a centred wordmark over a centred tagline is a
+          phone's splash screen; on a wide page it pushes everything below the
+          fold and leaves two empty margins. */}
+      <div className="flex items-center gap-5 border-b border-line pb-6">
+        <Eagle size={72} />
+        <div className="min-w-0">
+          <h1 className="font-heading text-[26px] leading-none">
+            <span className="text-gold">ZAFFAR</span>
+            <span className="text-heading">OLOGY</span>
+          </h1>
+          <p className="mt-1.5 text-[13px] font-semibold tracking-widest text-gold">
+            MASTER YOUR MIND — BUILD YOUR LEGACY
+          </p>
+        </div>
       </div>
 
       {/* Two things live on this screen: who Zaffar is, and how to use the
           app. They are different errands, so they get a switcher rather than
           one long scroll. */}
-      <div role="group" aria-label="Section" className="mt-6 flex justify-center gap-2">
+      <div role="group" aria-label="Section" className="mt-6 flex gap-2">
         {(
           [
             { k: "about" as const, label: "About" },

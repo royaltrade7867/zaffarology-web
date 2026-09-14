@@ -350,8 +350,10 @@ function NotesAndMeetings() {
     <div>
       <div className="mb-4 flex items-baseline justify-between gap-3">
         <h1 className="font-heading text-[26px] leading-tight text-heading">NOTES</h1>
+        {/* A position counter belongs to the pager. From `lg` every item is on
+            screen, so "1 of 8" would be describing a position nobody is in. */}
         {list.length > 1 ? (
-          <span className="text-[12px] tabular-nums text-muted">
+          <span className="text-[12px] tabular-nums text-muted lg:hidden">
             {idx + 1} of {list.length}
           </span>
         ) : null}
@@ -442,31 +444,54 @@ function NotesAndMeetings() {
         <Empty kind={kind} filtered={filter !== null} onNew={newItem} />
       ) : (
         <>
-          {/* One at a time, with the same navigator the pillars use. */}
-          <article
-            className="rounded-2xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-md"
-          >
-            {current && "body" in current ? (
-              <NoteCard note={current} onOpen={() => setOpenNoteId(current.id)} />
-            ) : current ? (
-              <MeetingCard meeting={current as ApiMeeting} onOpen={() => setOpenMeetingId(current.id)} />
-            ) : null}
-          </article>
+          {/* From `lg`, every note is on screen at once.
+              Below it, one at a time with the pager — a phone cannot show
+              eight cards, but a 1440px browser showing ONE of eight and two
+              arrows is a phone habit, not a constraint. The pager is why the
+              header still counts "1 of 8"; that count is also hidden at `lg`,
+              where the position means nothing. */}
+          <div className="hidden gap-3 lg:grid lg:grid-cols-2">
+            {list.map((item) => (
+              <article
+                key={item.id}
+                className="rounded-2xl border border-line bg-surface p-5 transition-shadow hover:shadow-md"
+              >
+                {"body" in item ? (
+                  <NoteCard note={item} onOpen={() => setOpenNoteId(item.id)} />
+                ) : (
+                  <MeetingCard
+                    meeting={item as ApiMeeting}
+                    onOpen={() => setOpenMeetingId(item.id)}
+                  />
+                )}
+              </article>
+            ))}
+          </div>
 
-          {list.length > 1 ? (
-            <div className="mt-4 flex items-center justify-between">
-              <NavButton
-                dir="prev"
-                disabled={idx === 0}
-                onClick={() => setCur((c) => Math.max(0, c - 1))}
-              />
-              <NavButton
-                dir="next"
-                disabled={idx >= list.length - 1}
-                onClick={() => setCur((c) => Math.min(list.length - 1, c + 1))}
-              />
-            </div>
-          ) : null}
+          <div className="lg:hidden">
+            <article className="rounded-2xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
+              {current && "body" in current ? (
+                <NoteCard note={current} onOpen={() => setOpenNoteId(current.id)} />
+              ) : current ? (
+                <MeetingCard meeting={current as ApiMeeting} onOpen={() => setOpenMeetingId(current.id)} />
+              ) : null}
+            </article>
+
+            {list.length > 1 ? (
+              <div className="mt-4 flex items-center justify-between">
+                <NavButton
+                  dir="prev"
+                  disabled={idx === 0}
+                  onClick={() => setCur((c) => Math.max(0, c - 1))}
+                />
+                <NavButton
+                  dir="next"
+                  disabled={idx >= list.length - 1}
+                  onClick={() => setCur((c) => Math.min(list.length - 1, c + 1))}
+                />
+              </div>
+            ) : null}
+          </div>
         </>
       )}
 

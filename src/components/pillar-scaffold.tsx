@@ -1,17 +1,24 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { type PillarMeta } from "@/lib/pillars";
 import { todayLine } from "@/lib/dates";
-import { Eagle, Wordmark } from "@/components/shell";
-import { PillarChips } from "@/components/pillar-chips";
 import { SaveStatusBar } from "@/components/save-status";
 import type { SaveStatus } from "@/lib/use-pillar-state";
 
-/** Brand app-bar + pinned pillar title (number, name, date) + pillar chips.
- *  Stays fixed at the top; only the content scrolls — matches the mobile app. */
+/**
+ * The masthead of one pillar page.
+ *
+ * This used to render its OWN brand bar — eagle, wordmark and a "▦ Pillars"
+ * button — directly beneath the app's real top bar, so the wordmark appeared
+ * twice on one screen. It also pinned a sticky phone-style header carrying the
+ * 1-5 chips. Both are gone: the top bar is the only brand bar, and the left
+ * rail is the only pillar switcher.
+ *
+ * What remains is what a page masthead is for — which pillar this is, what it
+ * is called, and what today is.
+ */
 export function PillarScaffold({
   pillar,
   children,
@@ -26,37 +33,31 @@ export function PillarScaffold({
 }) {
   return (
     <div>
-      <div className="sticky top-0 z-40 bg-background shadow-sm">
-        {/* accent line for the current pillar */}
-        <div className="h-[3px] rounded mx-4 mt-2 mb-2" style={{ backgroundColor: pillar.accent }} />
-        <div className="mx-auto max-w-3xl px-4">
-          <div className="flex items-center justify-between">
-            <Link href="/home" className="tap-row gap-2.5">
-              <Eagle size={30} />
-              <Wordmark size={15} />
-            </Link>
-            <Link href="/home" className="tap-row gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-heading">
-              ▦ Pillars
-            </Link>
-          </div>
-          <PillarChips active={pillar.n} />
-          {/* pinned title */}
-          <div className="border-b border-line pt-1 pb-3">
-            <h1 className="font-heading text-[24px] leading-none text-heading">
-              Pillar <span style={{ color: pillar.accent }}>{pillar.n}</span>
-            </h1>
-            <p className="font-semibold text-[12px] tracking-widest mt-1.5" style={{ color: pillar.accent }}>
-              {pillar.name.toUpperCase()}
-            </p>
-            {pillar.sub ? <p className="text-[13px] text-muted mt-1 leading-snug">{pillar.sub}</p> : null}
-            <p className="text-[13px] text-muted mt-1.5">{todayLine()}</p>
-          </div>
+      <header className="mb-6 border-b border-line pb-5">
+        <div className="flex items-baseline gap-3">
+          {/* The number is the accent, at the size that carries it. */}
+          <span
+            aria-hidden
+            className="font-heading text-[40px] leading-none tabular-nums"
+            style={{ color: pillar.accent }}
+          >
+            {pillar.n}
+          </span>
+          <h1 className="font-heading text-[26px] leading-tight text-heading sm:text-[30px]">
+            {pillar.name}
+          </h1>
         </div>
-      </div>
-      <div className="mx-auto max-w-3xl px-4 py-4">
-        <SaveStatusBar status={saveStatus} onRetry={onRetrySave ?? (() => {})} />
-        {children}
-      </div>
+
+        {pillar.sub ? (
+          <p className="mt-2.5 max-w-[68ch] text-[13.5px] leading-relaxed text-muted">
+            {pillar.sub}
+          </p>
+        ) : null}
+        <p className="mt-2 text-[13px] text-muted">{todayLine()}</p>
+      </header>
+
+      <SaveStatusBar status={saveStatus} onRetry={onRetrySave ?? (() => {})} />
+      {children}
     </div>
   );
 }

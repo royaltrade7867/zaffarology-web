@@ -212,8 +212,52 @@ export default function Pillar1() {
 
   return (
     <PillarScaffold pillar={pillar} saveStatus={status} onRetrySave={retrySave}>
-      {/* Project navigator — one goal at a time, like the huddle board */}
-      <div className="flex items-center justify-between mb-3">
+      {/* The goals, named, from `lg`.
+          Everything below — work of the day, do-or-die, extra tasks, delegated
+          rows — hangs off the SELECTED goal, so this cannot become "show both
+          side by side": there is one day's list, and it belongs to one project.
+          What the wide screen can fix is the blindness. "Goal 1 of 2" behind
+          two arrows never says what goal 2 IS; this does, and switching is one
+          click instead of a hunt. */}
+      {goals.length > 1 ? (
+        <div
+          role="tablist"
+          aria-label="Your goals"
+          className="mb-5 hidden gap-2 border-b border-line lg:flex"
+        >
+          {goals.map((goal, i) => {
+            const on = i === gi;
+            const label = goal.goal.trim() || `Goal ${i + 1}`;
+            return (
+              <button
+                key={i}
+                role="tab"
+                aria-selected={on}
+                onClick={() => setCur(i)}
+                title={label}
+                className="-mb-px max-w-[22ch] truncate border-b-2 px-1 pb-2.5 text-left text-[13.5px] font-semibold transition-colors"
+                style={{
+                  borderColor: on ? pillar.accent : "transparent",
+                  color: on ? "var(--heading)" : "var(--muted)",
+                }}
+              >
+                <span aria-hidden className="mr-1.5 tabular-nums" style={{ color: pillar.accent }}>
+                  {i + 1}
+                </span>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {/* Project navigator — one goal at a time.
+          Below `lg` only: from `lg` the named switcher above replaces it. The
+          whole day's list (work of the day, do-or-die, extra, delegated) hangs
+          off the SELECTED goal, so this is a real selection, not pagination —
+          which is why the wide layout names the goals rather than dropping the
+          control. */}
+      <div className="flex items-center justify-between mb-3 lg:hidden">
         <button
           type="button"
           disabled={gi === 0}
@@ -252,7 +296,7 @@ export default function Pillar1() {
               type="button"
               onClick={removeGoal}
               aria-label={`Remove exact goal ${gi + 1}`}
-              className="shrink-0 px-1.5 py-0.5 text-[12px] font-semibold transition-opacity hover:opacity-70"
+              className="tap-row shrink-0 px-1.5 text-[12px] font-semibold transition-opacity hover:opacity-70"
               style={{ color: RED }}
             >
               Remove
