@@ -9,9 +9,11 @@ import { Button, cx } from "@/components/ui";
 import { useTheme, type ThemeChoice } from "@/lib/theme";
 import { useDialog } from "@/components/dialog";
 
+/* The KEYS are the backend's role values and must stay as they are — they come
+   from the database and the auth routes. Only the labels shown to people change. */
 const ROLE_LABELS: Record<string, string> = {
   individual: "Individual",
-  employee: "Employee",
+  employee: "Team Member",
   company_admin: "Company admin",
 };
 
@@ -83,7 +85,7 @@ function ProfileInner() {
                 {company.inviteCode}
               </p>
               <p className="mt-1.5 max-w-[44ch] text-[13px] leading-relaxed text-muted">
-                Share this code with your employees. They choose &ldquo;Join a company&rdquo; at sign-up.
+                Share this code with your Team Members. They choose &ldquo;Join a company&rdquo; at sign-up.
               </p>
             </div>
           ) : null}

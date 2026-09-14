@@ -35,8 +35,8 @@ export interface Pillar {
 
 export const APP_TITLE = 'Zaffarology';
 export const APP_MOTTO = 'MASTER YOUR MIND, BUILD YOUR LEGACY';
-export const APP_BADGE = '30 Years Of Business Success';
-export const APP_QUESTION = 'How can you achieve 30 years of business success in just 3 years?';
+export const APP_BADGE = '40 Years Of Business Success';
+export const APP_QUESTION = 'How can you achieve 40 years of business success in just 3 years?';
 
 export const HOW_TO_USE = {
   title: 'How to Use This App',
@@ -315,7 +315,7 @@ export const ABOUT_ZAFFAR = {
   title: 'About Zaffar Khan',
   role: 'Business Acceleration Specialist',
   intro:
-    'Zaffar Khan is a Business Acceleration Specialist, entrepreneur, global speaker, mentor and author of more than 50 books. He brings 40 years of practical business experience across multiple industries.\n\nZaffar’s expertise is helping businesses achieve 30 years of success in just 3 years.',
+    'Zaffar Khan is a Business Acceleration Specialist, entrepreneur, global speaker, mentor and author of more than 50 books. He brings 40 years of practical business experience across multiple industries.\n\nZaffar’s expertise is helping businesses achieve 40 years of business success in just 3 years.',
   sections: [
     {
       heading: 'From Humble Beginnings to Business Success',

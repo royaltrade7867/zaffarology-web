@@ -67,7 +67,9 @@ const NAV = [
   { href: "/notes", label: "Notes" },
   { href: "/reports", label: "Reports" },
   { href: "/team", label: "Team" },
-  { href: "/about", label: "About" },
+  /* The ROUTE stays `/about` — it is a live URL and the folder name. Only the
+     label people read changes. */
+  { href: "/about", label: "Help" },
   { href: "/profile", label: "Profile" },
 ];
 

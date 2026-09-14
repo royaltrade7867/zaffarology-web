@@ -62,7 +62,9 @@ export default function About() {
       <div role="group" aria-label="Section" className="mt-6 flex gap-2">
         {(
           [
-            { k: "about" as const, label: "About" },
+            /* The KEY stays `about` — it is the tab's state value and the route.
+               Only the label people read changes. */
+            { k: "about" as const, label: "Help" },
             { k: "instructions" as const, label: "Instructions" },
           ]
         ).map(({ k, label }) => {
