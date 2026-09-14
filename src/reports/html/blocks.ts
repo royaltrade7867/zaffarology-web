@@ -49,6 +49,36 @@ export const table = (headers: string[], rows: string[][]): string => {
 export const pill = (text: string, kind?: 'warn' | 'ok'): string =>
   `<span class="pill${kind ? ` ${kind}` : ''}">${esc(text)}</span>`;
 
+/**
+ * A system's steps as a real flow chart: START, a box per step, DONE, joined by
+ * arrows — the same shape the app draws on screen.
+ *
+ * It was an `<ol>`, which printed as a plain numbered list and lost the one
+ * thing a flow chart is for: showing that these steps run in order, start to
+ * finish. Each box is `avoid-break` so a step is never split across a page.
+ */
+export const flowChart = (steps: string[]): string => {
+  const filled = steps.filter((s) => s.trim());
+  if (!filled.length) return '<p class="empty">No steps recorded.</p>';
+  const arrow = '<div class="flow-arrow" aria-hidden="true">&#9660;</div>';
+  const boxes = filled
+    .map(
+      (s, i) =>
+        `<div class="flow-step avoid-break"><div class="flow-n">Step ${i + 1}</div>` +
+        `<div class="flow-t">${escMultiline(s)}</div></div>`,
+    )
+    .join(arrow);
+  return (
+    '<div class="flow">' +
+    '<div class="flow-cap flow-start">START</div>' +
+    arrow +
+    boxes +
+    arrow +
+    '<div class="flow-cap flow-done">DONE</div>' +
+    '</div>'
+  );
+};
+
 export const para = (text: string, cls = ''): string =>
   `<p${cls ? ` class="${esc(cls)}"` : ''}>${escMultiline(text)}</p>`;
 

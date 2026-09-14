@@ -12,7 +12,7 @@ import { deadlineSection } from '@/reports/html/deadline-section';
 import { p1Deadlines, p4Deadlines } from '@/reports/stats/deadlines';
 import type { ReportMeta } from '@/reports/types';
 
-import { bar, card, field, footer, para, pill, section, stats, table, taskList } from './blocks';
+import { bar, card, field, flowChart, footer, para, pill, section, stats, table, taskList } from './blocks';
 import { esc } from './escape';
 import { renderShell } from './shell';
 
@@ -198,14 +198,10 @@ function renderBody(loaded: LoadedPillar): string {
                     .join('\n'),
                 ) +
                                   field('Results', sys.results.filter(Boolean).join('\n')) +
-                                  `<div class="field"><div class="label">Steps</div>${
-                                    sys.steps.filter((s) => s.trim()).length
-                                      ? `<ol>${sys.steps
-                                          .filter((s) => s.trim())
-                                          .map((s) => `<li>${esc(s)}</li>`)
-                                          .join('')}</ol>`
-                                      : '<p class="empty">No steps recorded.</p>'
-                                  }</div>` +
+                                  /* A drawn flow chart, not a numbered list: the
+                                     steps run START to DONE in order, and an <ol>
+                                     printed that as loose prose. */
+                                  `<div class="field"><div class="label">Flow chart</div>${flowChart(sys.steps)}</div>` +
                                   `<div class="field"><div class="label">Training</div>${table(
                                     ['Trainee', 'Trainer', 'Date', 'Satisfied', 'Remarks'],
                                     sys.trainings.map((t) => [

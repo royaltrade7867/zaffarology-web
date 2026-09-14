@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { ChevronRight, Close } from "@/components/icons";
+import { ChevronLeft, ChevronRight, Close } from "@/components/icons";
 
 import { pillarByNumber, Accents, HEADING, FIELD_EMPTY } from "@/lib/pillars";
 import { newId } from "@/lib/dates";
@@ -32,6 +32,7 @@ import {
   makeInitial,
   normalize as normalizeP8,
   syncPairMirrors,
+  systemNum,
   type Business,
   type Department,
   type EffortPair,
@@ -53,53 +54,157 @@ const ACCENT_VAR: Record<string, string> = {
 
 const NAVY = Accents.navy;
 
-type NavState = { level: "biz" | "dept" | "sys" | "detail"; bizId?: string; deptId?: string; sysId?: string };
+/**
+ * Where you are in Pillar 5.
+ *
+ * Two places only: browsing the tree, or inside one system's editor. The tree
+ * used to be four separate drill-down screens (businesses → departments →
+ * systems → editor), which meant three taps and three page loads before any
+ * work could start, and no way to see a business's shape at a glance.
+ *
+ * It now matches the phone: ONE business at a time, its departments listed
+ * underneath as an accordion, and one system at a time inside the open
+ * department. `editing` is the only thing that replaces the page.
+ */
+type Editing = { bizId: string; deptId: string; sysId: string };
 
 export default function Pillar8() {
   const dialog = useDialog();
   const { state, update, loaded, status, retrySave } = usePillarState<P8State>(pillar.key, makeInitial, normalizeP8);
-  const [view, setView] = useState<NavState>({ level: "biz" });
+  /** Which business is showing. An index, so deleting one lands on a neighbour. */
+  const [bi, setBi] = useState(0);
+  /** ONE department open at a time, or the page becomes a wall of systems. */
+  const [openDept, setOpenDept] = useState<string | null>(null);
+  /** Which system each department is showing, keyed by department id, so
+   *  reopening a department returns to the system you were on. */
+  const [sysIdx, setSysIdx] = useState<Record<string, number>>({});
+  const [editing, setEditing] = useState<Editing | null>(null);
   if (!loaded) return <Loading />;
 
-  const biz = state.businesses.find((b) => b.id === view.bizId);
-  const dept = biz?.departments.find((d) => d.id === view.deptId);
-  const sys = dept?.systems.find((s) => s.id === view.sysId);
+  const businesses = state.businesses;
+  // Clamp: deleting the last business must not strand the navigator past the end.
+  const idx = Math.min(bi, Math.max(0, businesses.length - 1));
+  const biz = businesses[idx] ?? null;
 
   const updateSys = (mut: (s: System) => void) =>
     update((st) => {
-      const b = st.businesses.find((x) => x.id === view.bizId);
-      const d = b?.departments.find((x) => x.id === view.deptId);
-      const s = d?.systems.find((x) => x.id === view.sysId);
+      if (!editing) return;
+      const b = st.businesses.find((x) => x.id === editing.bizId);
+      const d = b?.departments.find((x) => x.id === editing.deptId);
+      const s = d?.systems.find((x) => x.id === editing.sysId);
       if (s) mut(s);
     });
 
+  /* ---------------------------- system editor ---------------------------- */
+
+  if (editing) {
+    const eBiz = businesses.find((b) => b.id === editing.bizId);
+    const eDept = eBiz?.departments.find((d) => d.id === editing.deptId);
+    const eSys = eDept?.systems.find((s) => s.id === editing.sysId);
+    // The system can vanish underneath us (deleted on another device), so fall
+    // back to the tree rather than rendering a blank editor.
+    if (!eBiz || !eDept || !eSys) {
+      setEditing(null);
+      return <Loading />;
+    }
+    return (
+      <PillarScaffold pillar={pillar} saveStatus={status} onRetrySave={retrySave}>
+        <Hierarchy biz={eBiz} dept={eDept} sys={eSys} onBack={() => setEditing(null)} />
+        <SystemDetail sys={eSys} biz={eBiz} dept={eDept} updateSys={updateSys} />
+      </PillarScaffold>
+    );
+  }
+
   return (
     <PillarScaffold pillar={pillar} saveStatus={status} onRetrySave={retrySave}>
-      {/* Breadcrumb */}
-      <div className="flex flex-wrap items-center mb-4">
-        <Crumb label="Businesses" onClick={() => setView({ level: "biz" })} />
-        {biz ? <><Sep /><Crumb label={biz.name} onClick={() => setView({ level: "dept", bizId: biz.id })} /></> : null}
-        {dept ? <><Sep /><Crumb label={dept.name} onClick={() => setView({ level: "sys", bizId: biz!.id, deptId: dept.id })} /></> : null}
-        {sys && view.level === "detail" ? <><Sep /><span className="font-semibold text-[12px]" style={{ color: "var(--muted)" }}>{sys.num}</span></> : null}
-      </div>
+      {/* ONE business at a time, stepped with ‹ ›, exactly as on the phone. */}
+      {businesses.length > 1 ? (
+        <Stepper
+          label={`BUSINESS ${idx + 1} OF ${businesses.length}`}
+          tint={NAVY}
+          atFirst={idx === 0}
+          atLast={idx >= businesses.length - 1}
+          onPrev={() => { setBi(Math.max(0, idx - 1)); setOpenDept(null); }}
+          onNext={() => { setBi(Math.min(businesses.length - 1, idx + 1)); setOpenDept(null); }}
+          prevLabel="Previous business"
+          nextLabel="Next business"
+        />
+      ) : null}
 
-      {view.level === "biz" ? (
-        <LevelList
-          label="Your Businesses"
-          small="one or many, tap to open"
-          empty="No business yet, add your first below."
-          rows={state.businesses.map((b) => ({
-            key: b.id,
-            name: b.name,
-            sub: `${b.departments.length} ${b.departments.length === 1 ? "department" : "departments"}`,
-            onOpen: () => setView({ level: "dept", bizId: b.id }),
-            onDel: () =>
-              confirmDel(dialog, `Delete business "${b.name}" and everything inside it?`, () =>
-                update((st) => { st.businesses = st.businesses.filter((x) => x.id !== b.id); }),
-              ),
-          }))}
-          addPlaceholder="New business name…"
-          onAdd={(nm) =>
+      {biz ? (
+        <>
+          <Hierarchy biz={biz} />
+          <div className="mb-4 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() =>
+                confirmDel(dialog, `Delete business "${biz.name}" and everything inside it?`, () => {
+                  update((st) => { st.businesses = st.businesses.filter((x) => x.id !== biz.id); });
+                  setBi((c) => Math.max(0, c - 1));
+                  setOpenDept(null);
+                })
+              }
+              className="tap-row rounded px-2 text-[12px] font-semibold text-muted transition-colors hover:text-danger"
+            >
+              Delete this business
+            </button>
+          </div>
+
+          <SectionLabel text="Departments" small="tap one to see its systems" color={NAVY} />
+          {biz.departments.length === 0 ? (
+            <div className="mb-2 rounded-2xl border border-dashed border-line px-3.5 py-4">
+              <span className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>
+                No departments yet, add one below.
+              </span>
+            </div>
+          ) : (
+            biz.departments.map((d, di) => (
+              <DeptBlock
+                key={d.id}
+                biz={biz}
+                dept={d}
+                tint={`var(--${ACCENT_VAR[deptAccent(d.name, di)]})`}
+                open={openDept === d.id}
+                sysIdx={Math.min(sysIdx[d.id] ?? 0, Math.max(0, d.systems.length - 1))}
+                onToggle={() => setOpenDept((p) => (p === d.id ? null : d.id))}
+                onStepSys={(next) => setSysIdx((p) => ({ ...p, [d.id]: Math.max(0, next) }))}
+                onOpenSystem={(sysId) => setEditing({ bizId: biz.id, deptId: d.id, sysId })}
+                update={update}
+                dialog={dialog}
+                onAddedSystem={(sysId) => {
+                  setSysIdx((p) => ({ ...p, [d.id]: d.systems.length }));
+                  setEditing({ bizId: biz.id, deptId: d.id, sysId });
+                }}
+              />
+            ))
+          )}
+
+          <AddRow
+            placeholder="New department name…"
+            onAdd={(nm) =>
+              update((st) => {
+                const b = st.businesses.find((x) => x.id === biz.id);
+                if (b) b.departments.push(blankDepartment(nm, b.departments.length + 1));
+              })
+            }
+          />
+        </>
+      ) : (
+        <div className="mb-2 rounded-2xl border border-dashed border-line px-3.5 py-4">
+          <span className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>
+            No business yet, add your first below.
+          </span>
+        </div>
+      )}
+
+      {/* Adding a business belongs HERE, at the bottom of the one business on
+          screen — never inside a department or system list, where it read as
+          "add a business inside this department". */}
+      <div className="mt-8 border-t border-line pt-5">
+        <SectionLabel text="Add a business" small="each one gets the five standard departments" color={NAVY} />
+        <AddRow
+          placeholder="New business name…"
+          onAdd={(nm) => {
             update((st) => {
               st.businesses.push({
                 id: newId(),
@@ -109,96 +214,77 @@ export default function Pillar8() {
                 departments: DEFAULT_DEPARTMENTS.map((d, i) => blankDepartment(d, i + 1)),
                 seeded: true,
               });
-            })
-          }
-        />
-      ) : null}
-
-      {view.level === "dept" && biz ? (
-        <LevelList
-          label="Departments"
-          small={`inside ${biz.name}`}
-          empty="No departments yet, add one below."
-          rows={biz.departments.map((d, di) => ({
-            key: d.id,
-            name: d.name,
-            badge: d.num,
-            tint: `var(--${ACCENT_VAR[deptAccent(d.name, di)]})`,
-            sub: `${d.systems.length} ${d.systems.length === 1 ? "system" : "systems"}`,
-            onOpen: () => setView({ level: "sys", bizId: biz.id, deptId: d.id }),
-            onDel: () =>
-              confirmDel(dialog, `Delete department "${d.name}" and its systems?`, () =>
-                update((st) => {
-                  const b = st.businesses.find((x) => x.id === biz.id);
-                  if (b) b.departments = b.departments.filter((x) => x.id !== d.id);
-                }),
-              ),
-          }))}
-          addPlaceholder="New department name…"
-          onAdd={(nm) =>
-            update((st) => {
-              const b = st.businesses.find((x) => x.id === biz.id);
-              if (b) b.departments.push(blankDepartment(nm, b.departments.length + 1));
-            })
-          }
-        />
-      ) : null}
-
-      {view.level === "sys" && biz && dept ? (
-        <LevelList
-          label="Systems"
-          small="each system gets its own unique number"
-          empty="No systems yet, add one below."
-          rows={dept.systems.map((s) => ({
-            key: s.id,
-            name: s.name,
-            badge: s.num,
-            tint: `var(--${ACCENT_VAR[deptAccent(dept.name, 0)]})`,
-            onOpen: () => setView({ level: "detail", bizId: biz.id, deptId: dept.id, sysId: s.id }),
-            onDel: () =>
-              confirmDel(dialog, `Delete system ${s.num} "${s.name}"?`, () =>
-                update((st) => {
-                  const b = st.businesses.find((x) => x.id === biz.id);
-                  const d = b?.departments.find((x) => x.id === dept.id);
-                  if (d) d.systems = d.systems.filter((x) => x.id !== s.id);
-                }),
-              ),
-          }))}
-          addPlaceholder="New system name…"
-          onAdd={(nm) => {
-            const num = state.nextSysNum;
-            const created = blankSystem(nm, num);
-            update((st) => {
-              const b = st.businesses.find((x) => x.id === biz.id);
-              const d = b?.departments.find((x) => x.id === dept.id);
-              if (d) d.systems.push(created);
-              st.nextSysNum = num + 1;
             });
-            setView({ level: "detail", bizId: biz.id, deptId: dept.id, sysId: created.id });
+            // Land on what was just created, not on whichever was showing.
+            setBi(businesses.length);
+            setOpenDept(null);
           }}
         />
-      ) : null}
-
-      {view.level === "detail" && sys ? <SystemDetail sys={sys} biz={biz!} dept={dept!} updateSys={updateSys} /> : null}
+      </div>
     </PillarScaffold>
   );
 }
 
-/* ---------- list levels ---------- */
+/* ---------- the tree ---------- */
 
-interface RowSpec {
-  key: string;
-  name: string;
-  sub?: string;
-  /** D1, S1 — the row's identity, as on the phone. */
-  badge?: string;
-  /** The row's own accent. The five standard departments share one (plum), so
-   *  they read as a family in every business; custom ones cycle. */
-  tint?: string;
-  onOpen: () => void;
-  onDel: () => void;
+/**
+ * BUSINESS, then DEPARTMENT, then SYSTEM — always capitalised, always in this
+ * order, on every screen of the pillar.
+ *
+ * Each tier gets its own size and colour so which one you are looking at is
+ * obvious before reading a word. Capitalisation is display only: the stored
+ * name keeps whatever the user typed.
+ */
+function Hierarchy({ biz, dept, sys, onBack }: { biz: Business; dept?: Department; sys?: System; onBack?: () => void }) {
+  return (
+    <div className="mb-4 border-b border-line pb-3">
+      {onBack ? <Crumb label="‹ All departments" onClick={onBack} /> : null}
+      <p className={`${onBack ? "mt-1.5 " : ""}break-words font-heading text-[20px] leading-tight text-heading`}>
+        {(biz.name || "Business").toUpperCase()}
+      </p>
+      {dept ? (
+        <p
+          className="mt-0.5 break-words font-heading text-[14px] leading-tight tracking-[0.08em]"
+          /* The department's own colour. Index 0 because the five standard
+             departments are coloured by identity, not by position. */
+          style={{ color: `var(--${ACCENT_VAR[deptAccent(dept.name, 0)]})` }}
+        >
+          {dept.num} · {(dept.name || "Department").toUpperCase()}
+        </p>
+      ) : null}
+      {sys ? (
+        <p className="mt-0.5 break-words font-heading text-[13px] leading-tight tracking-[0.08em]" style={{ color: NAVY }}>
+          {sys.num} · {(sys.name || "Untitled system").toUpperCase()}
+        </p>
+      ) : null}
+    </div>
+  );
 }
-function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label: string; small: string; empty: string; rows: RowSpec[]; addPlaceholder: string; onAdd: (name: string) => void }) {
+
+/** ‹ label › — one item at a time, the shape the phone uses for businesses and
+ *  for systems inside a department. */
+function Stepper({
+  label, tint, atFirst, atLast, onPrev, onNext, prevLabel, nextLabel,
+}: {
+  label: string; tint: string; atFirst: boolean; atLast: boolean;
+  onPrev: () => void; onNext: () => void; prevLabel: string; nextLabel: string;
+}) {
+  const btn = "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors disabled:opacity-40";
+  return (
+    <div className="mb-3 flex items-center justify-center gap-3">
+      <button type="button" onClick={onPrev} disabled={atFirst} aria-label={prevLabel} className={btn} style={{ borderColor: atFirst ? "var(--line)" : tint, color: atFirst ? "var(--muted)" : tint }}>
+        <ChevronLeft size={16} />
+      </button>
+      <span className="font-heading text-[11px] tracking-[0.14em]" style={{ color: "var(--muted)" }}>{label}</span>
+      <button type="button" onClick={onNext} disabled={atLast} aria-label={nextLabel} className={btn} style={{ borderColor: atLast ? "var(--line)" : tint, color: atLast ? "var(--muted)" : tint }}>
+        <ChevronRight size={16} />
+      </button>
+    </div>
+  );
+}
+
+/** The name box + ADD button shared by the business and department lists. */
+function AddRow({ placeholder, onAdd }: { placeholder: string; onAdd: (name: string) => void }) {
   const dialog = useDialog();
   const inputRef = useRef<HTMLInputElement>(null);
   const [val, setVal] = useState("");
@@ -207,7 +293,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
      at all and explained nothing. */
   const submit = () => {
     if (!val.trim()) {
-      void dialog.alert(`Give it a name first: ${addPlaceholder.toLowerCase()}`);
+      void dialog.alert(`Give it a name first: ${placeholder.toLowerCase()}`);
       inputRef.current?.focus();
       return;
     }
@@ -215,73 +301,188 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
     setVal("");
   };
   return (
-    <div>
-      <SectionLabel text={label} small={small} color={NAVY} />
-      {rows.length === 0 ? (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-dashed border-line px-3.5 py-4 mb-1" >
-          <span className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>{empty}</span>
-        </div>
-      ) : rows.map((r) => (
-        /* This row used to be a clickable <div>, so Tab reached its Delete
-           button but never the row itself: a keyboard user could DELETE a
-           business but not OPEN one, leaving every department, system and the
-           12 sections beneath unreachable without a pointer.
-           Delete cannot sit inside the row button (a button may not nest), so
-           the row's content IS the button and Delete is its sibling. */
-        <div
-          key={r.key}
-          className="flex items-center gap-1 rounded-2xl border border-line bg-surface pr-2 mb-2.5 shadow-sm transition-colors hover:bg-line-soft focus-within:border-gold"
-        >
-          <button
-            type="button"
-            onClick={r.onOpen}
-            aria-label={`Open ${r.name}${r.sub ? `, ${r.sub}` : ""}`}
-            className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-transparent px-3 py-3 text-left"
-          >
-            {/* The number IS the identity — D1, S1 — exactly as on the phone. A
-                letter avatar cannot tell three departments starting with "A"
-                apart. Outlined in the row's own accent, so the five standard
-                departments read as one family in every business. */}
-            <span
-              aria-hidden
-              className="flex h-11 min-w-[44px] shrink-0 items-center justify-center rounded-xl border-[1.5px] px-2 font-heading text-[12px] tracking-wide"
-              style={{ borderColor: r.tint ?? NAVY, color: r.tint ?? NAVY }}
-            >
-              {r.badge ?? (r.name.trim()[0] ?? "•").toUpperCase()}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block break-words font-bold text-[15.5px] text-ink">{r.name}</span>
-              {r.sub ? <span className="mt-0.5 block text-[12.5px]" style={{ color: "var(--muted)" }}>{r.sub}</span> : null}
-            </span>
-            <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted"><ChevronRight size={16} /></span>
-          </button>
-          <button
-            onClick={r.onDel}
-            aria-label={`Delete ${r.name}`}
-            title={`Delete ${r.name}`}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-danger"
-          ><Close size={13} /></button>
-        </div>
-      ))}
-      <div className="flex gap-2 mt-2">
-        <input
-          autoCorrect="off"
-          spellCheck={false}
-          ref={inputRef}
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-          placeholder={addPlaceholder}
-          maxLength={80}
-          style={{ backgroundColor: val.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: val.trim() ? "var(--line)" : "var(--field-empty-border)" }}
-          className="flex-1 min-h-[40px] rounded-xl border-[1.5px] border-line px-3.5 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
-        />
-        <button onClick={submit} style={{ backgroundColor: NAVY }} className="min-h-[40px] rounded-xl px-4 text-on-accent font-heading text-[11.5px] tracking-widest">ADD</button>
-      </div>
+    <div className="mt-2 flex gap-2">
+      <input
+        autoCorrect="off"
+        spellCheck={false}
+        ref={inputRef}
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+        placeholder={placeholder}
+        maxLength={80}
+        style={{ backgroundColor: val.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: val.trim() ? "var(--line)" : "var(--field-empty-border)" }}
+        className="min-h-[40px] flex-1 rounded-xl border-[1.5px] border-line px-3.5 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
+      />
+      <button onClick={submit} style={{ backgroundColor: NAVY }} className="min-h-[40px] rounded-xl px-4 font-heading text-[11.5px] tracking-widest text-on-accent">ADD</button>
     </div>
   );
 }
 
+/**
+ * One department: a header that opens it, and — when open — its systems, one
+ * at a time behind a ‹ › stepper.
+ *
+ * The header is a real <button>, not a clickable <div>: a keyboard user could
+ * otherwise reach the row's Delete but never open the row itself, leaving every
+ * system and its 12 sections unreachable without a pointer. Delete cannot nest
+ * inside that button, so it is its sibling.
+ */
+function DeptBlock({
+  biz, dept, tint, open, sysIdx, onToggle, onStepSys, onOpenSystem, onAddedSystem, update, dialog,
+}: {
+  biz: Business;
+  dept: Department;
+  tint: string;
+  open: boolean;
+  sysIdx: number;
+  onToggle: () => void;
+  onStepSys: (next: number) => void;
+  onOpenSystem: (sysId: string) => void;
+  onAddedSystem: (sysId: string) => void;
+  update: (m: (st: P8State) => void) => void;
+  dialog: ReturnType<typeof useDialog>;
+}) {
+  const count = dept.systems.length;
+  const sub = `${count} ${count === 1 ? "system" : "systems"}`;
+  const sys = count ? dept.systems[Math.min(sysIdx, count - 1)] : null;
+
+  const inDept = (st: P8State, mut: (d: Department) => void) => {
+    const b = st.businesses.find((x) => x.id === biz.id);
+    const d = b?.departments.find((x) => x.id === dept.id);
+    if (d) mut(d);
+  };
+
+  return (
+    <div className="mb-2.5 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
+      <div className="flex items-center gap-1 pr-2 transition-colors hover:bg-line-soft focus-within:border-gold">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-label={`Open ${dept.name}, ${sub}`}
+          className="flex min-w-0 flex-1 items-center gap-3 bg-transparent px-3 py-3 text-left"
+        >
+          {/* One chevron, rotated when open — the icon set has no ChevronDown,
+              and this is how the instructions accordion already does it. */}
+          <span aria-hidden className={`shrink-0 transition-transform ${open ? "rotate-90" : ""}`} style={{ color: tint }}>
+            <ChevronRight size={16} />
+          </span>
+          {/* The number IS the identity — D1 — exactly as on the phone. */}
+          <span
+            aria-hidden
+            className="flex h-11 min-w-[44px] shrink-0 items-center justify-center rounded-xl border-[1.5px] px-2 font-heading text-[12px] tracking-wide"
+            style={{ borderColor: tint, color: tint }}
+          >
+            {dept.num}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block break-words font-heading text-[14px] tracking-[0.06em]" style={{ color: tint }}>
+              {(dept.name || "Department").toUpperCase()}
+            </span>
+            <span className="mt-0.5 block text-[12.5px]" style={{ color: "var(--muted)" }}>{sub}</span>
+          </span>
+        </button>
+        <button
+          onClick={() =>
+            confirmDel(dialog, `Delete department "${dept.name}" and its systems?`, () =>
+              update((st) => {
+                const b = st.businesses.find((x) => x.id === biz.id);
+                if (b) b.departments = b.departments.filter((x) => x.id !== dept.id);
+              }),
+            )
+          }
+          aria-label={`Delete ${dept.name}`}
+          title={`Delete ${dept.name}`}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-danger"
+        ><Close size={13} /></button>
+      </div>
+
+      {open ? (
+        /* The rule carries the DEPARTMENT's colour, so the systems underneath
+           are visibly tied to the row that opened them. */
+        <div className="border-t border-line px-3 py-3" style={{ borderLeft: `3px solid ${tint}` }}>
+          <p className="mb-2 font-heading text-[11px] tracking-[0.14em]" style={{ color: "var(--muted)" }}>SYSTEMS</p>
+
+          {count === 0 ? (
+            <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No systems yet, add one below.</p>
+          ) : (
+            <>
+              {count > 1 ? (
+                <Stepper
+                  label={`SYSTEM ${Math.min(sysIdx, count - 1) + 1} OF ${count}`}
+                  tint={tint}
+                  atFirst={sysIdx <= 0}
+                  atLast={sysIdx >= count - 1}
+                  onPrev={() => onStepSys(sysIdx - 1)}
+                  onNext={() => onStepSys(sysIdx + 1)}
+                  prevLabel="Previous system"
+                  nextLabel="Next system"
+                />
+              ) : null}
+              {sys ? (
+                <div className="flex items-center gap-1 rounded-xl border border-line pr-2 transition-colors hover:bg-line-soft">
+                  <button
+                    type="button"
+                    onClick={() => onOpenSystem(sys.id)}
+                    aria-label={`Open ${sys.name || "Untitled system"}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 bg-transparent px-3 py-3 text-left"
+                  >
+                    <span
+                      aria-hidden
+                      className="flex h-10 min-w-[40px] shrink-0 items-center justify-center rounded-lg border-[1.5px] px-2 font-heading text-[12px]"
+                      style={{ borderColor: NAVY, color: NAVY }}
+                    >
+                      {sys.num}
+                    </span>
+                    <span className="min-w-0 flex-1 break-words font-heading text-[13px] tracking-[0.06em]" style={{ color: NAVY }}>
+                      {(sys.name || "Untitled system").toUpperCase()}
+                    </span>
+                    <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted"><ChevronRight size={16} /></span>
+                  </button>
+                  <button
+                    onClick={() =>
+                      confirmDel(dialog, `Delete system ${sys.num} "${sys.name}"?`, () =>
+                        update((st) =>
+                          inDept(st, (d) => {
+                            d.systems = d.systems.filter((x) => x.id !== sys.id);
+                            // Close the gap: a department always reads S1, S2, S3.
+                            d.systems.forEach((x, i) => { x.num = systemNum(i + 1); });
+                          }),
+                        ),
+                      )
+                    }
+                    aria-label={`Delete ${sys.name || "Untitled system"}`}
+                    title={`Delete ${sys.name || "Untitled system"}`}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-danger"
+                  ><Close size={13} /></button>
+                </div>
+              ) : null}
+            </>
+          )}
+
+          <AddRow
+            placeholder="New system name…"
+            onAdd={(nm) => {
+              /* The number is this system's POSITION in its own department, so
+                 each department counts S1, S2, S3 of its own. `normalize`
+                 renumbers on the next load anyway; this just avoids the new row
+                 flashing the wrong number for one render. */
+              const created = blankSystem(nm, count + 1);
+              update((st) =>
+                inDept(st, (d) => {
+                  d.systems.push(created);
+                  d.systems.forEach((s, i) => { s.num = systemNum(i + 1); });
+                }),
+              );
+              onAddedSystem(created.id);
+            }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 /* ---------- system detail: 12 headings ---------- */
 
 function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Business; dept: Department; updateSys: (m: (s: System) => void) => void }) {
@@ -420,7 +621,7 @@ function TrainingSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: S
   const dialog = useDialog();
   if (!sys.trainings.length) {
     return <>
-      <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No training yet - add the first one below.</p>
+      <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No training yet, add the first one below.</p>
       <AddButton label="+ Add training / give another training" accent={Accents.green} onClick={() => updateSys((s) => { s.trainings.push({ id: newId(), trainee: "", trainer: "", date: "", satisfied: "", remarks: "" }); })} />
     </>;
   }
@@ -434,6 +635,11 @@ function TrainingSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: S
             <PersonField label="Trainee's Name" value={t.trainee} placeholder="Who is being trained?" onChange={(v) => updateSys((s) => { s.trainings[i].trainee = v; })} />
             <PersonField label="Trainer" value={t.trainer} placeholder="Who is training?" onChange={(v) => updateSys((s) => { s.trainings[i].trainer = v; })} />
             <DateField label="Training Date" value={t.date} onChange={(v) => updateSys((s) => { s.trainings[i].date = v; })} />
+            {/* Remarks come BEFORE the verdict: the trainer writes up how it went,
+                then says satisfied or not. Asking for the verdict first made the
+                remarks read as an afterthought to a decision already taken. */}
+            <FLabel>Remarks of the Trainer</FLabel>
+            <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.trainings[i].remarks = v; })} placeholder="How did the training go?" />
             <FLabel>Trainer Satisfied With The Training?</FLabel>
             <YesNoRow value={t.satisfied} onChange={(v) => updateSys((s) => { s.trainings[i].satisfied = v; })} yesLabel="✓ Satisfied" noLabel="✗ Not Satisfied" />
             {t.satisfied === "yes" ? <PassNote kind="pass">✓ {name} trained well, ready for evaluation (section 11).</PassNote> : null}
@@ -441,8 +647,6 @@ function TrainingSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: S
               <PassNote kind="fail">✗ Trainer not satisfied, {t.trainee.trim() || "trainee"} needs another training session.</PassNote>
               <AddButton label={`+ Give another training to ${t.trainee.trim() || "the trainee"}`} accent={Accents.green} onClick={() => updateSys((s) => { s.trainings.push({ id: newId(), trainee: t.trainee, trainer: t.trainer, date: "", satisfied: "", remarks: `Repeat training, trainer not satisfied with training ${i + 1}` }); })} />
             </> : null}
-            <FLabel>Remarks of the Trainer</FLabel>
-            <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.trainings[i].remarks = v; })} placeholder="How did the training go?" />
             <DelLink onClick={() => confirmDel(dialog, "Delete this training record?", () => updateSys((s) => { s.trainings.splice(i, 1); }))} />
           </div>
         );
@@ -457,7 +661,7 @@ function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Syste
   const lastTrainee = sys.trainings[sys.trainings.length - 1]?.trainee ?? "";
   if (!sys.evals.length) {
     return <>
-      <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No evaluation yet - add the first one below.</p>
+      <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No evaluation yet, add the first one below.</p>
       <AddButton label="+ Add evaluation / evaluate again" accent={Accents.green} onClick={() => updateSys((s) => { s.evals.push({ id: newId(), trainee: lastTrainee, evaluator: "", evalDate: "", satisfied: "", implDate: "", remarks: "" }); })} />
     </>;
   }
@@ -471,6 +675,11 @@ function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Syste
             <PersonField label="Trainee's Name" value={t.trainee} placeholder="Who is being evaluated?" onChange={(v) => updateSys((s) => { s.evals[i].trainee = v; })} />
             <PersonField label="Evaluator" value={t.evaluator} placeholder="Who is evaluating?" onChange={(v) => updateSys((s) => { s.evals[i].evaluator = v; })} />
             <DateField label="Evaluation Date" value={t.evalDate} onChange={(v) => updateSys((s) => { s.evals[i].evalDate = v; })} />
+            {/* Remarks, then the verdict, then the implementation date — the order
+                the work actually happens in. The implementation date stays tied to
+                a "yes", so it can only be set once the evaluation has passed. */}
+            <FLabel>Remarks of Evaluation</FLabel>
+            <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.evals[i].remarks = v; })} placeholder="What did the evaluation find?" />
             <FLabel>Evaluator Satisfied?</FLabel>
             <YesNoRow value={t.satisfied} onChange={(v) => updateSys((s) => { s.evals[i].satisfied = v; })} yesLabel="✓ Yes, Satisfied" noLabel="✗ No, Not Satisfied" />
             {t.satisfied === "yes" ? <>
@@ -481,8 +690,6 @@ function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Syste
               <PassNote kind="fail">✗ {name} failed the evaluation, another training session is needed. No implementation date.</PassNote>
               <AddButton label={`+ Schedule another training for ${t.trainee.trim() || "the trainee"}`} accent={Accents.green} onClick={() => { updateSys((s) => { s.trainings.push({ id: newId(), trainee: t.trainee, trainer: "", date: "", satisfied: "", remarks: `Re-training after failed evaluation ${i + 1}` }); }); void dialog.alert(`A new training has been added in section 10 for ${t.trainee.trim() || "the trainee"}.`); }} />
             </> : null}
-            <FLabel>Remarks of Evaluation</FLabel>
-            <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.evals[i].remarks = v; })} placeholder="What did the evaluation find?" />
             <DelLink onClick={() => confirmDel(dialog, "Delete this evaluation record?", () => updateSys((s) => { s.evals.splice(i, 1); }))} />
           </div>
         );
@@ -494,28 +701,80 @@ function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Syste
 
 function ReviewSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: System) => void) => void }) {
   const dialog = useDialog();
+  /** Which person is showing, and which of that person's reviews. Keyed by name
+   *  so stepping to another person and back returns to the same review. */
+  const [person, setPerson] = useState(0);
+  const [rev, setRev] = useState<Record<string, number>>({});
   const lastTrainee = sys.trainings[sys.trainings.length - 1]?.trainee ?? "";
   if (!sys.reviews.length) {
     return <>
-      <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No review yet - add the first one below.</p>
+      <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No review yet, add the first one below.</p>
       <AddButton label="+ Add fortnightly review" accent={Accents.green} onClick={() => updateSys((s) => { s.reviews.push({ id: newId(), trainee: lastTrainee, reviewer: "", date: "", satisfied: "", remarks: "" }); })} />
     </>;
   }
+  /* Grouped by PERSON, then stepped through that person's reviews.
+     A flat list put every fortnight of every trainee on one page, so following
+     one person's progress — which is the whole point of a fortnightly review —
+     meant scrolling past everyone else. Reviews with no name yet gather under
+     one "Not named yet" group rather than vanishing. */
+  const groups: { who: string; items: { r: Review; i: number }[] }[] = [];
+  sys.reviews.forEach((r, i) => {
+    const who = r.trainee.trim() || "Not named yet";
+    const key = who.toLowerCase();
+    const found = groups.find((g) => g.who.toLowerCase() === key);
+    if (found) found.items.push({ r, i });
+    else groups.push({ who, items: [{ r, i }] });
+  });
+
+  const pi = Math.min(person, Math.max(0, groups.length - 1));
+  const group = groups[pi];
+  const ri = Math.min(rev[group.who] ?? group.items.length - 1, group.items.length - 1);
+  const cur = group.items[ri];
+  const t = cur.r;
+  const i = cur.i;
+
   return (
     <div>
-      {sys.reviews.map((t, i) => (
-        <div key={t.id} className="rounded-lg border border-line bg-surface p-3 mb-2.5 shadow-sm">
-          <p className="font-heading text-[12px] tracking-widest text-ink mb-2">Review {i + 1}{i === sys.reviews.length - 1 && sys.reviews.length > 1 ? " (latest)" : ""}</p>
-          <PersonField label="Trainee's Name" value={t.trainee} placeholder="Who is being reviewed?" onChange={(v) => updateSys((s) => { s.reviews[i].trainee = v; })} />
-          <PersonField label="Reviewer" value={t.reviewer} placeholder="Who is reviewing?" onChange={(v) => updateSys((s) => { s.reviews[i].reviewer = v; })} />
-          <DateField label="Review Date" value={t.date} onChange={(v) => updateSys((s) => { s.reviews[i].date = v; })} />
-          <FLabel>Reviewer Satisfied?</FLabel>
-          <YesNoRow value={t.satisfied} onChange={(v) => updateSys((s) => { s.reviews[i].satisfied = v; })} yesLabel="✓ Satisfied" noLabel="✗ Not Satisfied" />
-          <p className="font-heading text-[9px] mt-2 mb-0.5" style={{ letterSpacing: "1.5px", color: Accents.red }}>🔒 CONFIDENTIAL REMARKS ABOUT THE TRAINEE</p>
-          <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.reviews[i].remarks = v; })} placeholder="For the reviewer's eyes, honest, confidential notes on the trainee…" />
-          <DelLink onClick={() => confirmDel(dialog, "Delete this review record?", () => updateSys((s) => { s.reviews.splice(i, 1); }))} />
-        </div>
-      ))}
+      {groups.length > 1 ? (
+        <Stepper
+          label={`${group.who.toUpperCase()} · ${pi + 1} OF ${groups.length}`}
+          tint={Accents.green}
+          atFirst={pi === 0}
+          atLast={pi >= groups.length - 1}
+          onPrev={() => setPerson(Math.max(0, pi - 1))}
+          onNext={() => setPerson(Math.min(groups.length - 1, pi + 1))}
+          prevLabel="Previous person"
+          nextLabel="Next person"
+        />
+      ) : null}
+
+      {group.items.length > 1 ? (
+        <Stepper
+          label={`REVIEW ${ri + 1} OF ${group.items.length}`}
+          tint={NAVY}
+          atFirst={ri === 0}
+          atLast={ri >= group.items.length - 1}
+          onPrev={() => setRev((p) => ({ ...p, [group.who]: ri - 1 }))}
+          onNext={() => setRev((p) => ({ ...p, [group.who]: ri + 1 }))}
+          prevLabel="Previous review"
+          nextLabel="Next review"
+        />
+      ) : null}
+
+      <div className="rounded-lg border border-line bg-surface p-3 mb-2.5 shadow-sm">
+        <p className="font-heading text-[12px] tracking-widest text-ink mb-2">
+          Review {ri + 1}{ri === group.items.length - 1 && group.items.length > 1 ? " (latest)" : ""}
+        </p>
+        <PersonField label="Trainee's Name" value={t.trainee} placeholder="Who is being reviewed?" onChange={(v) => updateSys((s) => { s.reviews[i].trainee = v; })} />
+        <PersonField label="Reviewer" value={t.reviewer} placeholder="Who is reviewing?" onChange={(v) => updateSys((s) => { s.reviews[i].reviewer = v; })} />
+        <DateField label="Review Date" value={t.date} onChange={(v) => updateSys((s) => { s.reviews[i].date = v; })} />
+        <FLabel>Reviewer Satisfied?</FLabel>
+        <YesNoRow value={t.satisfied} onChange={(v) => updateSys((s) => { s.reviews[i].satisfied = v; })} yesLabel="✓ Satisfied" noLabel="✗ Not Satisfied" />
+        <p className="font-heading text-[9px] mt-2 mb-0.5" style={{ letterSpacing: "1.5px", color: Accents.red }}>🔒 CONFIDENTIAL REMARKS ABOUT THE TRAINEE</p>
+        <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.reviews[i].remarks = v; })} placeholder="For the reviewer's eyes, honest, confidential notes on the trainee…" />
+        <DelLink onClick={() => confirmDel(dialog, "Delete this review record?", () => updateSys((s) => { s.reviews.splice(i, 1); }))} />
+      </div>
+
       <AddButton label="+ Add fortnightly review" accent={Accents.green} onClick={() => updateSys((s) => { s.reviews.push({ id: newId(), trainee: lastTrainee, reviewer: "", date: "", satisfied: "", remarks: "" }); })} />
     </div>
   );
@@ -541,7 +800,6 @@ const Crumb = ({ label, onClick }: { label: string; onClick: () => void }) => (
     {label}
   </button>
 );
-const Sep = () => <span className="text-[12px] px-0.5" style={{ color: "var(--muted)" }}> › </span>;
 const Section = ({ n, title, small }: { n: number; title: string; small?: string }) => (
   <div className="flex items-start gap-2.5 mt-6 mb-2">
     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-on-accent font-heading text-[12px]" style={{ backgroundColor: NAVY }}>{n}</span>

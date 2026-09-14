@@ -395,20 +395,26 @@ export const normalize = (st: P8State): P8State => {
     }
   }
 
-  /* ---- system numbers: drop the padding and the dash, keep the number ----
-     "S-007" and "S-7" were written by earlier versions. Re-rendering as "S7"
-     keeps the identity of the system while matching the new format, so a system
-     does not appear to change number when the app updates. */
-  let highestSys = 0;
+  /* ---- system numbers: POSITIONAL, restarting at S1 in every department ----
+
+     Each department counts its own systems: D1 holds S1, S2, S3 and so does D2.
+     Deleting S2 of three renumbers the rest, so a department always reads
+     S1, S2, S3 with no gaps — the same rule departments themselves follow.
+
+     This REPLACED an identity rule, where a number was issued once from a
+     pillar-wide counter and never reused: that produced D2 starting at S4 because
+     D1 had taken the first three, and the workbook asks each department to number
+     its own systems from one.
+
+     What this costs: a system number in a report printed before the change may
+     now point at a different system. Nothing in the data keys off the number —
+     daily answers use `system_id` + `pair_id` — so no recorded answer moves.
+     "S-007" and "S-7" from older versions are re-rendered in the same pass. */
   for (const b of businesses) {
     for (const d of b.departments) {
-      for (const s of d.systems) {
-        const n = numOf(s.num);
-        if (n > 0) {
-          s.num = systemNum(n);
-          if (n > highestSys) highestSys = n;
-        }
-      }
+      d.systems.forEach((s, i) => {
+        s.num = systemNum(i + 1);
+      });
     }
   }
 
@@ -420,9 +426,7 @@ export const normalize = (st: P8State): P8State => {
      so leaving gaps after a delete just looks broken. Deleting D2 of five
      renumbers the rest to D1-D4 rather than leaving D1, D3, D4, D5.
 
-     System numbers deliberately do NOT work this way: S2 appears in emailed
-     daily reports, so resequencing would make an old report contradict a new
-     one. */
+     System numbers work the same way, per department, since 2026-09-15. */
   /* ---- the five standard departments ----
      Businesses created before this existed get them once, retroactively. The
      `seeded` flag is what makes it ONCE: without it this runs on every read and
@@ -452,14 +456,19 @@ export const normalize = (st: P8State): P8State => {
     });
   }
 
-  // Systems keep their identity, so their counter must never re-issue a number
-  // already in use. Departments are positional now, so `nextDeptNum` is only
-  // kept for older clients and the web app, which still read it.
-  const storedSys = typeof loose.nextSysNum === 'number' ? (loose.nextSysNum as number) : 1;
+  /* `nextSysNum` and `nextDeptNum` no longer issue anything — both numbers are
+     derived from position now. They stay in the shape, and keep advancing, ONLY
+     so an older client reading this blob still finds the fields it expects: the
+     blob is a whole-document replace, and a field this app drops is a field that
+     app loses. Do not read them to number anything. */
+  const mostSys = businesses.reduce(
+    (n, b) => b.departments.reduce((m, d) => Math.max(m, d.systems.length), n),
+    0,
+  );
   const mostDepts = businesses.reduce((n, b) => Math.max(n, b.departments.length), 0);
   return {
     businesses,
-    nextSysNum: Math.max(storedSys, highestSys + 1),
+    nextSysNum: mostSys + 1,
     nextDeptNum: mostDepts + 1,
   };
 };

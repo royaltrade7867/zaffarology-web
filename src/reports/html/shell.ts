@@ -109,6 +109,32 @@ export function renderShell(o: ShellOptions): string {
   ul.tasks li.done::before { content: '☑'; color: var(--accent); }
   ul.tasks li.done { color: var(--muted); text-decoration: line-through; }
 
+  /* Flow chart: START, a box per step, DONE, joined by arrows — the same shape
+     the app draws on screen. Centred and narrow so it reads as a diagram rather
+     than as body text, and each box avoids breaking across a page. */
+  .flow { margin: 8px 0 4px; text-align: center; }
+  .flow-cap {
+    display: inline-block; min-width: 92px; padding: 5px 16px; border-radius: 999px;
+    font-family: 'Archivo Black', sans-serif; font-size: 8.5pt; letter-spacing: .12em;
+    color: #fff;
+  }
+  /* The CSS variable, not an interpolated colour: the shell sets --accent per
+     pillar, so the caps match the pillar the report is about. (No backticks in
+     this comment — it lives inside a template literal.) */
+  .flow-start { background: var(--accent); }
+  .flow-done { background: ${C.muted}; }
+  .flow-step {
+    display: block; max-width: 340px; margin: 0 auto; text-align: left;
+    border: 1.5px solid var(--accent); border-radius: 8px; padding: 8px 12px;
+    background: var(--card);
+  }
+  .flow-n {
+    font-family: 'Archivo Black', sans-serif; font-size: 7.5pt; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 2px;
+  }
+  .flow-t { font-size: 10pt; white-space: pre-wrap; }
+  .flow-arrow { color: var(--muted); font-size: 11pt; line-height: 1.1; margin: 3px 0; }
+
   table { width: 100%; border-collapse: collapse; font-size: 10pt; }
   th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th {

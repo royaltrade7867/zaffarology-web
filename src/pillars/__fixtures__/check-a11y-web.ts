@@ -100,7 +100,12 @@ const uiFiles = [
   const closeButtons = [...p5.matchAll(/<button[\s\S]*?<\/button>/g)].filter((m) =>
     /<Close size=\{13\} \/>/.test(m[0]),
   );
-  ck("every 13px Close button was found", closeButtons.length === 3, String(closeButtons.length));
+  /* Assert the INVARIANT, not a head-count. This pinned `=== 3` and failed when
+     the Pillar 5 tree became an accordion: the one delete button in the old
+     shared row list became two (a department's and a system's), which is correct
+     and changed nothing about target size. What matters is that a 13px icon
+     never sits in a 13px box. */
+  ck("Pillar 5 has 13px Close buttons to check", closeButtons.length > 0, String(closeButtons.length));
   // 24px can be spelled `min-h-[24px]` or a Tailwind `h-8 w-8` (32px). Both are
   // fine; requiring the literal spelling flagged a correct button.
   const sized = (s: string) => /\btap-target\b/.test(s) || /\bh-(?:[89]|1[0-9])\b/.test(s);
@@ -345,9 +350,18 @@ const uiFiles = [
 
   // Pillar 5 rows: a keyboard user could DELETE a business but not OPEN one.
   const p5 = read("src/pillars/pillar-5-business-systems.tsx");
-  ck("a Pillar 5 row opens from the keyboard", /onClick=\{r\.onOpen\}/.test(p5) && /aria-label=\{`Open \$\{r\.name\}/.test(p5));
-  ck("and is a real button, not a clickable div",
-     !/<div[^>]*\n?\s*key=\{r\.key\}\s*\n?\s*onClick=\{r\.onOpen\}/.test(p5));
+  /* Assert the INVARIANT, not one component's variable names: every row that
+     opens something is a real <button> carrying an "Open …" label. The rows used
+     to come from a single `LevelList` with an `r.onOpen` prop; they are now the
+     department header and the system row inside the accordion, so pinning `r.`
+     failed correct code. */
+  const openLabels = [...p5.matchAll(/aria-label=\{`Open \$\{/g)].length;
+  ck("Pillar 5 rows open from the keyboard", openLabels >= 2, `${openLabels} labelled rows`);
+  ck("and are real buttons, not clickable divs",
+     !/<div[^>]*\n\s*(?:role="button"|onClick=\{[^}]*(?:onOpen|onToggle)\})/.test(p5));
+  /* The department header must say whether it is open, or a screen reader
+     announces a button that appears to do nothing. */
+  ck("an expandable department announces its state", /aria-expanded=\{open\}/.test(p5));
 
   // WCAG 2.2 target size on the controls the audit measured under 24px.
   const task = read("src/components/task.tsx");
