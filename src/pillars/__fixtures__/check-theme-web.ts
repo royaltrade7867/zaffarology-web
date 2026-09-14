@@ -147,6 +147,33 @@ ck("no filled field goes transparent while its ink is on-card",
    transparentInk.length === 0,
    transparentInk[0] ?? "");
 
+/* The blind spot in BOTH checks above, and how two real bugs shipped: they only
+   see fields whose ink is a CLASS (`text-ink`, `text-on-card`). An element that
+   sets `color:` inline to a pillar accent is invisible to them.
+
+   The dark-theme accents are lightened for the navy page (--p3 #5fc191, --p4
+   #7aa9e8 …). On the empty green wash they land at 1.6-2.2:1, so the field was
+   unreadable exactly while blank — which is when it most needs reading. It hit
+   Pillar 3's "money made" box (reported as the field "not working") and the
+   "To whom?" box on Pillar 1's delegation rows.
+
+   A writing surface takes `--on-card` and nothing else; an accent may colour its
+   BORDER, never its text. */
+const accentInk: string[] = [];
+for (const f of componentFiles) {
+  const src = readFileSync(f, "utf8");
+  for (const m of src.matchAll(/style=\{\{[^}]*\}\}/g)) {
+    const s = m[0];
+    // A field surface: it paints FIELD_EMPTY or --field-empty when empty.
+    if (!/FIELD_EMPTY|--field-empty/.test(s)) continue;
+    // …and sets its own text colour to something that is not the on-card token.
+    const colour = /(?:^|[^-\w])color:\s*([^,}]+)/.exec(s);
+    if (colour && !/on-card/.test(colour[1])) accentInk.push(`${f}: color: ${colour[1].trim()}`);
+  }
+}
+ck("no field inks itself with an accent instead of on-card",
+   accentInk.length === 0, accentInk.slice(0, 3).join(" | "));
+
 /* Auth must stay neutral: a green sign-in form reads as an error state on the
    first screen anyone sees. */
 const ui = readFileSync("src/components/ui.tsx", "utf8");

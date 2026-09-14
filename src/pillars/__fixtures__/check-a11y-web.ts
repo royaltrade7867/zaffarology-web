@@ -129,10 +129,20 @@ const uiFiles = [
    not override — so the due date pushed past the card AND the viewport. */
 {
   const task = read("src/components/task.tsx");
-  // Span the whole element, not a fixed budget: adding min/max pushed
-  // `min-w-0` past a 400-char window and failed a correct file.
-  ck("the date input can shrink", /type="date"[\s\S]*?min-w-0/.test(task));
-  ck("and is bounded to a sane year range", /min="1900-01-01"/.test(task) && /max="2100-12-31"/.test(task));
+  // Assert the INVARIANT, not the markup: the date field must be able to shrink
+  // inside a flex row, whatever control it is built from. It was a native
+  // `type="date"` until that was replaced by a typed field in the app's own
+  // format, and pinning the tag here failed correct code.
+  ck("the date field can shrink", /DateField[\s\S]*?min-w-0/.test(task));
+  ck("and is bounded to a sane year range",
+     /DATE_MIN = "1900-01-01"/.test(task) && /DATE_MAX = "2100-12-31"/.test(task));
+  /* A native picker rejected an out-of-range year itself. A typed field has to
+     do it in code, or "62028-06-01" is storable again. */
+  ck("and enforces those bounds when parsing",
+     /out < DATE_MIN \|\| out > DATE_MAX/.test(task));
+  /* Parsing `new Date("2026-08-05")` is UTC midnight, which renders as the 4th
+     in every timezone behind UTC. */
+  ck("and builds the display date in local time", /new Date\(y, mo - 1, d\)/.test(task));
   const p4 = read("src/pillars/pillar-4.tsx");
   ck("the due-date row stacks on narrow screens", /flex flex-col gap-3 sm:flex-row/.test(p4));
   ck("both of its columns can shrink", (p4.match(/min-w-0 flex-1/g) ?? []).length >= 2);

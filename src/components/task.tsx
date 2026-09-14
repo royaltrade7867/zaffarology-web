@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { Check, Close } from "@/components/icons";
 import { Accents, FIELD_EMPTY, HEADING } from "@/lib/pillars";
-import { friendlyISO } from "@/lib/dates";
+import { friendlyISO, shortDate } from "@/lib/dates";
 import { cx } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
 
@@ -140,8 +140,12 @@ export function TaskRow({
           placeholder="To whom?"
           autoCorrect="off"
           spellCheck={false}
-          style={{ color: accent, borderColor: accent, backgroundColor: (who ?? "").trim() ? "transparent" : FIELD_EMPTY }}
-          className="w-24 shrink-0 border-b bg-transparent py-1 text-[13px] outline-none placeholder:text-placeholder"
+          /* Same rule as every other writing surface: the ink is `--on-card`, not
+             the accent. The dark-theme accents are lightened for the navy page and
+             sit at 1.6-2.2:1 on the empty green wash — Pillar 1's delegation rows
+             pass BLUE here, which was 1.65:1 and unreadable while empty. */
+          style={{ borderColor: accent, backgroundColor: (who ?? "").trim() ? "var(--field)" : FIELD_EMPTY }}
+          className="w-24 shrink-0 border-b py-1 text-[13px] text-on-card outline-none placeholder:text-placeholder"
         />
       ) : null}
       {done && actions ? (
@@ -189,24 +193,104 @@ export function Footer({ progress, resetLabel, onReset }: { progress: string; re
 }
 
 /* ---------------- Date field ---------------- */
+
+/** The lower and upper bounds a typed date is held to, as ISO. */
+const DATE_MIN = "1900-01-01";
+const DATE_MAX = "2100-12-31";
+
+/** ISO `YYYY-MM-DD` -> "5 Aug 2026". Byte-identical to the phone app's
+ *  `displayDate`, so the same deadline reads the same on both. */
+export function isoToDisplay(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (!y || !mo || !d) return iso;
+  // Local, never `new Date(iso)` — that parses as UTC midnight and shifts a day back.
+  return shortDate(new Date(y, mo - 1, d));
+}
+
+/** "5 Aug 2026", "5/8/2026", "2026-08-05" -> ISO, or "" if it is not a real date.
+ *  Returns "" rather than guessing, so a half-typed value never silently stores
+ *  a wrong day. */
+export function displayToIso(text: string): string {
+  const s = text.trim();
+  if (!s) return "";
+
+  let y: number | undefined, mo: number | undefined, d: number | undefined;
+
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+  const dmy = /^(\d{1,2})[/\s.-]+(\d{1,2})[/\s.-]+(\d{4})$/.exec(s);
+  const named = /^(\d{1,2})[\s.-]+([A-Za-z]{3,})[\s,.-]+(\d{4})$/.exec(s);
+  const namedFirst = /^([A-Za-z]{3,})[\s.-]+(\d{1,2})[\s,.-]+(\d{4})$/.exec(s);
+
+  if (iso) [y, mo, d] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
+  else if (dmy) [d, mo, y] = [Number(dmy[1]), Number(dmy[2]), Number(dmy[3])];
+  else if (named || namedFirst) {
+    const g = named ?? namedFirst!;
+    const [dayStr, monStr] = named ? [g[1], g[2]] : [g[2], g[1]];
+    const idx = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+      .indexOf(monStr.slice(0, 3).toLowerCase());
+    if (idx < 0) return "";
+    [d, mo, y] = [Number(dayStr), idx + 1, Number(g[3])];
+  } else return "";
+
+  if (!y || !mo || !d || mo < 1 || mo > 12 || d < 1 || d > 31) return "";
+  // Reject a day that does not exist in that month (31 Feb rolls over otherwise).
+  const dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return "";
+
+  const out = `${y}-${`${mo}`.padStart(2, "0")}-${`${d}`.padStart(2, "0")}`;
+  return out < DATE_MIN || out > DATE_MAX ? "" : out;
+}
+
+/**
+ * A date the user TYPES, shown in the app's own format.
+ *
+ * Deliberately not `type="date"`: the native control renders in the browser's
+ * locale (so it read `08/05/2026` next to the app's own "5 Aug 2026" elsewhere)
+ * and opens a calendar popup that looks nothing like any other field on the
+ * page. The stored value is still ISO `YYYY-MM-DD` — it is shared with the
+ * phone app through the pillar blob, so the STORED shape must never change,
+ * only its presentation.
+ */
 export function DateField({ value, onChange, label }: { value: string; onChange: (iso: string) => void; label?: string }) {
+  // What the user sees while typing. Committed to ISO on blur, so a partial
+  // value like "5 Au" is never parsed mid-keystroke.
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? isoToDisplay(value);
+  const bad = draft !== null && draft.trim() !== "" && displayToIso(draft) === "";
+
+  const commit = () => {
+    if (draft === null) return;
+    const next = displayToIso(draft);
+    // An unparseable entry reverts rather than wiping a good stored date.
+    if (next || draft.trim() === "") onChange(next);
+    setDraft(null);
+  };
+
   return (
     <label className="block mb-1.5">
       {label ? <span className="block text-[13px] text-muted mb-1">{label}</span> : null}
-      {/* `min-w-0`: a date input carries a UA intrinsic width that `w-full`
-          does not override, so inside a flex row it refused to shrink and
-          pushed its picker icon past the card edge on a phone. */}
+      {/* `min-w-0` so it can shrink inside a flex row instead of pushing past
+          the card edge on a phone. */}
       <input
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        /* A native date input accepts years up to 275760, so a couple of extra
-           keystrokes in the year segment silently produce nonsense — a deadline
-           was stored as 62028-06-01 with nothing flagging it. */
-        min="1900-01-01"
-        max="2100-12-31"
-        style={{ backgroundColor: value ? "var(--field)" : FIELD_EMPTY, borderColor: value ? "var(--line)" : "var(--field-empty-border)" }}
-        className="w-full min-w-0 min-h-[40px] rounded-xl border border-line px-3 text-[14.5px] text-on-card outline-none focus:border-gold"
+        type="text"
+        inputMode="numeric"
+        value={shown}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } }}
+        placeholder="e.g. 5 Aug 2026"
+        maxLength={24}
+        autoCorrect="off"
+        spellCheck={false}
+        aria-label={label ?? "Date"}
+        aria-invalid={bad || undefined}
+        style={{
+          backgroundColor: value ? "var(--field)" : FIELD_EMPTY,
+          borderColor: bad ? "var(--danger)" : value ? "var(--line)" : "var(--field-empty-border)",
+        }}
+        className="w-full min-w-0 min-h-[40px] rounded-xl border px-3 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
       />
     </label>
   );

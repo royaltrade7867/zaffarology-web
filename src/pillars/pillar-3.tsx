@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 
 import { pillarByNumber, Accents, INK, FIELD_EMPTY } from "@/lib/pillars";
-import { mdDate, todayKey } from "@/lib/dates";
+import { shortDate, todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, MiwBox, SectionLabel, AddButton, CharsLeft } from "@/components/ui";
@@ -95,7 +95,13 @@ export default function Pillar3() {
 
   const fileTask = (text: string, section: Section, clear: () => void) => {
     if (!text.trim()) return void dialog.alert("This task is empty, nothing to file.");
-    update((s) => { s.filed = [{ text, section, date: mdDate() }, ...s.filed]; });
+    /* `shortDate()` ("5 Aug 2026"), not `mdDate()` ("5 Aug"): Pillars 1, 2 and 4
+       all file with the year, and this screen showed "Wed, 5 Aug 2026" in its
+       Previous Days headers one section above — two formats on one page. The
+       date is stored ALREADY FORMATTED, so a yearless row loses its year for
+       good; rows filed before this change keep the short text they were saved
+       with, since the year they belong to cannot be recovered. */
+    update((s) => { s.filed = [{ text, section, date: shortDate() }, ...s.filed]; });
     clear();
   };
 
@@ -124,7 +130,7 @@ export default function Pillar3() {
         ☀ AM <span style={{ color: "var(--heading)" }}>PLANNING</span>
       </p>
       <p className="font-medium text-[12px] mt-1 mb-5" style={{ color: "var(--muted)" }}>
-        Set in the morning - plan the money-making day.
+        Set in the morning, plan the money-making day.
       </p>
 
       <section className="mb-8">
@@ -156,7 +162,7 @@ export default function Pillar3() {
           ☾ PM <span style={{ color: "var(--heading)" }}>ACHIEVEMENT</span>
         </p>
         <p className="font-medium text-[12px] mt-1 mb-5" style={{ color: "var(--muted)" }}>
-          Fill in the evening - what did the day actually produce?
+          Fill in the evening, what did the day actually produce?
         </p>
       </div>
 
@@ -184,9 +190,9 @@ export default function Pillar3() {
         </div>
         {planned.length > 0 ? (
           achievedN === planned.length ? (
-            <PassNote kind="pass">YES - all {planned.length} achieved 🔥</PassNote>
+            <PassNote kind="pass">YES, all {planned.length} achieved 🔥</PassNote>
           ) : (
-            <PassNote kind="fail">NOT YET - {achievedN} of {planned.length} achieved</PassNote>
+            <PassNote kind="fail">NOT YET, {achievedN} of {planned.length} achieved</PassNote>
           )
         ) : null}
       </section>
@@ -234,8 +240,15 @@ export default function Pillar3() {
               aria-label="Money made today"
               autoCorrect="off"
               spellCheck={false}
-              style={{ color: GREEN, borderColor: GREEN, backgroundColor: state.money.trim() ? "transparent" : FIELD_EMPTY }}
-              className="min-w-0 flex-1 rounded border-2 px-2.5 py-1.5 font-heading text-[16px] outline-none placeholder:text-placeholder"
+              /* The ink is `--on-card`, never the pillar accent. A field is white
+                 or green paper in BOTH themes, but `--p3` is lightened to #5fc191
+                 for the navy page, which lands at 1.61:1 on the empty green wash —
+                 invisible exactly when the box is blank and most needs reading.
+                 That is what "money made is not working" was. `--on-card` gives
+                 12.71:1 empty and 17.39:1 filled. The accent stays on the border,
+                 where it is decoration rather than text. */
+              style={{ borderColor: GREEN, backgroundColor: state.money.trim() ? "var(--field)" : FIELD_EMPTY }}
+              className="min-w-0 flex-1 rounded border-2 px-2.5 py-1.5 font-heading text-[16px] text-on-card outline-none placeholder:text-placeholder"
             />
           </div>
         </MiwBox>
