@@ -472,7 +472,7 @@ export function VoiceNotes({
                 className="min-w-0 flex-1 text-left"
                 title="Rename"
               >
-                <span className="block truncate text-[14px] text-ink">{n.title}</span>
+                <span className="block break-words text-[14px] text-ink">{n.title}</span>
                 <span className="block text-[11.5px] tabular-nums text-muted">
                   {mmss(n.duration_ms)}
                 </span>

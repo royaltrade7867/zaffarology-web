@@ -88,9 +88,13 @@ function TeamInner() {
             <tbody>
               {data.members.map((m) => (
                 <tr key={m.id} className="border-t border-line">
-                  <td className="px-3 py-2">
-                    <div className="font-semibold text-ink">{m.full_name ?? m.email}</div>
-                    <div className="text-muted text-[11px]">{m.email}</div>
+                  {/* The one cell holding words rather than digits, so it wraps:
+                      `whitespace-nowrap` on the table kept long names and email
+                      addresses on a single line, pushing them under the
+                      horizontal scroller. */}
+                  <td className="px-3 py-2 whitespace-normal">
+                    <div className="font-semibold text-ink break-words">{m.full_name ?? m.email}</div>
+                    <div className="text-muted text-[11px] break-all">{m.email}</div>
                   </td>
                   {PILLARS.map((p) => {
                     // Keyed by the BACKEND id, not the displayed number — Pillar 5

@@ -221,7 +221,7 @@ export function PersonTagField({
           className="flex min-h-[44px] items-center gap-2 rounded-xl border px-3 py-2"
           style={{ borderColor: tint, backgroundColor: "var(--field)" }}
         >
-          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: tint }}>
+          <span className="min-w-0 flex-1 break-words text-[15px] font-semibold" style={{ color: tint }}>
             {tagged.name}
           </span>
           <button
@@ -314,7 +314,7 @@ export function PersonTagField({
                     )}
                   >
                     <span className="text-[14.5px] font-semibold text-ink">{p.name}</span>
-                    <span className="truncate text-[12px] text-muted">{p.email}</span>
+                    <span className="min-w-0 break-all text-[12px] text-muted">{p.email}</span>
                   </button>
                 </li>
               ))}

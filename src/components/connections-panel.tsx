@@ -289,8 +289,10 @@ function Row({
         {initial(r)}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14.5px] font-semibold text-ink">{nameOf(r)}</span>
-        <span className="block truncate text-[12.5px] text-muted">{sub}</span>
+        {/* Names and email addresses show in full — a clipped address is
+            unusable for telling two people apart. */}
+        <span className="block break-words text-[14.5px] font-semibold text-ink">{nameOf(r)}</span>
+        <span className="block break-words text-[12.5px] text-muted">{sub}</span>
       </span>
       <span className="flex shrink-0 items-center gap-1">{children}</span>
     </li>

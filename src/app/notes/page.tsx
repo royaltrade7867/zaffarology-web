@@ -569,8 +569,10 @@ function NoteCard({ note, onOpen }: { note: ApiNote; onOpen: () => void }) {
       <h2 className="font-heading text-[19px] leading-snug text-heading">
         {note.title.trim() || "Untitled note"}
       </h2>
+      {/* The body is shown in full. It was `line-clamp-6`, which cut a longer
+          note mid-sentence with no way to tell how much was missing. */}
       {note.body.trim() ? (
-        <p className="mt-1.5 line-clamp-6 whitespace-pre-wrap text-[14px] leading-relaxed text-ink">
+        <p className="mt-1.5 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-ink">
           {note.body}
         </p>
       ) : (
@@ -603,9 +605,11 @@ function MeetingCard({ meeting, onOpen }: { meeting: ApiMeeting; onOpen: () => v
           <p className="text-[11px] font-bold uppercase tracking-wide text-gold">
             {decisions.length === 1 ? "1 decision" : `${decisions.length} decisions`}
           </p>
+          {/* Every decision, not `slice(0, 3)`: the count above said "7 decisions"
+              while the list showed three, with nothing marking the gap. */}
           <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-[14px] leading-relaxed text-ink">
-            {decisions.slice(0, 3).map((d, i) => (
-              <li key={i}>{d}</li>
+            {decisions.map((d, i) => (
+              <li key={i} className="break-words">{d}</li>
             ))}
           </ol>
         </div>

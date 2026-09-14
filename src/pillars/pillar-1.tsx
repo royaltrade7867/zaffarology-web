@@ -235,7 +235,9 @@ export default function Pillar1() {
                 aria-selected={on}
                 onClick={() => setCur(i)}
                 title={label}
-                className="-mb-px max-w-[22ch] truncate border-b-2 px-1 pb-2.5 text-left text-[13.5px] font-semibold transition-colors"
+                /* The goal's own words, in full. A 22ch cap clipped the label
+                   mid-word, and the goal text IS how the tabs are told apart. */
+                className="-mb-px max-w-[34ch] border-b-2 px-1 pb-2.5 text-left text-[13.5px] font-semibold transition-colors"
                 style={{
                   borderColor: on ? pillar.accent : "transparent",
                   color: on ? "var(--heading)" : "var(--muted)",
@@ -407,7 +409,7 @@ export default function Pillar1() {
         {state.filed.map((f, i) => (
           <div key={i} className="flex items-center gap-2.5 py-2 border-b border-line">
             <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide" style={{ backgroundColor: TAG[f.section].bg, color: TAG[f.section].color }}>{TAG[f.section].label.toUpperCase()}</span>
-            <span className="flex-1 truncate text-[13px] text-ink">{f.text}</span>
+            <span className="min-w-0 flex-1 break-words text-[13px] text-ink">{f.text}</span>
             <span className="text-[11px] text-muted">{f.date}</span>
           </div>
         ))}

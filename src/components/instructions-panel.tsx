@@ -75,11 +75,14 @@ export function InstructionsPanel() {
                 >
                   {p.meta.n}
                 </span>
+                {/* No `truncate`: these are the pillar's real names, and clipping
+                    turned "AM Planning & PM Achievement" into "AM Planning & PM…".
+                    On a wide page there is room to wrap, so the full name wraps. */}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-semibold text-ink">
+                  <span className="block break-words text-[15px] font-semibold text-ink">
                     {p.meta.name}
                   </span>
-                  <span className="block truncate text-[12.5px] text-muted">{p.tagline}</span>
+                  <span className="block break-words text-[12.5px] text-muted">{p.tagline}</span>
                 </span>
                 <ChevronRight
                   size={17}

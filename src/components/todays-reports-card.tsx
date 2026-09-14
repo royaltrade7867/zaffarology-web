@@ -124,10 +124,10 @@ export function TodaysReportsCard() {
                 className="flex items-center gap-3 rounded-xl border border-line px-3 py-2.5 transition-colors hover:bg-line-soft"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14.5px] font-semibold text-ink">
+                  <span className="block break-words text-[14.5px] font-semibold text-ink">
                     {r.system.name.trim() || "Untitled system"}
                   </span>
-                  <span className="block truncate text-[12px] text-muted">{r.deptName}</span>
+                  <span className="block break-words text-[12px] text-muted">{r.deptName}</span>
                 </span>
                 <span
                   className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums"

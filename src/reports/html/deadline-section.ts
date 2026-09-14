@@ -63,7 +63,11 @@ export function deadlineSection(d: DeadlineStats, title: string, scope: string):
     ? table(
         ['What', 'First deadline', 'Missed by'],
         d.misses.map((m) => [
-          esc(m.text.length > 70 ? `${m.text.slice(0, 70)}…` : m.text),
+          /* The task's full wording. This cut at 70 characters and appended an
+             ellipsis, so a longer task read as "Finish the quarterly board pack
+             and circulate it to…" in the one place meant to tell you WHAT was
+             missed. The cell wraps instead. */
+          esc(m.text),
           esc(friendlyISO(m.due) ?? m.due),
           days(m.by),
         ]),

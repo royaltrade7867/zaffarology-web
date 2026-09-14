@@ -291,7 +291,7 @@ export default function Pillar3() {
         {state.filed.map((f, i) => (
           <div key={i} className="flex items-center gap-2.5 py-2 border-b border-line">
             <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide" style={{ backgroundColor: TAG[f.section].bg, color: TAG[f.section].color }}>{TAG[f.section].label.toUpperCase()}</span>
-            <span className="flex-1 truncate text-[13px] text-ink">{f.text}</span>
+            <span className="min-w-0 flex-1 break-words text-[13px] text-ink">{f.text}</span>
             <span className="text-[11px] text-muted">{f.date}</span>
           </div>
         ))}
@@ -340,7 +340,7 @@ function ReviewItem({ tag, task, onToggle }: { tag: string; task: Task; onToggle
         </span>
       </button>
       <span className="font-semibold text-[11px] min-w-[44px]" style={{ color: "var(--muted)" }}>{tag}</span>
-      <span className="flex-1 truncate text-[13px]" style={{ color: task.done ? "var(--muted)" : INK, textDecorationLine: task.done ? "line-through" : "none" }}>
+      <span className="min-w-0 flex-1 break-words text-[13px]" style={{ color: task.done ? "var(--muted)" : INK, textDecorationLine: task.done ? "line-through" : "none" }}>
         {task.text}
       </span>
     </div>

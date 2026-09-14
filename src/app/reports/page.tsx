@@ -170,7 +170,8 @@ function Reports() {
                   >
                     {p.n}
                   </span>
-                  <span className="max-w-[16ch] truncate">{p.name}</span>
+                  {/* Full name: a 16ch cap clipped "AM Planning & PM Achievement". */}
+                  <span className="text-left">{p.name}</span>
                 </button>
               );
             })}

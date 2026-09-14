@@ -250,7 +250,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
               {r.badge ?? (r.name.trim()[0] ?? "•").toUpperCase()}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-bold text-[15.5px] text-ink">{r.name}</span>
+              <span className="block break-words font-bold text-[15.5px] text-ink">{r.name}</span>
               {r.sub ? <span className="mt-0.5 block text-[12.5px]" style={{ color: "var(--muted)" }}>{r.sub}</span> : null}
             </span>
             <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted"><ChevronRight size={16} /></span>

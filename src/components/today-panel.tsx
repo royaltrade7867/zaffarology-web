@@ -110,7 +110,10 @@ export function TodayPanel() {
           <PanelHead href="/pillar/4" accent={P4.accent} n={4} title="On the board" />
 
           <ul className="mt-3 space-y-2">
-            {open.slice(0, 5).map((item) => (
+            {/* Every open task, not the first five. The line below said
+                "12 open · showing 5", which named the gap but still made you
+                open another screen to see your own board. */}
+            {open.map((item) => (
               <li key={item.id} className="text-[13.5px] leading-snug">
                 <span className="text-ink">{item.name}</span>
                 {item.who.trim() ? (
@@ -126,7 +129,6 @@ export function TodayPanel() {
           <p className="mt-3.5 text-[12px] text-muted">
             {open.length} open
             {overdue.length ? `, ${overdue.length} overdue` : ""}
-            {open.length > 5 ? ` · showing 5` : ""}
           </p>
         </section>
       ) : null}
