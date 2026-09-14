@@ -10,7 +10,15 @@ export function todayLine(): string {
   });
 }
 
-/** "Wed, 5 Aug 2026" - or null if the ISO is invalid / year out of 2000-2100. */
+/**
+ * "5 Aug 2026" - or null if the ISO is invalid / year out of 2000-2100.
+ *
+ * No weekday. Every date the app SHOWS goes through here, and the typed date
+ * fields display `shortDate`, so a weekday here put two formats on one screen:
+ * an editable "Project Due Date" reading "5 Aug 2026" directly above a "Due"
+ * line reading "Wed, 5 Aug 2026". `weekdayShortDate` remains for the few places
+ * that genuinely want the day named.
+ */
 export function friendlyISO(iso: string): string | null {
   if (!iso) return null;
   const parts = iso.split("-");
@@ -19,7 +27,6 @@ export function friendlyISO(iso: string): string | null {
   const d = new Date(iso + "T00:00:00");
   if (isNaN(d.getTime())) return null;
   return d.toLocaleDateString(undefined, {
-    weekday: "short",
     day: "numeric",
     month: "short",
     year: "numeric",

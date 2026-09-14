@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Check, Close } from "@/components/icons";
-import { cx } from "@/components/ui";
+import { Loading, cx } from "@/components/ui";
 import { apiErrorMessage } from "@/lib/api";
 import { reportError } from "@/lib/error-reporting";
 import {
@@ -140,7 +140,10 @@ export function DailySystemReport({
   };
 
   if (!loaded) {
-    return <p className="py-6 text-[13px] text-muted">Loading today&apos;s answers…</p>;
+    // The spinning circle the rest of the app uses, rather than a line of text.
+    // A plain apostrophe: this is an attribute value, a JS string, so an HTML
+    // entity here would be read out literally as "apos".
+    return <Loading full={false} label="Loading today's answers" />;
   }
 
   if (!answerable.length) {

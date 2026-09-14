@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { ChevronRight } from "@/components/icons";
+import { Loading } from "@/components/ui";
 import { pillarByNumber } from "@/lib/pillars";
 import { todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
@@ -37,7 +38,9 @@ export function TodayPanel() {
   const p1 = usePillarState<P1State>(P1.key, p1Initial, p1Normalize);
   const p4 = usePillarState<P4State>(P4.key, p4Initial, p4Normalize);
 
-  if (!p1.loaded || !p4.loaded) return null;
+  // A spinner, not `null`: Home showed an unexplained gap where this card
+  // belongs while the two pillars loaded, which reads as nothing happening.
+  if (!p1.loaded || !p4.loaded) return <Loading full={false} label="Loading today" />;
 
   /* Pillar 1 keeps a do-or-die list PER GOAL. The one that matters today is the
      first goal with anything written in it — the same one the pillar opens on. */

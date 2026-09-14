@@ -200,10 +200,32 @@ export function AddButton({ label, accent, onClick, disabled, dimmed }: { label:
 }
 
 /* ---------------- Loading ---------------- */
-export function Loading({ full = true }: { full?: boolean }) {
+/**
+ * Spinning circle, centred, while data is on its way.
+ *
+ * `full` centres it in the VIEWPORT rather than in whatever box encloses it:
+ * `min-h-[60vh]` centred the spinner inside the content column, which sits below
+ * the nav and the pillar chips, so it settled well above the middle of a tall
+ * window and off-centre from the page.
+ *
+ * `.spinner` is defined in globals.css rather than using `animate-spin`, because
+ * the global reduced-motion block pins `animation-iteration-count: 1` on every
+ * element — which made this stop after a single turn and sit there as a plain
+ * static ring, i.e. no loading indicator at all for anyone with that setting.
+ */
+export function Loading({ full = true, label = "Loading" }: { full?: boolean; label?: string }) {
   return (
-    <div className={cx("flex items-center justify-center", full ? "min-h-[60vh]" : "py-12")}>
-      <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-line border-t-gold" />
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+      className={cx(
+        "flex items-center justify-center",
+        // Minus the top nav, so "centre" means the centre of what you can see.
+        full ? "min-h-[calc(100vh-7rem)]" : "py-12",
+      )}
+    >
+      <div className="spinner h-10 w-10 rounded-full border-[3px] border-line border-t-gold" />
     </div>
   );
 }

@@ -370,6 +370,23 @@ textarea {
   animation: zaff-reveal 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* The loading spinner.
+   Its own class rather than Tailwind's `animate-spin`, so the reduced-motion
+   block below can exempt it: that block pins `animation-iteration-count: 1` on
+   every element, which stopped the spinner dead after one turn and left a
+   static ring where the loading indicator should be. A spinner is the one
+   animation that carries information, so it keeps turning — slower, and with no
+   sudden movement, which is what the preference is actually asking for. */
+.spinner {
+  animation: spinner-turn 0.8s linear infinite;
+}
+
+@keyframes spinner-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -378,5 +395,10 @@ textarea {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Exempt: without this the spinner is not a spinner. */
+  .spinner {
+    animation: spinner-turn 1.6s linear infinite !important;
   }
 }
