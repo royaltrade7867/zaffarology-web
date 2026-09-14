@@ -134,17 +134,30 @@ const uiFiles = [
    not override — so the due date pushed past the card AND the viewport. */
 {
   const task = read("src/components/task.tsx");
-  // Assert the INVARIANT, not the markup: the date field must be able to shrink
-  // inside a flex row, whatever control it is built from. It was a native
-  // `type="date"` until that was replaced by a typed field in the app's own
-  // format, and pinning the tag here failed correct code.
+  /* Assert the INVARIANT, not the markup: the date field must be able to shrink
+     inside a flex row, whatever control it is built from. It has been a native
+     `type="date"`, then a typed text box, and is now a day/month/year wheel like
+     the phone's — pinning any one of those spellings failed correct code. */
   ck("the date field can shrink", /DateField[\s\S]*?min-w-0/.test(task));
   ck("and is bounded to a sane year range",
      /DATE_MIN = "1900-01-01"/.test(task) && /DATE_MAX = "2100-12-31"/.test(task));
-  /* A native picker rejected an out-of-range year itself. A typed field has to
-     do it in code, or "62028-06-01" is storable again. */
-  ck("and enforces those bounds when parsing",
-     /out < DATE_MIN \|\| out > DATE_MAX/.test(task));
+  /* The wheel cannot OFFER an out-of-range year, which is a stronger guarantee
+     than parsing one back out: the year column is generated from the bounds. */
+  ck("and the year column is generated from those bounds",
+     /MIN_YEAR = Number\(DATE_MIN/.test(task) && /MAX_YEAR - MIN_YEAR \+ 1/.test(task));
+  /* 31 spun onto February must land on the 28th, not store a day that does not
+     exist in that month. */
+  ck("and a day is clamped to the month it lands in",
+     /Math\.min\(draft\.d, daysIn\(y, mo\)\)/.test(task));
+  /* A calendar grid and a locale-formatted native input are both out: the phone
+     uses a spin wheel, and the two apps should read the same.
+
+     Tested with comments STRIPPED. The doc comment above `DateField` names
+     `type="date"` to explain what it deliberately is not, and a plain grep read
+     that prose as code — failing a correct file, which is the same trap the
+     money-field checks below already avoid. */
+  const taskCode = task.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+  ck("and it is not the browser's calendar popup", !/type="date"/.test(taskCode));
   /* Parsing `new Date("2026-08-05")` is UTC midnight, which renders as the 4th
      in every timezone behind UTC. */
   ck("and builds the display date in local time", /new Date\(y, mo - 1, d\)/.test(task));
@@ -251,7 +264,14 @@ const uiFiles = [
 
   const me = read("src/components/meeting-editor.tsx");
   ck("meeting time uses a time input when it can", /\? "time" : "text"/.test(me));
-  ck("meeting dates are bounded", /min: "1900-01-01"/.test(me));
+  /* The meeting date is bounded by the WHEEL now, not by a native input's
+     min/max: it comes from the shared `DateField`, whose year column is built
+     from DATE_MIN..DATE_MAX (asserted above). That is a stronger guarantee than
+     min/max, which a browser only enforces on its own picker — typing past it
+     still produced "62028-06-01", and Pydantic rejects the 13 characters rather
+     than truncating, wedging every later save to that meeting. */
+  ck("meeting dates come from the bounded wheel",
+     /<DateField[\s\S]*?value=\{meeting\.date\}/.test(me));
 
   const ups = read("src/lib/use-pillar-state.ts");
   ck("saved strings are trimmed", /const trimDeep/.test(ups) && /trimDeep\(data\)/.test(ups));

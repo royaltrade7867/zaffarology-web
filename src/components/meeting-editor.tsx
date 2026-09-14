@@ -19,6 +19,7 @@ import { PersonTagField } from "@/components/person-tag-field";
 import { VoiceNotes } from "@/components/voice-notes";
 import { usePartners, type Partner } from "@/lib/use-connections";
 import { SectionLabel, TextArea, cx } from "@/components/ui";
+import { DateField } from "@/components/task";
 import type { ApiMeeting } from "@/lib/notes-api";
 
 const ACCENT = "var(--gold)";
@@ -45,12 +46,13 @@ function Field({
   onChange: (v: string) => void;
   placeholder?: string;
   maxLength?: number;
-  type?: "text" | "date" | "time";
+  /* No `"date"` any more: the meeting date is a `DateField` wheel, like every
+     other date in the app. This used to carry a native date input, which needed
+     min/max bounds because it accepts years up to 275760 — a stray keystroke in
+     the year segment silently produced "62028-06-01". The wheel cannot offer
+     one, so the bounds went with it. */
+  type?: "text" | "time";
 }) {
-  /* A native date input accepts years up to 275760, so a stray keystroke in the
-     year segment silently produces something like 62028-06-01. Bound it to a
-     range a business meeting can plausibly fall in. */
-  const bounds = type === "date" ? { min: "1900-01-01", max: "2100-12-31" } : {};
   return (
     <label className="block mb-3">
       <span className="block text-[12px] font-semibold text-muted mb-1">{label}</span>
@@ -59,9 +61,8 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        // A date/time input rejects maxLength and warns in the console.
+        // A time input rejects maxLength and warns in the console.
         maxLength={type === "text" ? maxLength : undefined}
-        {...bounds}
         autoCorrect="off"
         spellCheck={false}
         style={{ backgroundColor: value.trim() ? "var(--field)" : "var(--field-empty)" }}
@@ -178,15 +179,14 @@ export function MeetingEditor({
         maxLength={200}
       />
       <div className="grid gap-x-3 sm:grid-cols-2">
-        {/* `maxLength` does nothing on type="date". Chrome yields "+012025-03-04"
-            (13 chars) for a 5-digit year, which the API's 10-char cap rejects —
-            wedging every later save — so clamp it here instead. */}
-        <Field
+        {/* The same day/month/year wheel the pillars use, not the browser's
+            calendar: it cannot produce the "+012025-03-04" a native date input
+            yields for a 5-digit year, which the API's 10-char cap rejected —
+            wedging every later save. */}
+        <DateField
           label="Date"
-          type="date"
           value={meeting.date}
-          onChange={(v) => onChange({ date: v.slice(0, 10) })}
-          maxLength={10}
+          onChange={(iso) => onChange({ date: iso })}
         />
         {/* Free text on purpose: people write "after lunch", not 14:30. */}
         {/* A `time` input shows NOTHING for a value it cannot parse, so an older

@@ -317,7 +317,14 @@ ck("motion is optional", /prefers-reduced-motion/.test(css));
     .filter((f) => f.endsWith(".tsx"))
     .map((f) => `src/app/${f}`);
   for (const f of componentFiles.concat(routeFiles)) {
-    const src = readFileSync(f, "utf8");
+    /* Comments STRIPPED before matching. A comment explaining why a component
+       does NOT use `text-placeholder` names the token, and a plain scan read
+       that prose as code — failing a correct file. Same trap the money-field and
+       date-field checks already avoid. */
+    const src = readFileSync(f, "utf8").replace(
+      /\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,
+      "",
+    );
     for (const m of src.matchAll(/var\(--placeholder\)/g)) offenders.push(`${f}: ${m[0]}`);
     // `placeholder:text-placeholder` IS the real ::placeholder and is correct;
     // a bare `text-placeholder` is colour applied to text on a card.

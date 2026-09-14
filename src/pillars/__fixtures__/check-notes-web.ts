@@ -167,8 +167,14 @@ ck("the joined decisions are capped before sending",
 ck("the cap matches the API schema", /const LONG_MAX = 20000;/.test(editor));
 ck("adding stops when the column is full", /used < DECISIONS_MAX/.test(editor));
 ck("the user is warned before the hard stop", /nearLimit/.test(editor));
-/* maxLength does nothing on type=date; a 5-digit year yields 13 chars. */
-ck("the date is clamped to the column width", /date: v\.slice\(0, 10\)/.test(editor));
+/* The meeting date cannot overrun its column any more, and not because it is
+   sliced: it comes from the shared day/month/year wheel, which builds the ISO
+   string itself from a bounded year and a real day, so it is always exactly 10
+   characters. This used to be a native `type="date"`, where a 5-digit year gave
+   Chrome's "+012025-03-04" — 13 chars, which Pydantic REJECTS rather than
+   truncating, wedging every later save to that meeting. */
+ck("the meeting date comes from the bounded wheel, not a native picker",
+   /<DateField[\s\S]*?value=\{meeting\.date\}/.test(editor) && !/type="date"/.test(editor));
 
 /* ---------------------------- API surface -------------------------------- */
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Close } from "@/components/icons";
 import { Accents, FIELD_EMPTY, FIELD_RED, FIELD_RED_BORDER, HEADING } from "@/lib/pillars";
 import { friendlyISO, shortDate } from "@/lib/dates";
@@ -212,90 +212,199 @@ export function isoToDisplay(iso: string): string {
   return shortDate(new Date(y, mo - 1, d));
 }
 
-/** "5 Aug 2026", "5/8/2026", "2026-08-05" -> ISO, or "" if it is not a real date.
- *  Returns "" rather than guessing, so a half-typed value never silently stores
- *  a wrong day. */
-export function displayToIso(text: string): string {
-  const s = text.trim();
-  if (!s) return "";
+/* There is no `displayToIso` any more. A typed field needed one — it had to turn
+   "5 Aug 2026" back into ISO and reject "31 Feb" — but the wheel can only ever
+   produce a real date: the year column is built from MIN_YEAR..MAX_YEAR, and the
+   day column is rebuilt from `daysIn` whenever the month or year changes. The
+   bounds are enforced by what the wheel OFFERS rather than by parsing. */
 
-  let y: number | undefined, mo: number | undefined, d: number | undefined;
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MIN_YEAR = Number(DATE_MIN.slice(0, 4));
+const MAX_YEAR = Number(DATE_MAX.slice(0, 4));
 
-  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
-  const dmy = /^(\d{1,2})[/\s.-]+(\d{1,2})[/\s.-]+(\d{4})$/.exec(s);
-  const named = /^(\d{1,2})[\s.-]+([A-Za-z]{3,})[\s,.-]+(\d{4})$/.exec(s);
-  const namedFirst = /^([A-Za-z]{3,})[\s.-]+(\d{1,2})[\s,.-]+(\d{4})$/.exec(s);
+/** Days in a month, so 31 cannot be spun onto February. */
+const daysIn = (y: number, mo: number): number => new Date(y, mo, 0).getDate();
 
-  if (iso) [y, mo, d] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
-  else if (dmy) [d, mo, y] = [Number(dmy[1]), Number(dmy[2]), Number(dmy[3])];
-  else if (named || namedFirst) {
-    const g = named ?? namedFirst!;
-    const [dayStr, monStr] = named ? [g[1], g[2]] : [g[2], g[1]];
-    const idx = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
-      .indexOf(monStr.slice(0, 3).toLowerCase());
-    if (idx < 0) return "";
-    [d, mo, y] = [Number(dayStr), idx + 1, Number(g[3])];
-  } else return "";
-
-  if (!y || !mo || !d || mo < 1 || mo > 12 || d < 1 || d > 31) return "";
-  // Reject a day that does not exist in that month (31 Feb rolls over otherwise).
-  const dt = new Date(y, mo - 1, d);
-  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return "";
-
-  const out = `${y}-${`${mo}`.padStart(2, "0")}-${`${d}`.padStart(2, "0")}`;
-  return out < DATE_MIN || out > DATE_MAX ? "" : out;
+/**
+ * One spin column. Scrolls, and each option is a real <button>, so the wheel is
+ * reachable by keyboard and readable by a screen reader — a scroll-snap list of
+ * <div>s would be neither.
+ */
+function Wheel({
+  label, options, value, onPick,
+}: {
+  label: string;
+  options: { v: number; text: string }[];
+  value: number;
+  onPick: (v: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  // Bring the selected row into view when the sheet opens, so the wheel starts
+  // on the current date rather than at the top of a 200-year list.
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>('[data-on="1"]')?.scrollIntoView({ block: "center" });
+  }, []);
+  return (
+    <div className="min-w-0 flex-1">
+      <p className="mb-1 text-center text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</p>
+      <div
+        ref={ref}
+        role="listbox"
+        aria-label={label}
+        className="h-[168px] overflow-y-auto rounded-xl border border-line bg-surface py-1"
+      >
+        {options.map((o) => {
+          const on = o.v === value;
+          return (
+            <button
+              key={o.v}
+              type="button"
+              role="option"
+              aria-selected={on}
+              data-on={on ? "1" : undefined}
+              onClick={() => onPick(o.v)}
+              className="block w-full px-2 py-1.5 text-center text-[14px] transition-colors"
+              style={{
+                backgroundColor: on ? "var(--selected)" : "transparent",
+                color: on ? "var(--on-selected)" : "var(--ink)",
+                fontWeight: on ? 700 : 400,
+              }}
+            >
+              {o.text}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /**
- * A date the user TYPES, shown in the app's own format.
+ * Tap to open, spin day / month / year, Done.
  *
- * Deliberately not `type="date"`: the native control renders in the browser's
- * locale (so it read `08/05/2026` next to the app's own "5 Aug 2026" elsewhere)
- * and opens a calendar popup that looks nothing like any other field on the
- * page. The stored value is still ISO `YYYY-MM-DD` — it is shared with the
- * phone app through the pillar blob, so the STORED shape must never change,
- * only its presentation.
+ * The same gesture as the phone, which uses a scroll-wheel (`display="spinner"`)
+ * picker rather than a calendar grid. Two things it is deliberately NOT:
+ *
+ *  - `type="date"`, which opens the browser's calendar popup and renders in the
+ *    browser's locale, so it read `08/05/2026` beside the app's own "Aug 5, 2026".
+ *  - a typed text box, which is what this was for one afternoon: it stored fine
+ *    but made the user compose a date character by character.
+ *
+ * The STORED value is still ISO `YYYY-MM-DD` — it is shared with the phone app
+ * through the pillar blob, so the stored shape must never change, only the way
+ * it is picked and shown.
  */
 export function DateField({ value, onChange, label }: { value: string; onChange: (iso: string) => void; label?: string }) {
-  // What the user sees while typing. Committed to ISO on blur, so a partial
-  // value like "5 Au" is never parsed mid-keystroke.
-  const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? isoToDisplay(value);
-  const bad = draft !== null && draft.trim() !== "" && displayToIso(draft) === "";
+  const [open, setOpen] = useState(false);
+  const today = new Date();
+  const parsed = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  // An empty field opens on today, which is the date people most often want.
+  const start = parsed
+    ? { y: Number(parsed[1]), mo: Number(parsed[2]), d: Number(parsed[3]) }
+    : { y: today.getFullYear(), mo: today.getMonth() + 1, d: today.getDate() };
+  const [draft, setDraft] = useState(start);
 
-  const commit = () => {
-    if (draft === null) return;
-    const next = displayToIso(draft);
-    // An unparseable entry reverts rather than wiping a good stored date.
-    if (next || draft.trim() === "") onChange(next);
-    setDraft(null);
+  const openSheet = () => { setDraft(start); setOpen(true); };
+  const confirm = () => {
+    const { y, mo } = draft;
+    // Clamp rather than reject: spinning to 31 then to February should give the
+    // 28th, not silently keep a day that does not exist in that month.
+    const d = Math.min(draft.d, daysIn(y, mo));
+    onChange(`${y}-${`${mo}`.padStart(2, "0")}-${`${d}`.padStart(2, "0")}`);
+    setOpen(false);
   };
 
+  const dayCount = daysIn(draft.y, draft.mo);
+  const years = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, i) => MIN_YEAR + i);
+
   return (
-    <label className="block mb-1.5">
-      {label ? <span className="block text-[13px] text-muted mb-1">{label}</span> : null}
+    <div className="mb-1.5">
+      {label ? <span className="mb-1 block text-[13px] text-muted">{label}</span> : null}
       {/* `min-w-0` so it can shrink inside a flex row instead of pushing past
           the card edge on a phone. */}
-      <input
-        type="text"
-        inputMode="numeric"
-        value={shown}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } }}
-        placeholder="e.g. 5 Aug 2026"
-        maxLength={24}
-        autoCorrect="off"
-        spellCheck={false}
-        aria-label={label ?? "Date"}
-        aria-invalid={bad || undefined}
+      <button
+        type="button"
+        onClick={openSheet}
+        aria-label={`${label ?? "Date"}: ${value ? isoToDisplay(value) : "no date chosen"}`}
+        aria-haspopup="dialog"
         style={{
           backgroundColor: value ? FIELD_EMPTY : FIELD_RED,
-          borderColor: bad ? "var(--danger)" : value ? "var(--field-empty-border)" : FIELD_RED_BORDER,
+          borderColor: value ? "var(--field-empty-border)" : FIELD_RED_BORDER,
         }}
-        className="w-full min-w-0 min-h-[40px] rounded-xl border px-3 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
-      />
-    </label>
+        className="min-h-[40px] w-full min-w-0 rounded-xl border px-3 text-left text-[14.5px] text-on-card outline-none focus:border-gold"
+      >
+        {/* `text-muted`, not `text-placeholder`: this is a BUTTON's label, not a
+            real `::placeholder`, and `--placeholder` is reserved for the latter
+            so the two cannot drift apart. */}
+        {value ? isoToDisplay(value) : <span className="text-muted">Choose a date</span>}
+      </button>
+
+      {open ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+          {/* Same scrim contract as `dialog.tsx`: it carries its own handler,
+              because it is painted on top of the wrapper and would otherwise
+              always be the event target itself. */}
+          <div
+            className="absolute inset-0 bg-[rgba(4,16,31,0.55)]"
+            aria-hidden
+            onMouseDown={() => setOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={label ?? "Choose a date"}
+            className="zaff-reveal relative w-full max-w-[420px] rounded-t-2xl border border-line bg-surface p-4 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.5)] sm:rounded-2xl"
+          >
+            <div className="mb-3 flex items-center justify-between border-b border-line pb-2.5">
+              <button type="button" onClick={() => setOpen(false)} className="tap-row rounded px-1 text-[13.5px] text-muted">
+                Cancel
+              </button>
+              <p className="font-heading text-[14px] text-heading">{label ?? "Select date"}</p>
+              <button type="button" onClick={confirm} className="tap-row rounded px-1 font-heading text-[13.5px] text-gold">
+                Done
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <Wheel
+                label="Day"
+                value={Math.min(draft.d, dayCount)}
+                options={Array.from({ length: dayCount }, (_, i) => ({ v: i + 1, text: String(i + 1) }))}
+                onPick={(d) => setDraft((p) => ({ ...p, d }))}
+              />
+              <Wheel
+                label="Month"
+                value={draft.mo}
+                options={MONTHS.map((m, i) => ({ v: i + 1, text: m }))}
+                onPick={(mo) => setDraft((p) => ({ ...p, mo }))}
+              />
+              <Wheel
+                label="Year"
+                value={draft.y}
+                options={years.map((y) => ({ v: y, text: String(y) }))}
+                onPick={(y) => setDraft((p) => ({ ...p, y }))}
+              />
+            </div>
+
+            <p className="mt-3 text-center text-[13px] text-muted">
+              {isoToDisplay(
+                `${draft.y}-${`${draft.mo}`.padStart(2, "0")}-${`${Math.min(draft.d, dayCount)}`.padStart(2, "0")}`,
+              )}
+            </p>
+
+            {value ? (
+              <button
+                type="button"
+                onClick={() => { onChange(""); setOpen(false); }}
+                className="tap-row mt-2 w-full rounded text-center text-[12.5px] font-semibold text-muted transition-colors hover:text-danger"
+              >
+                Clear this date
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
