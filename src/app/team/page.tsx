@@ -69,8 +69,14 @@ function TeamInner() {
                 {PILLARS.map((p) => (
                   <th
                     key={p.n}
-                    className={cx("px-2 py-2 text-center font-semibold", p.n === 1 && "text-gold-deep")}
-                    style={p.n === 1 ? undefined : { color: p.accent }}
+                    /* Pillar 1's accent is gold, and on the LIGHT header fill
+                       `--p1` (#8f6200) was 4.41:1 — just under AA. The fix was
+                       `--gold-deep`, but that token is #8a5b13 in BOTH themes,
+                       so on the DARK header it dropped to 2.13:1 while every
+                       sibling lightened correctly. Deep gold in light only;
+                       dark uses the accent like the other four. */
+                    className="px-2 py-2 text-center font-semibold"
+                    style={{ color: p.n === 1 ? "var(--gold-header)" : p.accent }}
                     title={p.name}
                   >
                     {p.n}

@@ -96,6 +96,10 @@ export function VoiceNotes({
   const [error, setError] = useState<string | null>(null);
 
   const [recording, setRecording] = useState(false);
+  /** Clicked, but the browser has not yet answered the permission prompt.
+   *  `recording` only turns true AFTER getUserMedia resolves, so without
+   *  this the button sat idle and enabled while the prompt was open. */
+  const [awaiting, setAwaiting] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [pending, setPending] = useState<Pending | null>(null);
   const [title, setTitle] = useState("");
@@ -169,6 +173,7 @@ export function VoiceNotes({
       );
       return;
     }
+    setAwaiting(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = pickMimeType();
@@ -210,6 +215,11 @@ export function VoiceNotes({
           : "Could not start recording.",
       );
       reportError(err, { area: "voice-record-start" });
+    } finally {
+      // Both paths must clear it: on success `recording` takes over, and on a
+      // refusal the button has to become clickable again. Without this the
+      // control stayed disabled for the rest of the session.
+      setAwaiting(false);
     }
   };
 
@@ -302,7 +312,16 @@ export function VoiceNotes({
   const retag = async (note: ApiVoiceNote, next: VoiceTag) => {
     if (note.tag === next) return;
     const before = notes;
-    setNotes((prev) => prev.filter((n) => n.id !== note.id));
+    /* Retag in place; only DROP it when the active filter no longer admits it.
+       This used to filter the row out unconditionally, so under "All" — where
+       every tag belongs — moving a recording between Personal and Business
+       made it disappear from a list it still belonged to. The write succeeded,
+       which is why a reload brought it back. */
+    setNotes((prev) =>
+      filter && filter !== next
+        ? prev.filter((n) => n.id !== note.id)
+        : prev.map((n) => (n.id === note.id ? { ...n, tag: next } : n)),
+    );
     try {
       await retagVoiceNote(note.id, next);
     } catch (err) {
@@ -385,7 +404,14 @@ export function VoiceNotes({
         <button
           type="button"
           onClick={recording ? stop : start}
-          disabled={!canRecord}
+          /* `awaiting` covers the gap between the click and the browser's
+             permission answer. `recording` only becomes true AFTER
+             getUserMedia resolves, so until the user picks Allow the button
+             said "Record a voice note", stayed enabled, and showed no spinner
+             — a tester could not tell whether the app had frozen or the prompt
+             was simply rendering outside the page. */
+          disabled={!canRecord || awaiting}
+          aria-busy={awaiting}
           aria-label={recording ? "Stop recording" : "Record a voice note"}
           className={cx(
             "flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border text-[13.5px] font-semibold transition-colors",
@@ -405,7 +431,11 @@ export function VoiceNotes({
           ) : (
             <Mic size={16} />
           )}
-          {recording ? `Stop · ${mmss(elapsed)} (${mmss(left)} left)` : "Record a voice note"}
+          {recording
+            ? `Stop · ${mmss(elapsed)} (${mmss(left)} left)`
+            : awaiting
+              ? "Waiting for microphone access…"
+              : "Record a voice note"}
         </button>
       )}
 

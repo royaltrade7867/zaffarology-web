@@ -33,6 +33,13 @@
      the page, which DO go dark, and a field-tuned colour lands at 2.30:1 there.
      Use --muted, which is defined per theme. This token was doing both jobs and
      could not satisfy either; the fixture below pins it to `::placeholder`. */
+  /* Gold on a TABLE HEADER fill, which is `--line-soft` over the page — a
+     lighter ground than the page itself. The pillar accent `--p1` (#8f6200)
+     measures 4.41:1 there, just under AA, so the header needs a deeper gold.
+     It is a separate token because it must FLIP: `--gold-deep` is #8a5b13 in
+     both themes and hit 2.13:1 on the dark header. */
+  --gold-header: #8a5b13;
+
   --placeholder: #4f5c6e;
 
   /* Writing surfaces. NOT theme-dependent — see the note at the top. */
@@ -107,6 +114,7 @@
     --gold: #d9a441; /* lightened: #8F6200 is 1.6:1 on navy */
     --gold-hover: #eec06a;
     --gold-deep: #8a5b13;
+    --gold-header: #d9a441; /* the lightened accent; deep gold is 2.13:1 here */
     --on-gold: #0d2440;
     --danger: #ff6b7a;
     --on-danger: #0d2440; /* 5.68:1 on the lightened red */
@@ -149,6 +157,7 @@
   --gold: #d9a441;
   --gold-hover: #eec06a;
   --gold-deep: #8a5b13;
+  --gold-header: #d9a441; /* the lightened accent; deep gold is 2.13:1 here */
   --on-gold: #0d2440;
   --danger: #ff6b7a;
   --on-danger: #0d2440; /* 5.68:1 on the lightened red */

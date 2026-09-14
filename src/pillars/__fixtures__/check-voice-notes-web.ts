@@ -91,7 +91,23 @@ ck("an insecure context is explained, not just broken",
    /needs a secure \(https\) connection/.test(rec));
 ck("a blocked microphone says how to fix it",
    /NotAllowedError/.test(rec) && /site settings/.test(rec));
-ck("the control is disabled where recording is impossible", /disabled=\{!canRecord\}/.test(rec));
+ck("the control is disabled where recording is impossible", /disabled=\{!canRecord\b/.test(rec));
+
+/* The gap between the click and the browser's permission answer. `recording`
+   only becomes true AFTER getUserMedia resolves, so without a separate flag the
+   button stayed enabled and unchanged while the prompt was open — a tester
+   could not tell whether the app had frozen or the prompt was simply rendering
+   outside the page. */
+ck("a pending permission is a visible state", /const \[awaiting, setAwaiting\]/.test(rec));
+ck("it is raised before the permission is requested",
+   /setAwaiting\(true\);[\s\S]{0,80}getUserMedia/.test(rec));
+ck("and cleared on BOTH paths, or the button never recovers",
+   // `[\s\S]*?` rather than a character budget: the block carries a comment
+   // explaining WHY it must clear on both paths, and a fixed budget failed a
+   // correct file for being well commented.
+   /finally \{[\s\S]*?setAwaiting\(false\)/.test(rec));
+ck("the button says what it is waiting for", /Waiting for microphone access/.test(rec));
+ck("and reports it to assistive tech", /aria-busy=\{awaiting\}/.test(rec));
 
 /* ------------------------------ the limits ------------------------------- */
 
@@ -197,6 +213,16 @@ for (const fn of ["loadVoiceNotes", "uploadVoiceNote", "loadVoiceNoteAudio",
                   "renameVoiceNote", "restoreVoiceNote", "deleteVoiceNote"]) {
   ck("voice-notes-api exports " + fn, new RegExp("export async function " + fn + "\\b").test(api));
 }
+
+/* Retagging must not drop a row the list still admits.
+   `retag` filtered the item out on EVERY call. That is right when a filter is
+   active and the new tag no longer matches, and wrong under "All", where the
+   recording still belongs — it vanished from the list while the write
+   succeeded, so a reload brought it back and nothing looked broken in the DB. */
+ck("retag updates the row in place", /prev\.map\(\(n\) => \(n\.id === note\.id \? \{ \.\.\.n, tag: next \} : n\)\)/.test(rec));
+ck("and only drops it when the filter excludes it",
+   /filter && filter !== next/.test(rec));
+ck("never unconditionally", !/setNotes\(\(prev\) => prev\.filter\(\(n\) => n\.id !== note\.id\)\);\s*try \{\s*await retagVoiceNote/.test(rec));
 
 if (fails.length) {
   console.error(pass + " passed, " + fails.length + " FAILED");

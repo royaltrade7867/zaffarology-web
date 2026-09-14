@@ -272,7 +272,19 @@ const uiFiles = [
   const teamCode = team.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
   ck("the team table fits its container",
      /min-w-\[560px\]/.test(teamCode) && !/min-w-\[760px\]/.test(teamCode));
-  ck("the gold header clears contrast in light", /text-gold-deep/.test(team));
+  /* Pillar 1's header gold must FLIP with the theme. `--gold-deep` is #8a5b13
+     in BOTH themes: it fixed light (4.41 -> 4.81:1) and broke dark, where the
+     same value on the dark header fill measured 2.13:1 while all four sibling
+     accents lightened correctly. Assert the paired token, not a class name. */
+  ck("the gold header uses a theme-flipping token", /var\(--gold-header\)/.test(teamCode));
+  ck("and not the fixed deep gold", !/text-gold-deep/.test(teamCode));
+  {
+    const css = read("src/app/globals.css");
+    // Light root + the media-query dark block + the [data-theme="dark"] block.
+    ck("the header gold is defined for every theme",
+       (css.match(/--gold-header:/g) ?? []).length === 3,
+       String((css.match(/--gold-header:/g) ?? []).length));
+  }
 
   // M8 — Add buttons refused in silence.
   const p2 = read("src/pillars/pillar-2.tsx");
