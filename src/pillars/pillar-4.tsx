@@ -320,7 +320,7 @@ export default function Pillar4() {
               maxLength={280}
               autoCorrect="off"
               spellCheck={false}
-              style={{ backgroundColor: item.note.trim() ? "var(--field)" : FIELD_EMPTY }}
+              style={{ backgroundColor: item.note.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: item.note.trim() ? "var(--line)" : "var(--field-empty-border)" }}
               className="w-full min-h-[64px] rounded-[10px] border-[1.5px] border-line px-3 py-3 text-[15px] text-on-card outline-none focus:border-gold resize-y placeholder:text-placeholder"
             />
             <p className="text-[12px] font-semibold mt-1.5" style={{ color: countSentences(item.note) > 3 ? Accents.red : "var(--muted)" }}>

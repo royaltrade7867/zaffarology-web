@@ -273,7 +273,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
           onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
           placeholder={addPlaceholder}
           maxLength={80}
-          style={{ backgroundColor: val.trim() ? "var(--field)" : FIELD_EMPTY }}
+          style={{ backgroundColor: val.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: val.trim() ? "var(--line)" : "var(--field-empty-border)" }}
           className="flex-1 min-h-[48px] rounded-xl border-[1.5px] border-line px-3.5 text-[15px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
         />
         <button onClick={submit} style={{ backgroundColor: NAVY }} className="min-h-[48px] rounded-xl px-5 text-on-accent font-heading text-[12px] tracking-widest">ADD</button>
@@ -567,8 +567,8 @@ const TextField = ({ value, onChange, placeholder }: { value: string; onChange: 
        fill paints that ink on the navy CARD at 1.30:1, which is invisible. The
        `Area` below already did this correctly; this input was missed, and it is
        what makes sections 1-5 of the system editor unreadable in dark mode. */
-    style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY }}
-    className="w-full min-h-[48px] rounded-xl border-[1.5px] border-line px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
+    style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY, borderColor: value.trim() ? "var(--line)" : "var(--field-empty-border)" }}
+    className="w-full min-h-[48px] rounded-xl border-[1.5px] px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
   />
 );
 const Area = ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (

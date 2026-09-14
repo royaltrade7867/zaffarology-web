@@ -205,7 +205,7 @@ export function DateField({ value, onChange, label }: { value: string; onChange:
            was stored as 62028-06-01 with nothing flagging it. */
         min="1900-01-01"
         max="2100-12-31"
-        style={{ backgroundColor: value ? "var(--field)" : FIELD_EMPTY }}
+        style={{ backgroundColor: value ? "var(--field)" : FIELD_EMPTY, borderColor: value ? "var(--line)" : "var(--field-empty-border)" }}
         className="w-full min-w-0 min-h-[48px] rounded-xl border border-line px-3.5 text-[15px] text-on-card outline-none focus:border-gold"
       />
     </label>

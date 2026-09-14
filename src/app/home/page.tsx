@@ -44,6 +44,14 @@ function Home() {
         <h1 className="font-heading text-[32px] leading-[1.05] text-heading sm:text-[40px]">
           {name ? `Good to see you, ${name}.` : "Master your mind."}
         </h1>
+        {/* The promise the workbook makes, under the greeting: what the five
+            pillars are FOR. The motto closes it, as it does on About. */}
+        <p className="mt-3 max-w-[54ch] text-[14.5px] leading-relaxed text-ink">
+          Forty years of business success in three years, structured as five pillars.
+        </p>
+        <p className="mt-1.5 font-heading text-[12px] tracking-[0.16em] text-gold">
+          MASTER YOUR MIND — BUILD YOUR LEGACY
+        </p>
         <p className="mt-2.5 text-[13.5px] text-muted">{todayLine()}</p>
       </header>
 

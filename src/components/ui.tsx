@@ -87,14 +87,22 @@ export function TextField({
         onChange={(e) => onChange(e.target.value)}
         autoCorrect="off"
         spellCheck={false}
+        /* An empty box is green-FILLED and green-EDGED. The wash says "still
+           yours to fill" while a neutral grey hairline said the opposite, so
+           an unfilled field carried two conflicting signals.
+           `--field-empty-border` was defined in all three theme blocks for
+           exactly this and applied nowhere. Only where the field opted into
+           the tint, so the auth screens stay neutral — a green sign-in form
+           reads as an error state. */
         style={{
           backgroundColor: tinted ? FIELD_EMPTY : "var(--field)",
           color: "var(--on-card)",
+          ...(tinted ? { borderColor: "var(--field-empty-border)" } : {}),
         }}
         className={cx(
           "w-full min-h-[48px] rounded-xl border px-3.5 py-3 text-[15px] outline-none transition-colors",
           "focus:border-gold",
-          error ? "border-danger" : "border-line",
+          error ? "border-danger" : tinted ? "" : "border-line",
           className,
         )}
       />
@@ -137,9 +145,13 @@ export function TextArea({ label, value, onChange, className, maxBreaks = MAX_IN
         }}
         autoCorrect="off"
         spellCheck={false}
-        style={{ backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY }}
+        // Border pairs with the wash — see TextField above.
+        style={{
+          backgroundColor: value.trim() ? "var(--field)" : FIELD_EMPTY,
+          borderColor: value.trim() ? "var(--line)" : "var(--field-empty-border)",
+        }}
         className={cx(
-          "w-full min-h-[96px] rounded-xl border border-line px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold resize-y",
+          "w-full min-h-[96px] rounded-xl border px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold resize-y",
           className,
         )}
       />
