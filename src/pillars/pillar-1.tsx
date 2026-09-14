@@ -322,7 +322,7 @@ export default function Pillar1() {
           <TextArea
             value={g.plan}
             onChange={(v) => setG((x) => { x.plan = v; })}
-            placeholder={`Write the plan for goal ${gi + 1} — the steps, the order, the deadlines…`}
+            placeholder={`Write the plan for goal ${gi + 1}: the steps, the order, the deadlines…`}
             maxLength={GOAL_MAX}
           />
             <CharsLeft value={g.plan} max={GOAL_MAX} />

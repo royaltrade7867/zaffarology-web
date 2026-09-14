@@ -189,7 +189,7 @@ export function VoiceNotes({
         const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
         chunksRef.current = [];
         if (ms < MIN_RECORDING_MS || !blob.size) {
-          setError("That was too short — hold on a moment longer.");
+          setError("That was too short. Hold on a moment longer.");
           return;
         }
         // Ask for a name before uploading, pre-filled with the date so

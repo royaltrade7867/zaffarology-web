@@ -247,7 +247,7 @@ function NotesAndMeetings() {
     const { what, id } = undo;
     setUndo(null);
     (what === "note" ? undoRemoveNote(id) : undoRemoveMeeting(id)).catch(() =>
-      void dialog.alert("Could not restore that — it may already be gone."),
+      void dialog.alert("Could not restore that. It may already be gone."),
     );
   };
 
@@ -625,10 +625,10 @@ function Empty({ kind, filtered, onNew }: { kind: Kind; filtered: boolean; onNew
       </p>
       <p className="mx-auto mt-1.5 max-w-[42ch] text-[13.5px] leading-relaxed text-muted">
         {filtered
-          ? "Try “All”, or start one here — it will keep the filter you're on."
+          ? "Try “All”, or start one here. It will keep the filter you're on."
           : kind === "notes"
             ? "Anything worth keeping: an idea, a number, something someone said."
-            : "Capture what was agreed while it's fresh — decisions, and who does what next."}
+            : "Capture what was agreed while it's fresh: decisions, and who does what next."}
       </p>
       <button
         type="button"

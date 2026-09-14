@@ -1,6 +1,7 @@
 "use client";
 
 import { todayLine } from "@/lib/dates";
+import { APP_MOTTO } from "@/content/pillars";
 import { useAuth } from "@/lib/auth-context";
 import { AuthGuard } from "@/components/shell";
 import { TodaysReportsCard } from "@/components/todays-reports-card";
@@ -75,7 +76,7 @@ function Home() {
         </h1>
 
         <p className="mt-4 font-heading text-[12px] tracking-[0.16em] text-gold">
-          MASTER YOUR MIND — BUILD YOUR LEGACY
+          {APP_MOTTO}
         </p>
 
         {/* The greeting steps down: the headline is the page's one large

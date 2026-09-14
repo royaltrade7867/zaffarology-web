@@ -18,7 +18,7 @@ const archivo = Archivo_Black({
 });
 
 export const metadata: Metadata = {
-  title: "Zaffarology — 5 Pillars",
+  title: "Zaffarology, 5 Pillars",
   // Five, not eight: the folder and the App Store listing keep the old name,
   // the app itself does not.
   description: "Master your mind, build your legacy. The 5 success pillars.",

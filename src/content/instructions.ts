@@ -50,7 +50,7 @@ const HOW_IT_WORKS: Record<number, string> = {
   2: 'Add a problem, then list the possible solutions under it. Work down the list until one holds. Tick ✓ the solution that works, then Delete it, File it, or mark the problem Solved.',
   3: 'A daily page. Plan the money-making actions in the morning, mark what was achieved in the evening.',
   4: 'A running board. Add the tasks a huddle agrees, tick them off, and extend the ones that slip with a reason.',
-  5: 'Build the tree once — businesses, departments, then a system in each. Then answer its effort and result questions each day from the Reports tab.',
+  5: 'Build the tree once: businesses, departments, then a system in each. Then answer its effort and result questions each day from the Reports tab.',
 };
 
 /** General instructions, in the workbook's words. */

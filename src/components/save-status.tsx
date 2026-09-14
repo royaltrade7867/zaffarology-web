@@ -28,7 +28,7 @@ export function SaveStatusBar({
       className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-danger bg-surface px-3.5 py-2.5"
     >
       <span className="text-[13.5px] font-semibold text-heading">
-        Not saved yet — we&rsquo;ll keep trying.
+        Not saved yet. We&rsquo;ll keep trying.
       </span>
       <span className="text-[13px] text-muted">
         Your changes are safe on this device, even if you reload.

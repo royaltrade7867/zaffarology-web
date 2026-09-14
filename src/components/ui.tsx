@@ -229,7 +229,7 @@ export function CharsLeft({ value, max }: { value: string; max: number }) {
       role="status"
       aria-live="polite"
     >
-      {left > 0 ? `${left} character${left === 1 ? "" : "s"} left` : "Limit reached — no more will be saved"}
+      {left > 0 ? `${left} character${left === 1 ? "" : "s"} left` : "Limit reached, no more will be saved"}
     </span>
   );
 }

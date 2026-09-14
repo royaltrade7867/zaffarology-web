@@ -207,7 +207,7 @@ function LevelList({ label, small, empty, rows, addPlaceholder, onAdd }: { label
      at all and explained nothing. */
   const submit = () => {
     if (!val.trim()) {
-      void dialog.alert(`Give it a name first — ${addPlaceholder.toLowerCase()}`);
+      void dialog.alert(`Give it a name first: ${addPlaceholder.toLowerCase()}`);
       inputRef.current?.focus();
       return;
     }

@@ -277,7 +277,7 @@ export function MeetingEditor({
           <p className="mb-2 text-[12px] font-semibold text-danger" role="status">
             {used >= DECISIONS_MAX
               ? "These decisions have reached the maximum length. Shorten one to add another."
-              : `Approaching the limit — ${(DECISIONS_MAX - used).toLocaleString()} characters left across all decisions.`}
+              : `Approaching the limit, ${(DECISIONS_MAX - used).toLocaleString()} characters left across all decisions.`}
           </p>
         ) : null}
         <button

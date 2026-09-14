@@ -113,7 +113,7 @@ export function PersonTagField({
   const pick = async (p: Partner) => {
     const notify = await dialog.confirm(
       `Email ${p.name}?\n\n` +
-        `${p.name} will be tagged on this either way — it appears on their board. ` +
+        `${p.name} will be tagged on this either way, it appears on their board. ` +
         `OK also emails them about it; Cancel just tags them.`,
     );
     if (multi) {

@@ -269,7 +269,7 @@ async function pdfMake(): Promise<PdfMake> {
     const raw = mod as unknown as { default?: PdfMake } & PdfMake;
     const pm: PdfMake = typeof raw.createPdf === "function" ? raw : (raw.default as PdfMake);
     if (typeof pm?.createPdf !== "function") {
-      throw new Error("pdfmake: no createPdf export — the module shape changed");
+      throw new Error("pdfmake: no createPdf export, the module shape changed");
     }
 
     const rawFonts = fontMod as unknown as { default?: Record<string, string> } & Record<

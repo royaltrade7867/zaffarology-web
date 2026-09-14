@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AuthGuard, Eagle } from "@/components/shell";
 import { InstructionsPanel } from "@/components/instructions-panel";
 import { cx } from "@/components/ui";
+import { APP_MOTTO } from "@/content/pillars";
 import {
   Facebook,
   Globe,
@@ -50,7 +51,7 @@ export default function About() {
             <span className="text-heading">OLOGY</span>
           </h1>
           <p className="mt-1.5 text-[13px] font-semibold tracking-widest text-gold">
-            MASTER YOUR MIND — BUILD YOUR LEGACY
+            {APP_MOTTO}
           </p>
         </div>
       </div>
@@ -95,7 +96,7 @@ export default function About() {
         <h2 className="font-heading text-[18px] text-heading">About Zaffar Khan</h2>
         <p className="text-ink mt-2 leading-relaxed">
           Zaffar Khan is a serial entrepreneur, business coach and author. His 5-Success-Pillars system
-          distils decades of hard-won lessons into a simple daily practice — <em>&ldquo;40 Years of Business
+          distils decades of hard-won lessons into a simple daily practice. <em>&ldquo;40 Years of Business
           Success in Just 3 Years.&rdquo;</em>
         </p>
         <p className="text-ink mt-3 leading-relaxed">
