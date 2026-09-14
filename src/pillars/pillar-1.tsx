@@ -364,7 +364,7 @@ export default function Pillar1() {
       </section>
 
       <section className="mb-8">
-        <SectionLabel text="Delegate Tasks and Follow Up" small="tick when you've chased it" color={BLUE} />
+        <SectionLabel text="Delegate or Follow Up" small="tick when you've chased it" color={BLUE} />
         {g.deleg.map((d, i) => (
           <TaskRow key={i} accent={BLUE} symbol="→" value={d.text} done={d.done} onChange={(text) => setG((x) => { x.deleg[i].text = text; })} onToggle={(v) => setG((x) => { x.deleg[i].done = v; })} onDelete={() => setG((x) => { x.deleg.splice(i, 1); })} actions={delegActions(i)} locked={i > 0 && !g.deleg[i - 1].text.trim()} placeholder="What did you delegate?" showWho who={d.who} onChangeWho={(text) => setG((x) => { x.deleg[i].who = text; })} />
         ))}
