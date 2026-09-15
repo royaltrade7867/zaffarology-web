@@ -63,10 +63,37 @@ async function request<T>(
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
+    // 402 means the subscription lapsed WHILE the page was open. The route gate
+    // only runs on navigation, so without this a user who expired mid-session
+    // would see a save fail with a cryptic message and keep typing into a page
+    // that can no longer store anything.
+    if (res.status === 402) notifyPaymentRequired();
     const detail = (data && data.detail) || res.statusText || "Request failed";
     throw new ApiError(res.status, typeof detail === "string" ? detail : "Request failed");
   }
   return data as T;
+}
+
+/* ---------------- 402 Payment Required ----------------
+ * `request` is not a component and cannot route. It announces instead, and
+ * `AuthGuard` listens — so the redirect happens where routing is legal.
+ */
+type PaymentRequiredListener = () => void;
+const paymentRequiredListeners = new Set<PaymentRequiredListener>();
+
+export function onPaymentRequired(fn: PaymentRequiredListener): () => void {
+  paymentRequiredListeners.add(fn);
+  return () => paymentRequiredListeners.delete(fn);
+}
+
+function notifyPaymentRequired(): void {
+  for (const fn of paymentRequiredListeners) {
+    try {
+      fn();
+    } catch {
+      // A broken listener must not swallow the original request error.
+    }
+  }
 }
 
 /** Fetch a binary response (audio, a download) rather than JSON. Separate from
@@ -82,6 +109,9 @@ export async function requestBlob(path: string): Promise<Blob> {
     throw new ApiError(0, "Cannot reach the server. Check your connection and try again.");
   }
   if (!res.ok) {
+    // Same gate as `request` — a report download is as much a paid feature as
+    // anything else, and this path has its own error handling.
+    if (res.status === 402) notifyPaymentRequired();
     throw new ApiError(res.status, res.statusText || "Request failed");
   }
   return res.blob();
@@ -123,6 +153,24 @@ export interface ApiUser {
   role: "individual" | "employee" | "company_admin";
   is_verified?: boolean;
   company: ApiCompany | null;
+}
+
+/** `GET /billing/status`. `entitled` is the only field the gate reads. */
+export interface ApiBillingStatus {
+  state: "trialing" | "active" | "in_grace_period" | "expired";
+  until: string | null;
+  source: "promotional" | "rc_billing" | "app_store" | "play_store" | null;
+  entitled: boolean;
+  can_manage: boolean;
+  management_url: string | null;
+}
+
+/** `GET /billing/config` — what the browser needs to start a purchase. */
+export interface ApiBillingConfig {
+  enabled: boolean;
+  public_key: string | null;
+  entitlement_id: string;
+  app_user_id: string;
 }
 export interface ApiAuthOut {
   access_token: string;

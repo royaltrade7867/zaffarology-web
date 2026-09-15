@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { onPaymentRequired } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { Loading, cx } from "@/components/ui";
 import { Close, Menu } from "@/components/icons";
@@ -170,10 +171,29 @@ export function TopNav() {
   );
 }
 
-/** Guards authenticated pages: redirects to /login (or /verify-email) as needed. */
+/**
+ * Pages a signed-in user reaches even without a subscription.
+ *
+ * `/profile` hosts the billing card — gating it would lock someone out of the
+ * one page that lets them pay. `/about` is Help, which is where a confused
+ * person goes. Both are deliberate holes in the gate, not oversights.
+ */
+const OPEN_WITHOUT_SUBSCRIPTION = ["/profile", "/about"];
+
+/** Guards authenticated pages: redirects to /login, /verify-email or /paywall. */
 export function AuthGuard({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, billing, billingLoading, refreshBilling } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  // Held in a ref so the 402 listener below can be registered ONCE. Subscribing
+  // on every change of `refreshBilling` would add and drop a listener each
+  // render, and a 402 arriving mid-swap would reach nobody.
+  const refreshBillingRef = useRef(refreshBilling);
+  refreshBillingRef.current = refreshBilling;
+  const exempt = OPEN_WITHOUT_SUBSCRIPTION.some((p) => pathname.startsWith(p));
+  // `billing === null` means "not known yet", NOT "locked out". Treating unknown
+  // as locked would flash the paywall at a paying customer on every slow load.
+  const locked = !billingLoading && billing !== null && !billing.entitled;
 
   useEffect(() => {
     if (loading) return;
@@ -183,10 +203,19 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       const here = window.location.pathname + window.location.search;
       const next = here && here !== "/" ? `?next=${encodeURIComponent(here)}` : "";
       router.replace(`/login${next}`);
+      // Verification BEFORE subscription: telling someone to pay when they
+      // cannot yet sign in properly is the wrong order.
     } else if (!user.isVerified) router.replace("/verify-email");
-  }, [user, loading, router]);
+    else if (locked && !exempt) router.replace("/paywall");
+  }, [user, loading, locked, exempt, router]);
+
+  // A mid-session lapse never reaches the effect above, because nothing
+  // navigates. `request()` announces the 402, this re-reads status, `locked`
+  // flips, and the redirect follows.
+  useEffect(() => onPaymentRequired(() => void refreshBillingRef.current?.()), []);
 
   if (loading || !user || !user.isVerified) return <Loading />;
+  if (locked && !exempt) return <Loading />;
   return (
     <>
       <TopNav />
