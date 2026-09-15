@@ -321,7 +321,7 @@ export default function Pillar4() {
               NO REASONS WHY. NEW COMPLETION DATE ONLY.
             </p>
             <DateField label="New Completion Date" value={item.newDate} onChange={(iso) => setItem({ newDate: iso })} />
-            <FLabel>Note (optional - 1 to 3 sentences max)</FLabel>
+            <FLabel>Note (optional, 1 to 3 sentences max)</FLabel>
             <textarea
               value={item.note}
               onChange={(e) => setItem({ note: e.target.value })}

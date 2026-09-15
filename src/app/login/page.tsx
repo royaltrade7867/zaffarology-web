@@ -99,12 +99,15 @@ function Login() {
         <Button type="submit" label="Log in" onClick={submit} loading={busy} />
       </form>
 
-      <div className="mt-3 space-y-2">
-        {/* `block`: `.tap-row` is `inline-flex`, so the two links sat on one line
-            and read as "Forgot password?New here? Create account" — `space-y-2`
-            only separates block-level children. */}
-        <Link href="/forgot-password" className="tap-row block text-center text-[14px] font-semibold text-heading">Forgot password?</Link>
-        <Link href="/signup" className="tap-row block text-center text-[14px] font-semibold text-heading">New here? Create account</Link>
+      {/* A COLUMN, rather than trusting the links to be block-level.
+          `.tap-row` sets `display: inline-flex` in globals.css, and a plain class
+          selector beats Tailwind's `block` utility of the same specificity when
+          it is defined later — so the two links stayed on one line and read as
+          "Forgot password?New here? Create account". Stacking is the parent's
+          job here; the children keep their own display. */}
+      <div className="mt-3 flex flex-col items-center gap-2">
+        <Link href="/forgot-password" className="tap-row text-center text-[14px] font-semibold text-heading">Forgot password?</Link>
+        <Link href="/signup" className="tap-row text-center text-[14px] font-semibold text-heading">New here? Create account</Link>
       </div>
     </AuthShell>
   );

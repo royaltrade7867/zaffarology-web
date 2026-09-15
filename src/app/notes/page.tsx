@@ -149,6 +149,8 @@ function NotesAndMeetings() {
      settled. Preferring the handed-back row makes the open immediate and does
      not depend on the order the two updates land in. */
   const [justMade, setJustMade] = useState<ApiNote | ApiMeeting | null>(null);
+  /** True while a new note or meeting is being created on the server. */
+  const [creating, setCreating] = useState(false);
   // Released once nothing is open, so a closed (or deleted) row cannot linger
   // and re-render from this fallback later.
   useEffect(() => {
@@ -173,14 +175,24 @@ function NotesAndMeetings() {
     // user's every note to "personal" hides it the moment they filter.
     const tag: NoteTag = filter ?? lastTag;
     setCur(0);
-    if (kind === "notes") {
-      const created = await addNote(tag);
-      if (created) { setJustMade(created); setOpenNoteId(created.id); }
-      else void dialog.alert("Couldn't create that note. Check your connection and try again.");
-    } else {
-      const created = await addMeeting(tag);
-      if (created) { setJustMade(created); setOpenMeetingId(created.id); }
-      else void dialog.alert("Couldn't create that meeting. Check your connection and try again.");
+    /* Say something IMMEDIATELY. Creating one is a round trip to the server,
+       which against the production database measures 5 to 8 seconds — the button
+       looked completely dead for all of it, so people pressed it again. This
+       disables the button and spins it until the row comes back. (A double press
+       was already harmless — it creates one note — but silence is not.) */
+    setCreating(true);
+    try {
+      if (kind === "notes") {
+        const created = await addNote(tag);
+        if (created) { setJustMade(created); setOpenNoteId(created.id); }
+        else void dialog.alert("Couldn't create that note. Check your connection and try again.");
+      } else {
+        const created = await addMeeting(tag);
+        if (created) { setJustMade(created); setOpenMeetingId(created.id); }
+        else void dialog.alert("Couldn't create that meeting. Check your connection and try again.");
+      }
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -428,11 +440,24 @@ function NotesAndMeetings() {
         <button
           type="button"
           onClick={newItem}
-          aria-label={kind === "notes" ? "New note" : "New meeting"}
-          title={kind === "notes" ? "New note" : "New meeting"}
-          className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg border border-gold text-gold transition-colors hover:bg-gold/8"
+          disabled={creating}
+          aria-busy={creating}
+          aria-label={
+            creating
+              ? "Creating…"
+              : kind === "notes"
+                ? "New note"
+                : "New meeting"
+          }
+          title={creating ? "Creating…" : kind === "notes" ? "New note" : "New meeting"}
+          className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg border border-gold text-gold transition-colors hover:bg-gold/8 disabled:opacity-60"
         >
-          <Plus size={18} />
+          {/* The same spinner the rest of the app uses, sized to the button. */}
+          {creating ? (
+            <span className="spinner h-4 w-4 rounded-full border-2 border-line border-t-gold" />
+          ) : (
+            <Plus size={18} />
+          )}
         </button>
       </div>
 

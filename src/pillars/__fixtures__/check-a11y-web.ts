@@ -399,9 +399,15 @@ const uiFiles = [
     "",
   );
   ck("the login links carry the tap class", (login.match(/\btap-row\b/g) ?? []).length === 2);
-  /* `.tap-row` is `inline-flex`, so two of them sat on one line and read as
-     "Forgot password?New here? Create account". They are stacked links. */
-  ck("and are stacked, not run together", (login.match(/tap-row block\b/g) ?? []).length === 2);
+  /* `.tap-row` is `inline-flex` in globals.css, so two of them sat on one line
+     and read as "Forgot password?New here? Create account".
+
+     Stacking is the PARENT's job, asserted here as such. The first attempt put
+     Tailwind's `block` on each link, which loses to a plain `.tap-row` class
+     selector of equal specificity defined later in the stylesheet — it looked
+     right in the source and was still one line in the browser. */
+  ck("and are stacked by their container, not by a losing utility",
+     /flex flex-col[^"]*/.test(login) && !/tap-row block\b/.test(login));
   ck("the header logo link carries the tap class",
      /tap-row min-w-0/.test(read("src/components/shell.tsx")));
 

@@ -239,7 +239,10 @@ export function PersonTagField({
             className={cx(
               "flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-xl border border-line px-2.5 py-1.5 transition-colors focus-within:border-gold",
             )}
-            style={{ backgroundColor: value.trim() ? "var(--field)" : "var(--field-empty)" }}
+            /* The pillar rule, like every other fillable box: red while empty,
+               green once written in. This one was missed, so an empty
+               "Delegated To" sat green beside a red "Project / Task Name". */
+            style={{ backgroundColor: value.trim() ? "var(--field-empty)" : "var(--field-red)" }}
           >
             {/* Committed names render as chips inside the field. */}
             {multi
