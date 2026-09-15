@@ -52,6 +52,20 @@ const isMeetingBlank = (m: ApiMeeting): boolean =>
 
 const isNoteBlank = (n: ApiNote): boolean => !n.title.trim() && !n.body.trim() && !n.pinned;
 
+/**
+ * A note's body, tidied for the CARD only — never for the editor.
+ *
+ * Deliberately not a truncation. It trims the ends and collapses a run of blank
+ * lines to one, so no word is ever dropped and nothing is cut mid-sentence
+ * (which is why `line-clamp-6` was removed from the card in the first place).
+ *
+ * The bug this fixes: a note holding 43 characters and 19 stray newlines
+ * rendered as a ~490px column of empty space, and because a CSS grid stretches
+ * every cell to its row's tallest, it dragged the note beside it to the same
+ * height. Opening the note still shows the body exactly as written.
+ */
+const preview = (body: string): string => body.trim().replace(/\n{2,}/g, "\n\n");
+
 /** "12 Mar 2026" from an ISO timestamp, or "" when there isn't one. */
 const stamp = (iso: string | null): string => {
   if (!iso) return "";
@@ -493,7 +507,12 @@ function NotesAndMeetings() {
               arrows is a phone habit, not a constraint. The pager is why the
               header still counts "1 of 8"; that count is also hidden at `lg`,
               where the position means nothing. */}
-          <div className="hidden gap-3 lg:grid lg:grid-cols-2">
+          {/* `items-start` is load-bearing. A CSS grid stretches every cell to
+              the tallest in its ROW, so one long note made its neighbour just
+              as tall — two one-line notes were filling half the screen because
+              a third note in the same row had blank lines in it. Each card
+              should take the height of its own content. */}
+          <div className="hidden items-start gap-3 lg:grid lg:grid-cols-2">
             {list.map((item) => (
               <article
                 key={item.id}
@@ -613,10 +632,15 @@ function NoteCard({ note, onOpen }: { note: ApiNote; onOpen: () => void }) {
         {note.title.trim() || "Untitled note"}
       </h2>
       {/* The body is shown in full. It was `line-clamp-6`, which cut a longer
-          note mid-sentence with no way to tell how much was missing. */}
+          note mid-sentence with no way to tell how much was missing.
+
+          `preview` only collapses runs of BLANK lines and trims the ends — it
+          never drops words. A note holding 43 characters and 19 stray newlines
+          was rendering as a ~490px tower of empty space; the text is identical,
+          the empty space is not. Opening the note still shows it verbatim. */}
       {note.body.trim() ? (
         <p className="mt-1.5 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-ink">
-          {note.body}
+          {preview(note.body)}
         </p>
       ) : (
         <p className="mt-1.5 text-[13px] italic text-muted">Nothing written yet</p>
