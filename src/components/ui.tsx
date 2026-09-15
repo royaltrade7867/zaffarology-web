@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { FIELD_EMPTY, FIELD_RED, FIELD_RED_BORDER } from "@/lib/pillars";
 import type { ReactNode, TextareaHTMLAttributes, InputHTMLAttributes } from "react";
@@ -57,6 +57,35 @@ type FieldProps = {
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">;
 
 /**
+ * The password-reveal glyph.
+ *
+ * `off` slashes the eye. The convention is that the icon names the ACTION, not
+ * the state: a plain eye means "click to show", a slashed eye means "click to
+ * hide". That is genuinely ambiguous either way round, which is why the button
+ * carries an explicit `aria-label` — the glyph is for sighted users only, and
+ * is hidden from assistive tech.
+ */
+function EyeIcon({ off }: { off: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+      {off ? <line x1="3" y1="21" x2="21" y2="3" /> : null}
+    </svg>
+  );
+}
+
+/**
  * A text field.
  *
  * `emptyTint` opts into the green "still to fill" wash. It is OFF by default
@@ -66,6 +95,12 @@ type FieldProps = {
  *
  * The ink is `on-card`, never `ink`: a field is white paper in BOTH themes, so
  * cream text on it is 1.2:1 and invisible. See DESIGN.md.
+ *
+ * A `type="password"` field gets a reveal toggle automatically — no prop to
+ * pass and no way for one screen to forget it. It matters most on signup and
+ * password reset, where a typo is invisible AND unverifiable: there is no
+ * "wrong password" to bounce off, so the mistake only surfaces at the next
+ * login, by which time the user cannot know what they typed.
  */
 export function TextField({
   label,
@@ -77,11 +112,18 @@ export function TextField({
   ...rest
 }: FieldProps & { emptyTint?: boolean }) {
   const tinted = emptyTint && !error && !value.trim();
+  const isPassword = rest.type === "password";
+  const [shown, setShown] = useState(false);
   return (
     <label className="block mb-3">
       {label ? <span className="block text-[13px] text-muted mb-1">{label}</span> : null}
+      {/* `relative` only in the password case: the toggle is absolutely
+          positioned against it, and a stray containing block elsewhere would
+          silently re-anchor anything positioned inside a field. */}
+      <span className={cx("block", isPassword && "relative")}>
       <input
         {...rest}
+        type={isPassword && shown ? "text" : rest.type}
         // Same fallback as TextArea: a placeholder-only field would otherwise
         // announce its own value, or nothing.
         aria-label={rest["aria-label"] ?? (label ? undefined : rest.placeholder)}
@@ -105,9 +147,35 @@ export function TextField({
           "w-full min-h-[40px] rounded-xl border px-3 py-2 text-[14.5px] outline-none transition-colors",
           "focus:border-gold",
           error ? "border-danger" : tinted ? "" : "border-line",
+          // Keep the text clear of the toggle. Without it a long password runs
+          // underneath the button — which is exactly when someone reveals it.
+          isPassword && "pr-11",
           className,
         )}
       />
+      {isPassword ? (
+        <button
+          type="button"
+          // Inside a <label>, so a click would otherwise fall through to the
+          // input and re-focus it. Harmless here, but it also means the button
+          // must never be a submit — the default type would post the form.
+          onClick={(e) => {
+            e.preventDefault();
+            setShown((s) => !s);
+          }}
+          // The state, not the action: a screen reader user needs to know
+          // whether their password is currently exposed on screen.
+          aria-pressed={shown}
+          aria-label={shown ? "Hide password" : "Show password"}
+          // `on-card`, not `muted`. A field is white paper in both themes, so
+          // the page's muted token lands at ~1.3:1 here. See DESIGN.md.
+          style={{ color: "var(--on-card)" }}
+          className="absolute right-0 top-0 flex h-full items-center px-3 opacity-75 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold rounded-r-xl"
+        >
+          <EyeIcon off={shown} />
+        </button>
+      ) : null}
+      </span>
       {error ? <span className="block text-[12px] text-danger mt-1">{error}</span> : null}
     </label>
   );
