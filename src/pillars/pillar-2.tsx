@@ -116,7 +116,10 @@ export default function Pillar2() {
           small="write it exactly, a clear problem is half solved"
           color={pillar.accent}
         />
-        <MiwBox accent={pillar.accent}>
+        {/* `filled` so the CARD follows its contents, red while the problem is
+            unwritten and green once it is. The inner box already switched; the
+            wrapper kept a fixed accent, so a filled problem sat in a red card. */}
+        <MiwBox accent={pillar.accent} filled={!!state.problem.trim()}>
           <textarea
             value={state.problem}
             onChange={(e) => update((s) => { s.problem = e.target.value; })}

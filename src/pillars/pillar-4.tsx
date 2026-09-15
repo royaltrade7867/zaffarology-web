@@ -97,15 +97,23 @@ export default function Pillar4() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
 
+  /* Hooks run BEFORE the loading guard, always, in the same order.
+     `useAutoGrow` used to sit below `if (!loaded) return <Loading />`, so the
+     first render (still loading) called one fewer hook than the second — React
+     threw "Rendered more hooks than during the previous render" and the whole
+     pillar failed to open. Derive the value defensively here, since `items` is
+     only computed after the guard. */
+  const preItems = state.items.length ? state.items : [blank()];
+  const noteRef = useAutoGrow(preItems[Math.min(cur, preItems.length - 1)]?.note ?? "");
+
   if (!loaded) return <Loading />;
 
-  const items = state.items.length ? state.items : [blank()];
+  const items = preItems;
   const idx = Math.min(cur, items.length - 1);
   const item = items[idx];
   const border = item.status === "completed" ? Accents.green : isOverdue(item) ? Accents.red : "var(--line)";
 
   const setItem = (patch: Partial<Item>) => update((s) => { s.items[idx] = { ...s.items[idx], ...patch }; });
-  const noteRef = useAutoGrow(item.note);
 
   /** The status of THIS item's assignment, if it was sent to someone. */
   const sent = outgoing.byTaskId[item.id];

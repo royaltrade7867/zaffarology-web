@@ -44,11 +44,15 @@ const mmss = (ms: number) => {
  *  just clutter the list. */
 const MIN_RECORDING_MS = 800;
 
+/* No weekday, and the year kept: a recording's name is a VALUE that sits in a
+   list beside every other date in the app, all of which read "5 Aug 2026" since
+   `friendlyISO` dropped the weekday. "Monday, 31 Aug" also lost the year, so two
+   recordings a year apart were named identically. */
 const suggestedName = () =>
   new Date().toLocaleDateString(undefined, {
-    weekday: "long",
     day: "numeric",
     month: "short",
+    year: "numeric",
   });
 
 /** Best container this browser will actually produce. Ordered by preference:

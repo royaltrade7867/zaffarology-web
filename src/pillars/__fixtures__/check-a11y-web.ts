@@ -390,8 +390,18 @@ const uiFiles = [
   ck("breadcrumbs carry the tap class", /tap-row[^"]*font-semibold text-\[12px\]/.test(p5));
   ck("the recording tag chip carries the tap class",
      /tap-row[^"]*uppercase/.test(read("src/components/voice-notes.tsx")));
-  const login = read("src/app/login/page.tsx");
+  /* Comments STRIPPED before counting. A comment explaining why the links need
+     `block` names `.tap-row`, and a plain count read that prose as a third
+     usage — the same trap the money-field, date-field and placeholder checks
+     already avoid. */
+  const login = read("src/app/login/page.tsx").replace(
+    /\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,
+    "",
+  );
   ck("the login links carry the tap class", (login.match(/\btap-row\b/g) ?? []).length === 2);
+  /* `.tap-row` is `inline-flex`, so two of them sat on one line and read as
+     "Forgot password?New here? Create account". They are stacked links. */
+  ck("and are stacked, not run together", (login.match(/tap-row block\b/g) ?? []).length === 2);
   ck("the header logo link carries the tap class",
      /tap-row min-w-0/.test(read("src/components/shell.tsx")));
 

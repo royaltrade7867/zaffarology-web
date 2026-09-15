@@ -140,8 +140,26 @@ function NotesAndMeetings() {
     setVoiceCount(null);
   }, [openNoteId, openMeetingId]);
 
-  const openNote = notes.find((n) => n.id === openNoteId) ?? null;
-  const openMeeting = meetings.find((m) => m.id === openMeetingId) ?? null;
+  /* The row we were JUST handed, held until the list catches up.
+     `openNote` is looked up by id inside `notes`, and `newItem` sets the two
+     from different places after an `await`: `addNote` calls `setNotes` inside
+     the hook, `setOpenNoteId` runs here. When the page re-rendered with the new
+     id but the previous `notes` array, the lookup missed and NOTHING opened —
+     the editor then appeared on the next unrelated click, once both had
+     settled. Preferring the handed-back row makes the open immediate and does
+     not depend on the order the two updates land in. */
+  const [justMade, setJustMade] = useState<ApiNote | ApiMeeting | null>(null);
+  // Released once nothing is open, so a closed (or deleted) row cannot linger
+  // and re-render from this fallback later.
+  useEffect(() => {
+    if (openNoteId === null && openMeetingId === null) setJustMade(null);
+  }, [openNoteId, openMeetingId]);
+  const openNote =
+    notes.find((n) => n.id === openNoteId) ??
+    (justMade && "body" in justMade && justMade.id === openNoteId ? justMade : null);
+  const openMeeting =
+    meetings.find((m) => m.id === openMeetingId) ??
+    (justMade && "agenda" in justMade && justMade.id === openMeetingId ? justMade : null);
 
   /** Switching tab or filter resets the position — index 3 of one list means
    *  nothing in another. */
@@ -157,11 +175,11 @@ function NotesAndMeetings() {
     setCur(0);
     if (kind === "notes") {
       const created = await addNote(tag);
-      if (created) setOpenNoteId(created.id);
+      if (created) { setJustMade(created); setOpenNoteId(created.id); }
       else void dialog.alert("Couldn't create that note. Check your connection and try again.");
     } else {
       const created = await addMeeting(tag);
-      if (created) setOpenMeetingId(created.id);
+      if (created) { setJustMade(created); setOpenMeetingId(created.id); }
       else void dialog.alert("Couldn't create that meeting. Check your connection and try again.");
     }
   };

@@ -34,7 +34,11 @@ function TeamInner() {
       <p className="text-[12px] tracking-widest font-heading text-gold">YOUR TEAM</p>
       <h1 className="font-heading text-[28px] text-ink">Team progress</h1>
       <p className="text-dim">
-        Invite code: {company?.inviteCode ?? "N/A"} · Each member&apos;s pillar progress updates as they work.
+        {/* The separator needs its own spaces: `{code} · text` renders the code
+            hard against the dot when the value has no trailing space. */}
+        Invite code: {company?.inviteCode ?? "N/A"}
+        {" · "}
+        Each member&apos;s pillar progress updates as they work.
       </p>
 
       {!loaded ? (

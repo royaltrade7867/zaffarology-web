@@ -100,8 +100,11 @@ function Login() {
       </form>
 
       <div className="mt-3 space-y-2">
-        <Link href="/forgot-password" className="tap-row text-center text-[14px] font-semibold text-heading">Forgot password?</Link>
-        <Link href="/signup" className="tap-row text-center text-[14px] font-semibold text-heading">New here? Create account</Link>
+        {/* `block`: `.tap-row` is `inline-flex`, so the two links sat on one line
+            and read as "Forgot password?New here? Create account" — `space-y-2`
+            only separates block-level children. */}
+        <Link href="/forgot-password" className="tap-row block text-center text-[14px] font-semibold text-heading">Forgot password?</Link>
+        <Link href="/signup" className="tap-row block text-center text-[14px] font-semibold text-heading">New here? Create account</Link>
       </div>
     </AuthShell>
   );

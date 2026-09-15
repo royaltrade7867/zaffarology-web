@@ -150,7 +150,8 @@ export default function Pillar8() {
             </button>
           </div>
 
-          <SectionLabel text="Departments" small="tap one to see its systems" color={NAVY} />
+          {/* "click", not "tap": this is the website. */}
+          <SectionLabel text="Departments" small="click one to see its systems" color={NAVY} />
           {biz.departments.length === 0 ? (
             <div className="mb-2 rounded-2xl border border-dashed border-line px-3.5 py-4">
               <span className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>

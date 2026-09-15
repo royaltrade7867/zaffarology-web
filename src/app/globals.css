@@ -319,6 +319,11 @@ textarea::selection {
 input,
 textarea {
   caret-color: var(--gold-deep);
+  /* No drag grip. Every textarea in the app grows to fit its text (`useAutoGrow`)
+     and scrolls past a ceiling, so the browser's default `resize: vertical`
+     offered a second, conflicting way to size the same box — and left the grip
+     drawn in the corner of every field. */
+  resize: none;
 }
 
 /* Keyboard focus is always visible, and always in the accent. Never

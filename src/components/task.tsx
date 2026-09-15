@@ -129,9 +129,15 @@ export function TaskRow({
           autoCorrect="off"
           spellCheck={false}
           onClick={() => locked && void dialog.alert("Fill the previous field first.")}
+          /* `--on-card`, NEVER `--ink` or `--muted`. This row's background is a
+             writing surface — red while empty, green once filled — and it stays
+             that way in BOTH themes, so the theme's ink tokens are wrong on it:
+             cream `--ink` measured 1.14:1 on the green fill and `--muted`
+             1.59:1, i.e. invisible in dark mode. A done task dims by OPACITY
+             instead, which keeps the same ink and the same contrast. */
           className={cx(
-            "w-full bg-transparent py-2 text-[15px] outline-none placeholder:text-placeholder",
-            done && filled ? "text-muted" : "text-ink",
+            "w-full bg-transparent py-2 text-[15px] text-on-card outline-none placeholder:text-placeholder",
+            done && filled ? "opacity-75" : "",
           )}
           style={struck ? { textDecoration: "line-through", textDecorationColor: accent } : undefined}
         />
