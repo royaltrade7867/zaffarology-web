@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { AuthShell, Eagle } from "@/components/shell";
 import { Button, Loading } from "@/components/ui";
 import { useAuth } from "@/lib/auth-context";
-import { friendlyISO } from "@/lib/dates";
+import { friendlyTimestamp } from "@/lib/dates";
 
 /**
  * Shown when a trial or subscription has ended.
@@ -20,7 +20,7 @@ import { friendlyISO } from "@/lib/dates";
  * pillar, note and recording is exactly where it was.
  */
 export default function Paywall() {
-  const { user, loading, billing, refreshBilling, signOut } = useAuth();
+  const { user, loading, billing, syncBilling, signOut } = useAuth();
   const router = useRouter();
   const [checking, setChecking] = useState(false);
 
@@ -34,7 +34,8 @@ export default function Paywall() {
 
   if (loading || !user) return <Loading />;
 
-  const ended = billing?.until ? friendlyISO(billing.until) : null;
+  const ended = friendlyTimestamp(billing?.until);
+  const [stillLocked, setStillLocked] = useState(false);
 
   return (
     <AuthShell>
@@ -65,17 +66,27 @@ export default function Paywall() {
           variant="ghost"
           loading={checking}
           onClick={async () => {
-            // For the gap between paying and the webhook landing. Re-reads
-            // status rather than trusting the client's own optimism.
+            // For the gap between paying and the webhook landing — or a
+            // purchase made in the phone app. Asks the backend to re-read
+            // RevenueCat now, rather than trusting the client's own optimism.
             setChecking(true);
+            setStillLocked(false);
             try {
-              await refreshBilling();
+              const fresh = await syncBilling();
+              if (!fresh?.entitled) setStillLocked(true);
             } finally {
               setChecking(false);
             }
           }}
         />
       </div>
+
+      {stillLocked ? (
+        <p className="mt-3 text-center text-[13px] leading-relaxed text-muted" role="status">
+          We could not find an active subscription for {user.email}. If you subscribed
+          in the phone app, make sure you were signed in with this same account.
+        </p>
+      ) : null}
 
       <div className="mt-6 border-t border-line pt-4 text-center">
         <button

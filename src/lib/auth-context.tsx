@@ -44,6 +44,11 @@ interface AuthContextValue {
   billingLoading: boolean;
   /** Re-read status — after paying, or when a 402 says it changed. */
   refreshBilling: () => Promise<void>;
+  /**
+   * Ask the backend to re-read RevenueCat NOW and return the fresh answer. For
+   * the moment after a purchase, before RevenueCat's webhook has arrived.
+   */
+  syncBilling: () => Promise<ApiBillingStatus | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUpIndividual: (fullName: string, email: string, password: string) => Promise<string | null>;
   signUpCompany: (fullName: string, email: string, password: string, companyName: string) => Promise<string | null>;
@@ -74,6 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<ApiBillingStatus | null>(null);
   const [billingLoading, setBillingLoading] = useState(true);
+
+  const syncBilling = useCallback(async () => {
+    try {
+      const fresh = await api.post<ApiBillingStatus>("/billing/refresh", {});
+      setBilling(fresh);
+      return fresh;
+    } catch {
+      return null;
+    }
+  }, []);
 
   const refreshBilling = useCallback(async () => {
     setBillingLoading(true);
@@ -119,11 +134,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshBilling]);
 
-  const applyAuth = useCallback((data: ApiAuthOut) => {
-    setToken(data.access_token);
-    setUser(toUser(data.user));
-    setCompany(toCompany(data.user));
-  }, []);
+  /**
+   * Read billing for a user who just signed in, BEFORE they are published.
+   *
+   * Order matters: `AuthGuard` decides on `user` and `billing` together, so
+   * setting the user first would render the app with no billing answer and then
+   * bounce. An unverified user is skipped — `/billing/status` is behind the
+   * verified-user check and would only 403; `verifyEmail` loads it instead.
+   */
+  const loadBillingFor = useCallback(
+    async (verified: boolean | undefined) => {
+      if (verified ?? true) await refreshBilling();
+      else setBillingLoading(false);
+    },
+    [refreshBilling],
+  );
+
+  const applyAuth = useCallback(
+    async (data: ApiAuthOut) => {
+      setToken(data.access_token);
+      await loadBillingFor(data.user.is_verified);
+      setUser(toUser(data.user));
+      setCompany(toCompany(data.user));
+    },
+    [loadBillingFor],
+  );
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
@@ -134,13 +169,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!data.access_token) return "Could not log in. Please try again.";
       setToken(data.access_token);
       const session = await api.get<ApiUser>("/auth/session");
+      await loadBillingFor(session.is_verified);
       setUser(toUser(session));
       setCompany(toCompany(session));
       return null;
     } catch (err) {
       return apiErrorMessage(err, "Could not log in. Please try again.");
     }
-  }, []);
+  }, [loadBillingFor]);
 
   const signUpIndividual = useCallback(
     async (fullName: string, email: string, password: string) => {
@@ -150,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: email.trim().toLowerCase(),
           password,
         });
-        applyAuth(data);
+        await applyAuth(data);
         return null;
       } catch (err) {
         return apiErrorMessage(err, "Could not create your account. Please try again.");
@@ -168,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password,
           company_name: companyName.trim(),
         });
-        applyAuth(data);
+        await applyAuth(data);
         return null;
       } catch (err) {
         return apiErrorMessage(err, "Could not create your company account. Please try again.");
@@ -186,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password,
           invite_code: inviteCode.trim(),
         });
-        applyAuth(data);
+        await applyAuth(data);
         return null;
       } catch (err) {
         return apiErrorMessage(err, "Could not join the company. Please try again.");
@@ -211,6 +247,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await api.post("/auth/verify-email", { email: user.email, code: code.trim() });
         const session = await api.get<ApiUser>("/auth/session");
+        // Now verified, so billing is readable for the first time.
+        await loadBillingFor(session.is_verified);
         setUser(toUser(session));
         setCompany(toCompany(session));
         return null;
@@ -218,7 +256,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return apiErrorMessage(err, "Invalid or expired code. Please try again.");
       }
     },
-    [user],
+    [user, loadBillingFor],
   );
 
   const resendVerification = useCallback(async () => {
@@ -250,6 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       billing,
       billingLoading,
       refreshBilling,
+      syncBilling,
       signIn,
       signUpIndividual,
       signUpCompany,
@@ -259,7 +298,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyEmail,
       resendVerification,
     }),
-    [user, company, loading, billing, billingLoading, refreshBilling, signIn, signUpIndividual, signUpCompany, signUpEmployee, signOut, deleteAccount, verifyEmail, resendVerification],
+    [user, company, loading, billing, billingLoading, refreshBilling, syncBilling, signIn, signUpIndividual, signUpCompany, signUpEmployee, signOut, deleteAccount, verifyEmail, resendVerification],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

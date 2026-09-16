@@ -6,7 +6,8 @@ import { useState } from "react";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthGuard } from "@/components/shell";
-import { friendlyISO } from "@/lib/dates";
+import { friendlyTimestamp } from "@/lib/dates";
+import { STORE_NAMES, isStoreManaged } from "@/lib/api";
 import { Button, cx } from "@/components/ui";
 import { useTheme, type ThemeChoice } from "@/lib/theme";
 import { useDialog } from "@/components/dialog";
@@ -122,41 +123,71 @@ function BillingCard() {
   // Silent until known. A card that says "expired" for a second while loading
   // is worse than no card at all.
   if (billingLoading || !billing) return null;
+  // Paywall switched off: everyone is in for free, and a card saying "Ended"
+  // with a link to a checkout that is not live would only alarm people.
+  if (!billing.enforced) return null;
 
-  const LABEL: Record<string, string> = {
-    trialing: "Free trial",
-    active: "Active",
-    in_grace_period: "Payment problem",
-    expired: "Ended",
-  };
-  const tint =
-    billing.state === "expired"
-      ? "var(--danger)"
-      : billing.state === "in_grace_period"
-        ? "var(--gold)"
-        : "var(--p3)";
-  const when = billing.until ? friendlyISO(billing.until) : null;
+  const paid = Boolean(billing.entitled && billing.store);
+  const label = !billing.entitled
+    ? "Ended"
+    : billing.state === "in_grace_period" || billing.billing_issue
+      ? "Payment problem"
+      : paid
+        ? billing.will_renew === false
+          ? "Cancelled"
+          : "Active"
+        : billing.state === "trialing"
+          ? "Free trial"
+          : "Free access";
+  const tint = !billing.entitled
+    ? "var(--danger)"
+    : label === "Payment problem" || label === "Cancelled"
+      ? "var(--gold)"
+      : "var(--p3)";
+  const when = friendlyTimestamp(billing.until);
+  const grantUntil = billing.grant?.until ? friendlyTimestamp(billing.grant.until) : null;
+
+  let detail: string;
+  if (!billing.entitled) {
+    detail = when ? `Ended ${when}.` : "No active subscription.";
+  } else if (paid) {
+    const via = `Subscribed through ${STORE_NAMES[billing.store ?? "other"]}`;
+    detail =
+      label === "Payment problem"
+        ? `${via}. The last payment failed — update your payment method to keep access.`
+        : billing.will_renew === false
+          ? `${via}. Auto-renew is off; access ends ${when ?? "at the end of the period"}.`
+          : when
+            ? `${via}. Renews ${when}.`
+            : `${via}.`;
+    if (billing.grant) {
+      detail += grantUntil ? ` You also have free access until ${grantUntil}.` : " You also have permanent free access.";
+    }
+  } else if (billing.state === "trialing") {
+    detail = when ? `Your trial runs until ${when}.` : "You are on a free trial.";
+  } else {
+    detail = when ? `Free access until ${when}.` : "You have permanent access.";
+  }
+
+  const storeManaged = paid && isStoreManaged(billing.store);
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-5">
       <h2 className="font-heading text-[12px] uppercase tracking-widest text-muted">
         Subscription
+        {billing.is_sandbox ? <span className="ml-2 normal-case tracking-normal text-gold">(test)</span> : null}
       </h2>
       <p className="mt-1.5 font-heading text-[20px]" style={{ color: tint }}>
-        {LABEL[billing.state] ?? billing.state}
+        {label}
       </p>
-      <p className="mt-1 text-[13px] leading-relaxed text-muted">
-        {billing.state === "expired"
-          ? when
-            ? `Ended ${when}.`
-            : "No active subscription."
-          : when
-            ? billing.state === "trialing"
-              ? `Your trial runs until ${when}.`
-              : `Renews ${when}.`
-            : "You have permanent access."}
-      </p>
+      <p className="mt-1 text-[13px] leading-relaxed text-muted">{detail}</p>
 
+      {storeManaged ? (
+        <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
+          Manage or cancel it in {STORE_NAMES[billing.store ?? "other"]} on the device you
+          subscribed with.
+        </p>
+      ) : null}
       {billing.can_manage && billing.management_url ? (
         <a
           href={billing.management_url}
@@ -164,14 +195,14 @@ function BillingCard() {
           rel="noreferrer noopener"
           className="tap-row mt-3 inline-flex rounded-lg border border-line px-3 text-[13px] font-semibold text-heading transition-colors hover:bg-line-soft"
         >
-          Manage subscription
+          {storeManaged ? `Open ${STORE_NAMES[billing.store ?? "other"]}` : "Manage subscription"}
         </a>
-      ) : billing.state === "expired" || billing.state === "trialing" ? (
+      ) : !paid ? (
         <Link
           href="/pricing"
           className="tap-row mt-3 inline-flex rounded-lg border border-gold px-3 text-[13px] font-semibold text-gold transition-colors hover:bg-gold/8"
         >
-          See plans
+          {billing.entitled ? "Subscribe" : "See plans"}
         </Link>
       ) : null}
     </div>

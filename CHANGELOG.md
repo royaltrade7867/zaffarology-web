@@ -2,6 +2,59 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-16 - Real checkout, and subscription status from every store
+
+**`/pricing` sells for real.** It uses `@revenuecat/purchases-js` (pinned to
+1.62.1), always identified as our `users.id`, the same ID the phone apps use.
+- Plans and prices come from the RevenueCat offering, not from code.
+- Checkout is RevenueCat Billing's own sheet. Card details go to Stripe, never
+  to us.
+- After paying, the page asks the backend to re-read RevenueCat
+  (`POST /billing/refresh`) and waits up to 45 seconds for access, with a clear
+  "Payment received" state if it takes longer. It does not trust the SDK's own
+  answer, because the backend's answer is the one every platform reads.
+- If the person cancels checkout, the plans simply show again.
+- Declined cards, pending payments, network loss and "already purchased" each
+  get their own message.
+- Someone already paying through the App Store or Google Play is told where
+  their subscription lives and is not offered a second one.
+- Sandbox and Test Store keys show a "Test mode" badge.
+- The SDK is loaded only on this page, and is switched to the right user before
+  every purchase, so a browser shared by two accounts cannot buy for the wrong
+  one.
+
+**Profile's Subscription card** now covers every state: which store, renewing,
+cancelled (access until a date), payment problem, free trial, free access, and
+paid plus free access. Store-managed subscriptions point to that store.
+
+**Paywall.** "I've already subscribed" asks the backend to re-check RevenueCat,
+so a purchase made in the phone app unlocks the web at once. If nothing is
+found, the page says which account it checked.
+
+**Dates on the paywall and Profile were never shown.** `friendlyISO` only parses
+`YYYY-MM-DD`, but the billing API sends full timestamps. The new
+`friendlyTimestamp` fixes that.
+
+Verified in a browser against the backend with a stateful fake RevenueCat. The
+real Stripe or Test Store checkout still needs a RevenueCat test key.
+
+## 2026-09-16 - Billing status loads on sign-in; subscription UI follows the server switch
+
+**Billing status was only read on a full page load.** `signIn`, all three
+sign-ups and `verifyEmail` set the user without ever reading `/billing/status`,
+so after logging in the paywall gate and the Profile card did nothing until a
+reload. Each of them now reads it BEFORE publishing the user, because
+`AuthGuard` decides on both together. An unverified user is skipped, because
+the endpoint would only return 403; `verifyEmail` reads it once they are
+verified. Checked in a browser: `/billing/status` is requested right after
+`/auth/login`, and a user without access lands on `/paywall` with no reload.
+
+**The Subscription card hides while the backend's `BILLING_ENFORCED` is off.**
+While the paywall is switched off, everyone is in for free, and a card saying
+"Ended" with a link to a checkout that is not live would only alarm people.
+Deploy the backend first: an older backend sends no `enforced` field, so the card
+stays hidden, but it would still paywall users who have no billing row.
+
 ## 2026-09-13 - Responsive audit: 320px, tap targets, and a keyboard dead end
 
 **The money field's earlier fix had never actually shipped.** A scripted edit

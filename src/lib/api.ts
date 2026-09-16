@@ -155,14 +155,39 @@ export interface ApiUser {
   company: ApiCompany | null;
 }
 
+/** Where access came from: `promotional` = given (trial, gift), the rest name
+ *  the store that took the money. */
+export type BillingSource =
+  | "promotional"
+  | "rc_billing"
+  | "stripe"
+  | "app_store"
+  | "play_store"
+  | "amazon"
+  | "test_store"
+  | "other";
+
 /** `GET /billing/status`. `entitled` is the only field the gate reads. */
 export interface ApiBillingStatus {
   state: "trialing" | "active" | "in_grace_period" | "expired";
   until: string | null;
-  source: "promotional" | "rc_billing" | "app_store" | "play_store" | null;
+  source: BillingSource | null;
   entitled: boolean;
+  /** False while the paywall is switched off server-side: `entitled` is then
+   *  always true, and subscription UI should stay out of sight. */
+  enforced: boolean;
+  /** Set only while a PURCHASE gives access: which store, and its state. */
+  store: BillingSource | null;
+  product_id: string | null;
+  will_renew: boolean | null;
+  billing_issue: boolean;
+  is_sandbox: boolean;
   can_manage: boolean;
   management_url: string | null;
+  /** Free access underneath (or instead of) a purchase. */
+  grant: { kind: "trial" | "admin" | "backfill" | null; until: string | null } | null;
+  /** `POST /billing/refresh` only: RevenueCat could not be reached this time. */
+  refresh_failed?: boolean;
 }
 
 /** `GET /billing/config` — what the browser needs to start a purchase. */
@@ -170,8 +195,26 @@ export interface ApiBillingConfig {
   enabled: boolean;
   public_key: string | null;
   entitlement_id: string;
+  offering_id: string | null;
   app_user_id: string;
+  email: string;
 }
+
+/** A store as a customer would name it. */
+export const STORE_NAMES: Record<BillingSource, string> = {
+  promotional: "free access",
+  rc_billing: "the web",
+  stripe: "the web",
+  app_store: "the App Store",
+  play_store: "Google Play",
+  amazon: "the Amazon Appstore",
+  test_store: "the test store",
+  other: "another store",
+};
+
+/** True when the subscription is managed somewhere other than this website. */
+export const isStoreManaged = (store: BillingSource | null): boolean =>
+  store === "app_store" || store === "play_store" || store === "amazon";
 export interface ApiAuthOut {
   access_token: string;
   token_type: string;
