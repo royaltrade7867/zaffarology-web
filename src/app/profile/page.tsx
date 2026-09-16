@@ -122,6 +122,9 @@ function BillingCard() {
   // Silent until known. A card that says "expired" for a second while loading
   // is worse than no card at all.
   if (billingLoading || !billing) return null;
+  // Paywall switched off: everyone is in for free, and a card saying "Ended"
+  // with a link to a checkout that is not live would only alarm people.
+  if (!billing.enforced) return null;
 
   const LABEL: Record<string, string> = {
     trialing: "Free trial",

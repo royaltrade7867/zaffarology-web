@@ -2,6 +2,23 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-16 - Billing status loads on sign-in; subscription UI follows the server switch
+
+**Billing status was only read on a full page load.** `signIn`, all three
+sign-ups and `verifyEmail` set the user without ever reading `/billing/status`,
+so after logging in the paywall gate and the Profile card did nothing until a
+reload. Each of them now reads it BEFORE publishing the user, because
+`AuthGuard` decides on both together. An unverified user is skipped, because
+the endpoint would only return 403; `verifyEmail` reads it once they are
+verified. Checked in a browser: `/billing/status` is requested right after
+`/auth/login`, and a user without access lands on `/paywall` with no reload.
+
+**The Subscription card hides while the backend's `BILLING_ENFORCED` is off.**
+While the paywall is switched off, everyone is in for free, and a card saying
+"Ended" with a link to a checkout that is not live would only alarm people.
+Deploy the backend first: an older backend sends no `enforced` field, so the card
+stays hidden, but it would still paywall users who have no billing row.
+
 ## 2026-09-13 - Responsive audit: 320px, tap targets, and a keyboard dead end
 
 **The money field's earlier fix had never actually shipped.** A scripted edit

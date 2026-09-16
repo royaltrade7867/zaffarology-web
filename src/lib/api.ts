@@ -161,6 +161,9 @@ export interface ApiBillingStatus {
   until: string | null;
   source: "promotional" | "rc_billing" | "app_store" | "play_store" | null;
   entitled: boolean;
+  /** False while the paywall is switched off server-side: `entitled` is then
+   *  always true, and subscription UI should stay out of sight. */
+  enforced: boolean;
   can_manage: boolean;
   management_url: string | null;
 }
