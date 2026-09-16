@@ -44,6 +44,11 @@ interface AuthContextValue {
   billingLoading: boolean;
   /** Re-read status — after paying, or when a 402 says it changed. */
   refreshBilling: () => Promise<void>;
+  /**
+   * Ask the backend to re-read RevenueCat NOW and return the fresh answer. For
+   * the moment after a purchase, before RevenueCat's webhook has arrived.
+   */
+  syncBilling: () => Promise<ApiBillingStatus | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUpIndividual: (fullName: string, email: string, password: string) => Promise<string | null>;
   signUpCompany: (fullName: string, email: string, password: string, companyName: string) => Promise<string | null>;
@@ -74,6 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<ApiBillingStatus | null>(null);
   const [billingLoading, setBillingLoading] = useState(true);
+
+  const syncBilling = useCallback(async () => {
+    try {
+      const fresh = await api.post<ApiBillingStatus>("/billing/refresh", {});
+      setBilling(fresh);
+      return fresh;
+    } catch {
+      return null;
+    }
+  }, []);
 
   const refreshBilling = useCallback(async () => {
     setBillingLoading(true);
@@ -273,6 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       billing,
       billingLoading,
       refreshBilling,
+      syncBilling,
       signIn,
       signUpIndividual,
       signUpCompany,
@@ -282,7 +298,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyEmail,
       resendVerification,
     }),
-    [user, company, loading, billing, billingLoading, refreshBilling, signIn, signUpIndividual, signUpCompany, signUpEmployee, signOut, deleteAccount, verifyEmail, resendVerification],
+    [user, company, loading, billing, billingLoading, refreshBilling, syncBilling, signIn, signUpIndividual, signUpCompany, signUpEmployee, signOut, deleteAccount, verifyEmail, resendVerification],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

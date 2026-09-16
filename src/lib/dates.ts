@@ -33,6 +33,13 @@ export function friendlyISO(iso: string): string | null {
   });
 }
 
+/** "5 Aug 2026" from a full ISO timestamp (the billing API sends those), or
+ *  null. `friendlyISO` wants a bare date, so the time is dropped first. */
+export function friendlyTimestamp(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  return friendlyISO(iso.slice(0, 10));
+}
+
 export type RelClass = "ok" | "soon" | "late";
 
 /** Relative label + colour class for a due date. */
