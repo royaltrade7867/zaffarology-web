@@ -1,6 +1,6 @@
 "use client";
 
-import { pillarByNumber, Accents } from "@/lib/pillars";
+import { pillarByNumber, Accents , rowLocked} from "@/lib/pillars";
 import { shortDate } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
@@ -159,7 +159,7 @@ export default function Pillar2() {
               })
             }
             actions={solActions(i)}
-            locked={i > 0 && !sols[i - 1].text.trim()}
+            locked={rowLocked(sols, i)}
             placeholder={`Possible solution ${i + 1}…`}
             noStrike
           />

@@ -1,6 +1,6 @@
 "use client";
 
-import { Accents } from "@/lib/pillars";
+import { Accents , rowLocked} from "@/lib/pillars";
 import { weekdayShortDate } from "@/lib/dates";
 import { SectionLabel, AddButton, MiwBox } from "@/components/ui";
 import { TaskRow, DateField, FiledBox, type TaskAction } from "@/components/task";
@@ -126,7 +126,7 @@ export function IdeaBoard({
               onChange={(t) => update((s) => { s.ideas[i].text = t; })}
               onToggle={(v) => update((s) => { s.ideas[i].done = v; })}
               actions={listActions(i)}
-              locked={i > 0 && !state.ideas[i - 1].text.trim()}
+              locked={rowLocked(state.ideas, i)}
               placeholder={`Idea ${i + 1}`}
             />
             {it.text.trim()
@@ -150,7 +150,7 @@ export function IdeaBoard({
               onToggle={(v) => update((s) => { s.extra[i].done = v; })}
               onDelete={() => update((s) => { s.extra.splice(i, 1); })}
               actions={extraActions(i)}
-              locked={i > 0 && !state.extra[i - 1].text.trim()}
+              locked={rowLocked(state.extra, i)}
               placeholder="Extra idea"
             />
             {it.text.trim()

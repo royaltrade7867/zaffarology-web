@@ -104,6 +104,32 @@ export const PILLARS: PillarMeta[] = [
 export const pillarByNumber = (n: number): PillarMeta | undefined => PILLARS.find((p) => p.n === n);
 
 /**
+ * Should row `i` of an ordered list be locked?
+ *
+ * The rule is "fill them in order", so an EMPTY row is locked until the one
+ * before it has something in it. Two things that rule must never do:
+ *
+ *  - lock a row that already has text. Typing 1, 2, 3 and then clearing 2 used
+ *    to lock 3 — text you had already written, now uneditable, with no way to
+ *    fix it except deleting it. That is the bug this function exists to stop.
+ *  - look only at `i - 1`. What matters is whether ANY earlier row has content:
+ *    after clearing 2, row 3 follows a filled row 1, so the list is still being
+ *    worked on in order.
+ *
+ * Shared because it was written inline at six call sites, and a rule copied six
+ * times is a rule that gets fixed in five.
+ */
+export const rowLocked = (items: { text: string }[], i: number): boolean => {
+  if (i === 0) return false;
+  // Never lock a row that already has text. This is the whole point: typing
+  // 1, 2, 3 then clearing 2 used to lock 3, stranding work you had done.
+  if (items[i]?.text.trim()) return false;
+  // An empty row opens when the one before it has something in it, so the list
+  // still fills top-down and only ONE empty row is ever open at a time.
+  return !items[i - 1]?.text.trim();
+};
+
+/**
  * The id the BACKEND uses for a pillar in `per_pillar` maps — which is not the
  * number shown in the UI. Pillar 5 is stored as `pillar-8-business-systems` and
  * reported as 8, because renumbering would orphan every existing blob row.

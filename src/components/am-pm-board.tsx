@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 
-import { Accents, INK, FIELD_EMPTY } from "@/lib/pillars";
+import { Accents, INK, FIELD_EMPTY , rowLocked} from "@/lib/pillars";
 import { shortDate, todayKey } from "@/lib/dates";
 import { MiwBox, SectionLabel, AddButton, CharsLeft, useAutoGrow } from "@/components/ui";
 import { TaskRow, Footer, FiledBox, PassNote, DayReport, DayGroup, DayTask, DayField, type TaskAction } from "@/components/task";
@@ -95,7 +95,7 @@ export function AmPmBoard({ state, update }: { state: P3State; update: (m: (s: P
       <section className="mb-8">
         <SectionLabel text="Do or Die Tasks" small="max 5, no more" color={RED} />
         {state.dod.map((t, i) => (
-          <TaskRow key={i} accent={RED} symbol={i + 1} value={t.text} done={t.done} onChange={(text) => update((s) => { s.dod[i].text = text; })} onToggle={(v) => update((s) => { s.dod[i].done = v; })} actions={dodActions(i)} slot placeholder={`Do-or-die task ${i + 1}`} locked={i > 0 && !state.dod[i - 1].text.trim()} />
+          <TaskRow key={i} accent={RED} symbol={i + 1} value={t.text} done={t.done} onChange={(text) => update((s) => { s.dod[i].text = text; })} onToggle={(v) => update((s) => { s.dod[i].done = v; })} actions={dodActions(i)} slot placeholder={`Do-or-die task ${i + 1}`} locked={rowLocked(state.dod, i)} />
         ))}
         <Footer progress={`${dodDone} / 5 do-or-die done`} resetLabel="New day (reset)" onReset={newDay} />
       </section>
@@ -103,7 +103,7 @@ export function AmPmBoard({ state, update }: { state: P3State; update: (m: (s: P
       <section className="mb-8">
         <SectionLabel text="Go-Extra-Mile Daily Tasks" small="anything beyond the 5" color={GREEN} />
         {state.extra.map((t, i) => (
-          <TaskRow key={i} accent={GREEN} symbol="+" value={t.text} done={t.done} onChange={(text) => update((s) => { s.extra[i].text = text; })} onToggle={(v) => update((s) => { s.extra[i].done = v; })} onDelete={() => update((s) => { s.extra.splice(i, 1); })} actions={extraActions(i)} locked={i > 0 && !state.extra[i - 1].text.trim()} placeholder="Extra task" />
+          <TaskRow key={i} accent={GREEN} symbol="+" value={t.text} done={t.done} onChange={(text) => update((s) => { s.extra[i].text = text; })} onToggle={(v) => update((s) => { s.extra[i].done = v; })} onDelete={() => update((s) => { s.extra.splice(i, 1); })} actions={extraActions(i)} locked={rowLocked(state.extra, i)} placeholder="Extra task" />
         ))}
         <AddButton label="+ Add extra-mile task" accent={GREEN} onClick={() => update((s) => { s.extra.push({ text: "", done: false }); })} />
       </section>

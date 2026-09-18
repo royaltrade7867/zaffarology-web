@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent, type TouchEvent } from "react";
 
-import { pillarByNumber, Accents, INK } from "@/lib/pillars";
+import { pillarByNumber, Accents, INK , rowLocked} from "@/lib/pillars";
 import { friendlyISO, shortDate, todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
@@ -463,7 +463,7 @@ export default function Pillar1() {
       <section className="mb-8">
         <SectionLabel text="Do or Die Tasks" small="max 5, no more" color={RED} />
         {g.dod.map((t, i) => (
-          <TaskRow key={i} accent={RED} symbol={i + 1} value={t.text} done={t.done} onChange={(text) => setG((x) => { x.dod[i].text = text; })} onToggle={(v) => setG((x) => { x.dod[i].done = v; })} actions={dodActions(i)} slot placeholder={`Do-or-die task ${i + 1}`} locked={i > 0 && !g.dod[i - 1].text.trim()} />
+          <TaskRow key={i} accent={RED} symbol={i + 1} value={t.text} done={t.done} onChange={(text) => setG((x) => { x.dod[i].text = text; })} onToggle={(v) => setG((x) => { x.dod[i].done = v; })} actions={dodActions(i)} slot placeholder={`Do-or-die task ${i + 1}`} locked={rowLocked(g.dod, i)} />
         ))}
         <Footer progress={`${dodDone} / 5 do-or-die done`} resetLabel="New day (reset)" onReset={newDay} />
       </section>
@@ -471,7 +471,7 @@ export default function Pillar1() {
       <section className="mb-8">
         <SectionLabel text="Go-Extra-Mile Daily Tasks" small="anything beyond the 5" color={GREEN} />
         {g.extra.map((t, i) => (
-          <TaskRow key={i} accent={GREEN} symbol="+" value={t.text} done={t.done} onChange={(text) => setG((x) => { x.extra[i].text = text; })} onToggle={(v) => setG((x) => { x.extra[i].done = v; })} onDelete={() => setG((x) => { x.extra.splice(i, 1); })} actions={extraActions(i)} locked={i > 0 && !g.extra[i - 1].text.trim()} placeholder="Extra task" />
+          <TaskRow key={i} accent={GREEN} symbol="+" value={t.text} done={t.done} onChange={(text) => setG((x) => { x.extra[i].text = text; })} onToggle={(v) => setG((x) => { x.extra[i].done = v; })} onDelete={() => setG((x) => { x.extra.splice(i, 1); })} actions={extraActions(i)} locked={rowLocked(g.extra, i)} placeholder="Extra task" />
         ))}
         <AddButton label="+ Add extra-mile task" accent={GREEN} dimmed={!lastExtraFilled} onClick={addExtra} />
       </section>

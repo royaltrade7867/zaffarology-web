@@ -117,8 +117,14 @@ export function TaskRow({
     if (ok) run();
   };
 
+  /* No divider between rows any more.
+     Every task is already a filled, rounded box — red while empty, green once
+     written in — so a hairline underneath it was a second way of saying the
+     same thing, and at `py-2` it sat ~8px from the box's rounded corner, which
+     read as a line cutting across the field. The gap now does the separating.
+     `noBorder` stays in the props so existing callers still typecheck. */
   return (
-    <div className={cx("py-2", !noBorder && "border-b border-line")}>
+    <div className="py-1.5">
     {/* Wraps so that on a phone "To whom?" can drop under the task (see below)
         instead of squeezing a long delegation into a narrow column. */}
     <div className="flex flex-wrap items-start gap-x-2.5 gap-y-1.5">
