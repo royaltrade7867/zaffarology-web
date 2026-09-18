@@ -25,8 +25,11 @@ import type { ApiMeeting, ApiNote, NoteTag } from "@/lib/notes-api";
 import { useDialog } from "@/components/dialog";
 
 type Kind = "notes" | "meetings";
-/** `null` = show everything, so the filter is additive rather than a mode. */
-type Filter = NoteTag | null;
+/* The Personal / Business FILTER is gone (19 Sep 2026). The two kinds carry
+   those names now — a personal note is a plain note, a business note is a
+   meeting — so filtering by tag on top of that was a second way to hide the
+   same row. `tag` still exists on every note and meeting, and is still written
+   on create, because the phone app filters by it and both apps share the rows. */
 
 /**
  * A meeting the user has put nothing into.
@@ -109,21 +112,13 @@ function NotesAndMeetings() {
   const [undo, setUndo] = useState<{ what: "note" | "meeting"; id: number } | null>(null);
 
   const [kind, setKind] = useState<Kind>("notes");
-  const [filter, setFilter] = useState<Filter>(null);
   const [openNoteId, setOpenNoteId] = useState<number | null>(null);
   const [openMeetingId, setOpenMeetingId] = useState<number | null>(null);
-  // Index within the CURRENT filtered list, so Prev/Next walks what is shown.
+  // Index within the current list, so Prev/Next walks what is shown.
   const [cur, setCur] = useState(0);
 
-  const shownNotes = useMemo(
-    () => (filter ? notes.filter((n) => n.tag === filter) : notes),
-    [notes, filter],
-  );
-  const shownMeetings = useMemo(
-    () => (filter ? meetings.filter((m) => m.tag === filter) : meetings),
-    [meetings, filter],
-  );
-  const list: (ApiNote | ApiMeeting)[] = kind === "notes" ? shownNotes : shownMeetings;
+  /* Every note and every meeting, unfiltered. The tab is the only division. */
+  const list: (ApiNote | ApiMeeting)[] = kind === "notes" ? notes : meetings;
   const idx = Math.min(cur, Math.max(0, list.length - 1));
 
   /**
@@ -180,17 +175,21 @@ function NotesAndMeetings() {
     meetings.find((m) => m.id === openMeetingId) ??
     (justMade && "agenda" in justMade && justMade.id === openMeetingId ? justMade : null);
 
-  /** Switching tab or filter resets the position — index 3 of one list means
-   *  nothing in another. */
+  /** Switching tab resets the position — index 3 of one list means nothing in
+   *  another. */
   const switchKind = (k: Kind) => { setKind(k); setCur(0); };
-  const switchFilter = (f: Filter) => { setFilter(f); setCur(0); };
 
   const newItem = async () => {
     // A new item takes the current filter's tag, so creating one while
     // "Business" is selected does not immediately hide it. Under "All" it
     // repeats whichever tag was last used here, since defaulting a business
     // user's every note to "personal" hides it the moment they filter.
-    const tag: NoteTag = filter ?? lastTag;
+    /* The TAB decides the tag: a personal note is tagged personal, a business
+       note (a meeting) business. The tag is no longer used to filter here, but
+       it is still written because the PHONE app filters by it and both apps
+       share the same rows — leaving it unset would make new items vanish from
+       whichever filter the phone is on. */
+    const tag: NoteTag = kind === "notes" ? "personal" : "business";
     setCur(0);
     /* Say something IMMEDIATELY. Creating one is a round trip to the server,
        which against the production database measures 5 to 8 seconds — the button
@@ -413,11 +412,16 @@ function NotesAndMeetings() {
         ) : null}
       </div>
 
-      {/* Kind switcher */}
-      <div role="group" aria-label="Note kind" className="mb-3 flex gap-2">
+      {/* ONE choice, not two.
+          This was a Notes / Meeting notes switcher AND a separate
+          All / Personal / Business filter — two rows of controls to reach one
+          list, and an item could be hidden by either. The two kinds now carry
+          the names: a personal note is a plain note, a business note is a
+          meeting. Neither list is filtered. */}
+      <div role="group" aria-label="Note kind" className="mb-5 flex gap-2">
         {([
-          { k: "notes" as const, label: "Notes", Icon: NoteIcon },
-          { k: "meetings" as const, label: "Meeting notes", Icon: MeetingIcon },
+          { k: "notes" as const, label: "Personal notes", Icon: NoteIcon },
+          { k: "meetings" as const, label: "Business notes", Icon: MeetingIcon },
         ]).map(({ k, label, Icon }) => {
           const on = kind === k;
           return (
@@ -440,27 +444,9 @@ function NotesAndMeetings() {
         })}
       </div>
 
-      {/* Filters, with the new-item plus beside them */}
+      {/* The new-item button. The All / Personal / Business filters that used
+          to sit beside it are gone — the tabs above are the only division now. */}
       <div className="mb-5 flex items-center gap-2">
-        {([null, "personal", "business"] as Filter[]).map((f) => {
-          const on = filter === f;
-          const label = f === null ? "All" : f === "personal" ? "Personal" : "Business";
-          return (
-            <button
-              key={label}
-              onClick={() => switchFilter(f)}
-              aria-pressed={on}
-              className={cx(
-                "rounded-lg border px-3 py-1.5 text-[12.5px] font-semibold transition-colors",
-                // No accent tint behind accent text: that pairing sat at 3.90:1.
-                // The border and the weight carry the state instead.
-                on ? "border-gold text-gold" : "border-line text-muted hover:bg-line-soft",
-              )}
-            >
-              {label}
-            </button>
-          );
-        })}
         <button
           type="button"
           onClick={newItem}
@@ -508,7 +494,7 @@ function NotesAndMeetings() {
       ) : null}
 
       {list.length === 0 ? (
-        <Empty kind={kind} filtered={filter !== null} onNew={newItem} />
+        <Empty kind={kind} onNew={newItem} />
       ) : (
         <>
           {/* From `lg`, every note is on screen at once.
@@ -572,11 +558,10 @@ function NotesAndMeetings() {
           is what makes this the STANDALONE list: a note's own recordings show
           inside that note, and listing them here too would show them twice. */}
       <div className="mt-8 border-t border-line pt-2">
-        {/* The SAME filter drives this list. One control at the top of the
-            screen governs notes, meetings and recordings together — picking
-            "Business" shows business notes and business recordings, rather than
-            making the user set the same thing twice. */}
-        <VoiceNotes filter={filter} />
+        {/* Every standalone recording, unfiltered — the screen no longer has a
+            Personal / Business control to inherit. A new recording made here
+            defaults to `personal`, which is the side it is recorded from. */}
+        <VoiceNotes />
       </div>
     </div>
   );
@@ -697,19 +682,18 @@ function MeetingCard({ meeting, onOpen }: { meeting: ApiMeeting; onOpen: () => v
   );
 }
 
-function Empty({ kind, filtered, onNew }: { kind: Kind; filtered: boolean; onNew: () => void }) {
-  const thing = kind === "notes" ? "note" : "meeting note";
+/* No `filtered` case any more: the Personal / Business filter is gone, so an
+   empty list always means there is nothing of this kind yet. The old copy sent
+   people to an "All" button that no longer exists. */
+function Empty({ kind, onNew }: { kind: Kind; onNew: () => void }) {
+  const thing = kind === "notes" ? "personal note" : "business note";
   return (
     <div className="rounded-2xl border border-dashed border-line px-6 py-12 text-center">
-      <p className="font-heading text-[17px] text-heading">
-        {filtered ? `No ${thing}s under this filter` : `No ${thing}s yet`}
-      </p>
+      <p className="font-heading text-[17px] text-heading">No {thing}s yet</p>
       <p className="mx-auto mt-1.5 max-w-[42ch] text-[13.5px] leading-relaxed text-muted">
-        {filtered
-          ? "Try “All”, or start one here. It will keep the filter you're on."
-          : kind === "notes"
-            ? "Anything worth keeping: an idea, a number, something someone said."
-            : "Capture what was agreed while it's fresh: decisions, and who does what next."}
+        {kind === "notes"
+          ? "Anything worth keeping: an idea, a number, something someone said."
+          : "Capture what was agreed while it's fresh: decisions, and who does what next."}
       </p>
       <button
         type="button"

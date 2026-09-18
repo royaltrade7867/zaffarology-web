@@ -132,7 +132,12 @@ ck("both editors mount the recorder",
 /* A recording need not belong to a typed note. The Notes LIST carries its own
    recorder for those, exactly as the phone does — without it there is no way to
    make one on the web at all. */
-ck("the notes list has a standalone recorder", /<VoiceNotes filter=\{filter\} \/>/.test(notes));
+/* No `filter` prop any more (19 Sep 2026): the screen's Personal / Business
+   filter was removed, so the standalone list shows every recording. What still
+   matters is that the recorder is MOUNTED with no note or meeting id — that is
+   what makes it the standalone list, and without it there is no way to record
+   on the web at all. */
+ck("the notes list has a standalone recorder", /<VoiceNotes \/>/.test(notes));
 /* ...and it must ask for ONLY the unattached ones, or a note's recordings show
    twice: once inside the note and once in the general list. The backend's own
    docstring names this bug. */
@@ -170,15 +175,17 @@ ck("the server refuses to retag an attached recording",
 ck("and only tag-filters the standalone list",
    /if tag and standalone_only:/.test(
      readFileSync("../zaffarology-backend/app/services/voice_note_service.py", "utf8")));
-/* ONE filter for the whole screen. Notes, meetings and recordings are three
-   lists of the same person's material, so asking for Personal twice — once for
-   notes and once for recordings — is two controls doing one job. */
+/* The recorder still has no filter control of its own — but there is no screen
+   filter left for it to inherit either, so the standalone list simply shows
+   everything. The `filter` PROP is kept on the component: the phone screen
+   still has Personal / Business and passes it. */
 ck("the recorder has NO filter control of its own",
    !/aria-label="Recording type"/.test(rec),
-   "the screen's filter governs it instead");
-ck("it takes the screen's filter as a prop", /filter\?: VoiceTag \| null;/.test(rec));
-ck("the notes screen passes its own filter down",
-   /<VoiceNotes filter=\{filter\} \/>/.test(notes));
+   "there is no per-list filter anywhere");
+ck("it still accepts a filter prop (the phone passes one)",
+   /filter\?: VoiceTag \| null;/.test(rec));
+ck("the web screen passes none, so nothing is hidden",
+   !/<VoiceNotes filter=/.test(notes));
 ck("a new recording inherits the active filter's tag",
    /const tag: VoiceTag = filter \?\? "personal";/.test(rec));
 ck("All sends no tag, so everything comes back",
