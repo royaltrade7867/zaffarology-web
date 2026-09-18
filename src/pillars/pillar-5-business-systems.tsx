@@ -12,8 +12,12 @@ import { PersonField, DateField, PassNote, FiledBox } from "@/components/task";
 import { AmPmBoard } from "@/components/am-pm-board";
 import { DelegateSection } from "@/components/delegate-section";
 import { PersonTagField } from "@/components/person-tag-field";
+import { IdeaBoard, type IdeaCfg } from "@/components/idea-board";
+import { RecordsBoard } from "@/components/records-board";
 import { usePartners } from "@/lib/use-connections";
 import { blankDeleg } from "@/pillars/schemas/types";
+import { makeInitial as initIdea } from "@/pillars/schemas/idea";
+import { makeInitial as initRecords } from "@/pillars/schemas/records";
 import { makeInitial as blankAmPm } from "@/pillars/schemas/pillar-3";
 import { useDialog } from "@/components/dialog";
 
@@ -140,7 +144,7 @@ export default function Pillar8() {
     return (
       <PillarScaffold pillar={pillar} saveStatus={status} onRetrySave={retrySave}>
         <Hierarchy biz={eBiz} dept={eDept} sys={eSys} onBack={() => setEditing(null)} />
-        <SystemDetail sys={eSys} biz={eBiz} dept={eDept} updateSys={updateSys} />
+        <SystemBody sys={eSys} biz={eBiz} dept={eDept} updateSys={updateSys} />
       </PillarScaffold>
     );
   }
@@ -590,6 +594,70 @@ function DeptBlock({
   );
 }
 /* ---------- system detail: 12 headings ---------- */
+
+/**
+ * Which editor a SYSTEM opens, decided by the department it sits in.
+ *
+ * Loyalty and AI open the idea board, Record Keeping the A-Z index; everything
+ * else gets the ordinary 12-section editor. Mirrors the phone's `SystemBody`,
+ * and it is why `System.idea` / `System.records` exist in the shared schema.
+ *
+ * Both sub-states are allocated on FIRST WRITE (`?? initIdea()`), so a system
+ * nobody has opened stays small in the blob.
+ */
+function SystemBody({ sys, biz, dept, updateSys }: { sys: System; biz: Business; dept: Department; updateSys: (m: (s: System) => void) => void }) {
+  const kind = deptKind(dept.name);
+
+  if (kind === "idea-loyalty" || kind === "idea-ai") {
+    const loyalty = kind === "idea-loyalty";
+    return (
+      <IdeaBoard
+        state={sys.idea ?? initIdea()}
+        update={(mut) => updateSys((s) => { s.idea = s.idea ?? initIdea(); mut(s.idea); })}
+        accent={loyalty ? Accents.plum : Accents.teal}
+        cfg={loyalty ? LOYALTY_CFG : AI_CFG}
+      />
+    );
+  }
+  if (kind === "records") {
+    return (
+      <RecordsBoard
+        state={sys.records ?? initRecords()}
+        update={(mut) => updateSys((s) => { s.records = s.records ?? initRecords(); mut(s.records); })}
+        accent={Accents.brown}
+      />
+    );
+  }
+  return <SystemDetail sys={sys} biz={biz} dept={dept} updateSys={updateSys} />;
+}
+
+/** Wording that differs between the two idea boards, kept verbatim from the
+ *  phone so the same system reads identically on both. */
+const LOYALTY_CFG: IdeaCfg = {
+  mark: "♥",
+  iodSmall: "the one loyalty idea to act on today",
+  iodPh: "Today's big loyalty idea…",
+  listName: "Loyalty Ideas",
+  fileVerb: "File",
+  archiveTitle: "Idea Bank, Filed",
+  archiveEmpty: "No ideas in the bank yet.",
+  archiveClear: "Clear idea bank",
+  clearConfirm: "Delete every idea in the Idea Bank?",
+  datePrefix: "Filed ",
+};
+
+const AI_CFG: IdeaCfg = {
+  mark: "⚡",
+  iodSmall: "one AI idea for automation, speed or quality",
+  iodPh: "Today's AI idea…",
+  listName: "AI Ideas",
+  fileVerb: "Implement",
+  archiveTitle: "Implemented Ideas",
+  archiveEmpty: "Nothing implemented yet, tick ⚡ an idea and hit Implement.",
+  archiveClear: "Clear implemented list",
+  clearConfirm: "Delete the whole implemented ideas list?",
+  datePrefix: "Implemented on ",
+};
 
 function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Business; dept: Department; updateSys: (m: (s: System) => void) => void }) {
   /* Called here rather than threaded down from the screen: this is the only
