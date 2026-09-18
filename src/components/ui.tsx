@@ -265,14 +265,66 @@ export function useAutoGrow(value: string, maxPx = 320) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Reset first, or the box can only ever get taller: scrollHeight includes
-    // the height we set last time.
-    el.style.height = "auto";
-    const next = Math.min(el.scrollHeight, maxPx);
-    el.style.height = `${next}px`;
-    el.style.overflowY = el.scrollHeight > maxPx ? "auto" : "hidden";
+    const fit = () => {
+      // Reset first, or the box can only ever get taller: scrollHeight includes
+      // the height we set last time.
+      el.style.height = "auto";
+      const next = Math.min(el.scrollHeight, maxPx);
+      el.style.height = `${next}px`;
+      el.style.overflowY = el.scrollHeight > maxPx ? "auto" : "hidden";
+    };
+    fit();
+    // Wrapping depends on WIDTH too: a phone rotating, or the window narrowing,
+    // re-wraps the same text onto more lines.
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(fit);
+    ro?.observe(el);
+    return () => ro?.disconnect();
   }, [value, maxPx]);
   return ref;
+}
+
+/**
+ * A one-line box that grows as the words run on.
+ *
+ * Zaffar: "all boxes to have only one line but these boxes must expand if we
+ * write more". A plain `<input>` clips a long task mid-word and hides the rest,
+ * so this is a `<textarea rows={1}>` that WRAPS instead — while still behaving
+ * like a single-line field: Enter never inserts a line break, and a pasted
+ * break becomes a space, so what is stored is the same one-line string an
+ * `<input>` would have stored (the phone app reads these same fields).
+ */
+export function GrowField({
+  value,
+  onChange,
+  onEnter,
+  className,
+  style,
+  ...rest
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  /** What Enter does, where an `<input>` used to submit on Enter. */
+  onEnter?: () => void;
+} & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange" | "rows">) {
+  const grow = useAutoGrow(value);
+  return (
+    <textarea
+      {...rest}
+      ref={grow}
+      rows={1}
+      value={value}
+      onChange={(e) => onChange(e.target.value.replace(/\r?\n/g, " "))}
+      onKeyDown={(e) => {
+        rest.onKeyDown?.(e);
+        if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+          e.preventDefault();
+          onEnter?.();
+        }
+      }}
+      className={cx("block resize-none overflow-hidden leading-snug", className)}
+      style={style}
+    />
+  );
 }
 
 /* ---------------- Section label + hint ---------------- */
@@ -305,13 +357,13 @@ export function MiwBox({ accent, children, filled }: { accent: string; children:
   );
 }
 
-export function AddButton({ label, accent, onClick, disabled, dimmed }: { label: string; accent: string; onClick: () => void; disabled?: boolean; /** Greys the button out but keeps it clickable, so `onClick` can explain why it isn't available yet. */ dimmed?: boolean }) {
+export function AddButton({ label, accent, onClick, disabled, dimmed, compact }: { label: string; accent: string; onClick: () => void; disabled?: boolean; /** Greys the button out but keeps it clickable, so `onClick` can explain why it isn't available yet. */ dimmed?: boolean; /** Sized to its label, for a header row, instead of full width. */ compact?: boolean }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       aria-disabled={dimmed || undefined}
-      className={`mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border-[1.5px] px-4 py-3 text-[13.5px] font-semibold transition-colors disabled:opacity-45${dimmed ? " opacity-50" : ""}`}
+      className={`${compact ? "tap-row shrink-0 rounded-lg px-3 py-1.5 text-[12.5px]" : "mt-2 w-full rounded-xl px-4 py-3 text-[13.5px]"} flex items-center justify-center gap-1.5 border-[1.5px] font-semibold transition-colors disabled:opacity-45${dimmed ? " opacity-50" : ""}`}
       style={{ borderColor: accent, color: accent, backgroundColor: `${accent}10` }}
     >
       <span className="text-lg leading-none">+</span>

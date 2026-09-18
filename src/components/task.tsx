@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Close } from "@/components/icons";
 import { Accents, FIELD_EMPTY, FIELD_RED, FIELD_RED_BORDER, HEADING } from "@/lib/pillars";
 import { friendlyISO, shortDate } from "@/lib/dates";
-import { cx } from "@/components/ui";
+import { cx, GrowField } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
 
 /** WCAG 2.2 target size, in px. Matches `.tap-target` / `.tap-row` in
@@ -75,6 +75,8 @@ export function TaskRow({
   who,
   onChangeWho,
   noStrike,
+  slot,
+  below,
 }: {
   accent: string;
   symbol: ReactNode;
@@ -91,35 +93,59 @@ export function TaskRow({
   who?: string;
   onChangeWho?: (v: string) => void;
   noStrike?: boolean;
+  /** A FIXED slot (work of the day, do-or-die n): deleting clears its text
+   *  rather than removing the row, and the confirm says so. */
+  slot?: boolean;
+  /** Rendered under the row, lined up with the text — e.g. a deadline. */
+  below?: ReactNode;
 }) {
   const dialog = useDialog();
   const filled = value.trim().length > 0;
   const struck = done && filled && !noStrike;
+
+  /* Zaffar: "anything we delete, it must give us a second chance". Asked HERE,
+     in the one shared row, so no pillar can wire a delete that skips it. A row
+     with nothing written in it loses nothing, so it goes without asking. */
+  const confirmThen = async (run: () => void) => {
+    if (!filled && !(who ?? "").trim()) return run();
+    const quoted = value.trim().length > 60 ? `${value.trim().slice(0, 60)}…` : value.trim();
+    const ok = await dialog.confirm(slot ? "Clear this task?" : "Delete this task?", {
+      body: `"${quoted}" ${slot ? "will be cleared, the slot stays." : "will be removed."}`,
+      confirmLabel: slot ? "Clear" : "Delete",
+      danger: true,
+    });
+    if (ok) run();
+  };
+
   return (
-    <div className={cx("flex items-center gap-2.5 py-2", !noBorder && "border-b border-line")}>
-      <span className="font-heading text-[15px] w-5 text-center shrink-0" style={{ color: accent }}>
+    <div className={cx("py-2", !noBorder && "border-b border-line")}>
+    {/* Wraps so that on a phone "To whom?" can drop under the task (see below)
+        instead of squeezing a long delegation into a narrow column. */}
+    <div className="flex flex-wrap items-start gap-x-2.5 gap-y-1.5">
+      <span className="font-heading text-[15px] w-5 text-center shrink-0 pt-2" style={{ color: accent }}>
         {symbol}
       </span>
       {/* a done task can always be un-checked; empty ones just can't be checked */}
-      <Checkbox
-        checked={done}
-        onToggle={onToggle}
-        disabled={!filled && !done}
-        // The task's own words, so a screen reader says WHICH task is ticked
-        // rather than just "pressed". `symbol` is the row marker (1..5, ✦).
-        label={filled ? `Mark done: ${value.trim()}` : `Mark done: ${placeholder ?? symbol}`}
-      />
+      <span className="shrink-0 pt-1.5">
+        <Checkbox
+          checked={done}
+          onToggle={onToggle}
+          disabled={!filled && !done}
+          // The task's own words, so a screen reader says WHICH task is ticked
+          // rather than just "pressed". `symbol` is the row marker (1..5, ✦).
+          label={filled ? `Mark done: ${value.trim()}` : `Mark done: ${placeholder ?? symbol}`}
+        />
+      </span>
       {/* The pillar rule: red while it still wants writing, green once written
           in. Green rather than transparent when filled — a transparent fill
           paints `--on-card` ink on the navy card at 1.30:1. */}
       <div className="flex-1 min-w-0 rounded-lg px-2" style={{ backgroundColor: filled ? FIELD_EMPTY : FIELD_RED }}>
-        <input
+        {/* One line that grows: a long task WRAPS instead of being clipped
+            mid-word behind the box edge. */}
+        <GrowField
           value={value}
-          // A long value is clipped mid-character with no ellipsis, so hovering
-          // is the only way to read the rest without clicking in.
-          title={value.trim() || undefined}
-          onChange={(e) => {
-            const v = e.target.value;
+          aria-label={placeholder}
+          onChange={(v) => {
             onChange(v);
             // clearing a checked task un-checks it (else it's stuck + inflates the counter)
             if (!v.trim() && done) onToggle(false);
@@ -143,10 +169,11 @@ export function TaskRow({
         />
       </div>
       {showWho ? (
-        <input
+        <GrowField
           value={who ?? ""}
-          onChange={(e) => onChangeWho?.(e.target.value)}
+          onChange={(v) => onChangeWho?.(v)}
           placeholder="To whom?"
+          aria-label="To whom?"
           autoCorrect="off"
           spellCheck={false}
           /* Same rule as every other writing surface: the ink is `--on-card`, not
@@ -154,17 +181,19 @@ export function TaskRow({
              sit at 1.6-2.2:1 on the empty green wash — Pillar 1's delegation rows
              pass BLUE here, which was 1.65:1 and unreadable while empty. */
           style={{ borderColor: accent, backgroundColor: (who ?? "").trim() ? FIELD_EMPTY : FIELD_RED }}
-          className="w-24 shrink-0 border-b py-1 text-[13px] text-on-card outline-none placeholder:text-placeholder"
+          /* Phone: its own line under the task, lined up with the text. From
+             `sm` up: beside the task, as before. */
+          className="order-last ml-[66px] basis-[calc(100%-66px)] border-b px-1 py-1 text-[13px] text-on-card outline-none placeholder:text-placeholder sm:order-none sm:ml-0 sm:mt-1 sm:basis-28 sm:shrink-0"
         />
       ) : null}
       {done && actions ? (
-        <div className="flex gap-1.5 shrink-0">
+        <div className="flex gap-1.5 shrink-0 pt-1">
           {actions.map((a) => (
             /* `tap-row` carries the WCAG 2.2 minimum. These were 21x13 — about a
                quarter of the required area, on a destructive control. */
             <button
               key={a.label}
-              onClick={a.onClick}
+              onClick={a.kind === "delete" ? () => void confirmThen(a.onClick) : a.onClick}
               className="tap-row rounded border-[1.5px] px-2 text-[11px] font-semibold"
               style={{ borderColor: a.kind === "delete" ? Accents.red : "var(--ink)", color: a.kind === "delete" ? Accents.red : "var(--ink)" }}
             >
@@ -174,13 +203,15 @@ export function TaskRow({
         </div>
       ) : onDelete ? (
         <button
-          onClick={onDelete}
-          className="shrink-0 tap-target text-muted"
+          onClick={() => void confirmThen(onDelete)}
+          className="shrink-0 tap-target text-muted mt-1"
           aria-label="Remove"
         >
           <Close size={13} />
         </button>
       ) : null}
+    </div>
+    {below ? <div className="mt-1.5 pl-[66px]">{below}</div> : null}
     </div>
   );
 }

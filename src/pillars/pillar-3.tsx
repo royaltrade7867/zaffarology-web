@@ -137,14 +137,14 @@ export default function Pillar3() {
       <section className="mb-8">
         <SectionLabel text="Work of the Day" small="only one, the money move that matters most" />
         <MiwBox accent={RED} filled={!!state.work.text.trim()}>
-          <TaskRow accent={RED} symbol="★" value={state.work.text} done={state.work.done} onChange={(t) => update((s) => { s.work.text = t; })} onToggle={(v) => update((s) => { s.work.done = v; })} placeholder="If you do nothing else, do this…" noBorder actions={workActions()} />
+          <TaskRow accent={RED} symbol="★" value={state.work.text} done={state.work.done} onChange={(t) => update((s) => { s.work.text = t; })} onToggle={(v) => update((s) => { s.work.done = v; })} placeholder="If you do nothing else, do this…" noBorder slot actions={workActions()} />
         </MiwBox>
       </section>
 
       <section className="mb-8">
         <SectionLabel text="Do or Die Tasks" small="max 5, no more" color={RED} />
         {state.dod.map((t, i) => (
-          <TaskRow key={i} accent={RED} symbol={i + 1} value={t.text} done={t.done} onChange={(text) => update((s) => { s.dod[i].text = text; })} onToggle={(v) => update((s) => { s.dod[i].done = v; })} actions={dodActions(i)} placeholder={`Do-or-die task ${i + 1}`} locked={i > 0 && !state.dod[i - 1].text.trim()} />
+          <TaskRow key={i} accent={RED} symbol={i + 1} value={t.text} done={t.done} onChange={(text) => update((s) => { s.dod[i].text = text; })} onToggle={(v) => update((s) => { s.dod[i].done = v; })} actions={dodActions(i)} slot placeholder={`Do-or-die task ${i + 1}`} locked={i > 0 && !state.dod[i - 1].text.trim()} />
         ))}
         <Footer progress={`${dodDone} / 5 do-or-die done`} resetLabel="New day (reset)" onReset={newDay} />
       </section>
