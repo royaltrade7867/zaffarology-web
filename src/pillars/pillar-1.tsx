@@ -10,6 +10,9 @@ import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, MiwBox, SectionLabel, AddButton, TextArea, CharsLeft, GrowField } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
 import { DelegateSection } from "@/components/delegate-section";
+import { usePartners, useOutgoingAssignments, type Partner } from "@/lib/use-connections";
+import { assignTask, unassignTask } from "@/lib/connections-api";
+import { apiErrorMessage } from "@/lib/api";
 import {
   TaskRow,
   Footer,
@@ -108,6 +111,15 @@ export default function Pillar1() {
   const [dir, setDir] = useState<"next" | "prev" | null>(null);
   const touch = useRef<{ x: number; y: number } | null>(null);
 
+  /* Tagging for "Delegate or Follow Up". Every hook here sits ABOVE the
+     `if (!loaded)` return below — a hook after an early return is a different
+     hook order on the two paths, which React rejects at runtime. That exact
+     mistake has shipped in this codebase before. */
+  const { partners } = usePartners();
+  const [assignTick, setAssignTick] = useState(0);
+  const [assigning, setAssigning] = useState(false);
+  const outgoing = useOutgoingAssignments(pillar.key, assignTick);
+
   useEffect(() => {
     if (!loaded) return;
     const today = todayKey();
@@ -139,6 +151,61 @@ export default function Pillar1() {
     if (!text.trim()) return void dialog.alert("This task is empty, nothing to file.");
     update((s) => { s.filed = [{ text, section, date: shortDate() }, ...s.filed]; });
     clear();
+  };
+
+  /**
+   * Tag a connection on a delegated row. Same contract as Pillar 4: the tag IS
+   * the assignment, so it is sent immediately, and `whoUserId` is only written
+   * once the server has accepted — a failure must not leave a tag pointing at
+   * an assignment that does not exist.
+   */
+  const onTagDeleg = async (i: number, partner: Partner | null, notify = true) => {
+    if (assigning) return;
+    const row = g.deleg[i];
+    if (!row) return;
+    const sent = outgoing.byTaskId[row.id];
+
+    if (!partner) {
+      if (sent) {
+        setAssigning(true);
+        try {
+          await unassignTask(sent.id);
+          setG((x) => { if (x.deleg[i]) x.deleg[i].whoUserId = ""; });
+          setAssignTick((t) => t + 1);
+        } catch (err) {
+          void dialog.alert(apiErrorMessage(err, "Couldn't unassign. Please try again."));
+        } finally {
+          setAssigning(false);
+        }
+        return;
+      }
+      setG((x) => { if (x.deleg[i]) x.deleg[i].whoUserId = ""; });
+      return;
+    }
+
+    if (!row.text.trim()) {
+      void dialog.alert("Write what you're delegating first, so they know what they're being asked to do.");
+      return;
+    }
+    setAssigning(true);
+    try {
+      await assignTask({
+        assigneeUserId: partner.userId,
+        pillarKey: pillar.key,
+        taskId: row.id,
+        title: row.text,
+        due: row.due,
+        notify,
+      });
+      setG((x) => { if (x.deleg[i]) x.deleg[i].whoUserId = String(partner.userId); });
+      setAssignTick((t) => t + 1);
+    } catch (err) {
+      // Leave the typed name alone — losing what they wrote would be worse
+      // than a failed assignment they can retry.
+      void dialog.alert(apiErrorMessage(err, "Couldn't assign that task. Please try again."));
+    } finally {
+      setAssigning(false);
+    }
   };
 
   // A new goal can only be started once the LAST goal in the list is filled in —
@@ -420,6 +487,19 @@ export default function Pillar1() {
         onEdit={(i, mut) => setG((x) => { if (x.deleg[i]) mut(x.deleg[i]); })}
         onRemove={(i) => setG((x) => { x.deleg.splice(i, 1); })}
         onFile={fileDeleg}
+        partners={partners}
+        onTag={onTagDeleg}
+        statusNoteFor={(d) => {
+          const sent = outgoing.byTaskId[d.id];
+          if (!sent) return null;
+          const extra = outgoing.extraCount(d.id);
+          return (
+            (sent.status === "completed"
+              ? `✓ ${sent.assignee_name} marked this done`
+              : `Sent to ${sent.assignee_name}, waiting`) +
+            (extra ? ` · +${extra} more assigned` : "")
+          );
+        }}
       />
 
       {/* Previous days, grouped per goal/project */}

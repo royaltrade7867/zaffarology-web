@@ -34,10 +34,6 @@ function TeamInner() {
       <p className="text-[12px] tracking-widest font-heading text-gold">YOUR TEAM</p>
       <h1 className="font-heading text-[28px] text-ink">Team progress</h1>
       <p className="text-dim">
-        {/* The separator needs its own spaces: `{code} · text` renders the code
-            hard against the dot when the value has no trailing space. */}
-        Invite code: {company?.inviteCode ?? "N/A"}
-        {" · "}
         Each member&apos;s pillar progress updates as they work.
       </p>
 
@@ -46,7 +42,7 @@ function TeamInner() {
       ) : error ? (
         <p className="text-danger mt-4">{error}</p>
       ) : !data || data.members.length <= 1 ? (
-        <p className="text-muted mt-6">No team members yet. Share your invite code so they can join.</p>
+        <p className="text-muted mt-6">No team members yet. Add people by email in Connections above.</p>
       ) : (
         <div className="mt-5 rounded-xl border border-line">
           {/* On a phone the table scrolls INSIDE this box — the page itself

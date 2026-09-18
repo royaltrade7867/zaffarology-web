@@ -78,21 +78,10 @@ function ProfileInner() {
           can change about it on the right. Stacked full-width buttons in an
           840px column were a phone's settings screen. */}
       <div className="mt-8 grid gap-x-10 gap-y-8 lg:grid-cols-2">
+        {/* The invite-code card was removed with the company sign-up paths: a
+            code is no use when nobody can choose "Join a company" any more.
+            Teams are built from Connections, which connect on the spot. */}
         <div className="space-y-5">
-          {company && user?.role === "company_admin" ? (
-            <div className="rounded-2xl border-[1.5px] border-gold bg-surface p-5">
-              <h2 className="font-heading text-[12px] uppercase tracking-widest text-gold">
-                Team invite code
-              </h2>
-              <p className="mt-1.5 font-heading text-[26px] tracking-widest text-gold">
-                {company.inviteCode}
-              </p>
-              <p className="mt-1.5 max-w-[44ch] text-[13px] leading-relaxed text-muted">
-                Share this code with your Team Members. They choose &ldquo;Join a company&rdquo; at sign-up.
-              </p>
-            </div>
-          ) : null}
-
           <BillingCard />
         </div>
 

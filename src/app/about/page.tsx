@@ -11,6 +11,7 @@ import {
   Globe,
   Instagram,
   LinkedIn,
+  Threads,
   TikTok,
   XTwitter,
   YouTube,
@@ -26,6 +27,7 @@ const SOCIAL_LINKS = [
   { label: "LinkedIn", url: "https://www.linkedin.com/in/zaffar-khan/", Icon: LinkedIn },
   { label: "YouTube", url: "https://www.youtube.com/@Zaffarology101", Icon: YouTube },
   { label: "X (Twitter)", url: "https://x.com/zaffarology101", Icon: XTwitter },
+  { label: "Threads", url: "https://www.threads.com/@zaffarology101", Icon: Threads },
 ];
 
 const CONTACT = [
@@ -109,7 +111,11 @@ export default function About() {
 
       <div className="mt-5">
         <h3 className="font-heading text-[14px] text-heading mb-2">Follow Zaffar</h3>
-        <div className="flex flex-wrap gap-2">
+        {/* Four to a row from `sm`, two on a phone. A wrapping flex row sized
+            each pill to its label, so the rows ended ragged and the count per
+            row changed with the text. A grid gives every link the same width
+            and a straight right edge. */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[...CONTACT, ...SOCIAL_LINKS].map(({ url, label, Icon }) => (
             <a
               key={url}
@@ -118,12 +124,14 @@ export default function About() {
               rel="noreferrer noopener"
               /* `noopener` as well as `noreferrer`: without it the opened tab
                  gets a handle on this one via `window.opener`. */
-              className="flex min-h-[36px] items-center gap-2 rounded-full border border-line bg-surface pl-3 pr-3.5 text-[13px] font-semibold text-heading transition-colors hover:bg-line-soft"
+              /* `min-w-0` + `truncate` on the label: without them a long name
+                 widens its own column and the four stop being equal. */
+              className="flex min-h-[36px] min-w-0 items-center gap-2 rounded-full border border-line bg-surface px-3 text-[13px] font-semibold text-heading transition-colors hover:bg-line-soft"
             >
               {/* The label is right there, so the mark is decorative — a `title`
                   here would make a screen reader read the name twice. */}
               <Icon size={16} className="shrink-0 text-gold" />
-              {label}
+              <span className="truncate">{label}</span>
             </a>
           ))}
         </div>

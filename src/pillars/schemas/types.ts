@@ -20,6 +20,10 @@ export interface Task {
   done: boolean;
 }
 
+/** '' = not yet answered. Mirrors Pillar 4's `Status` exactly, so the two
+ *  screens can share the same Completed / Not Completed control. */
+export type DelegStatus = '' | 'completed' | 'notdone';
+
 export interface Deleg {
   /** Stable identity. These are spliced by index, so a position is NOT an
    *  identity — a task assignment has to point at this instead. Minted by
@@ -32,6 +36,23 @@ export interface Deleg {
   /** User id of a tagged connection, '' when the name is just typed text.
    *  Optional by design: tagging never replaces free-typed names. */
   whoUserId: string;
+
+  /* --- the huddle flow, added 18 Sep 2026 -------------------------------
+     Zaffar asked for delegate-or-follow-up to work like the 2-minute huddle:
+     answer Completed or Not Completed, and if not, give a NEW DATE rather than
+     an excuse. These mirror Pillar 4's `Item` field-for-field so the same
+     controls drive both.
+
+     `done` is kept and still drives the tick and the carry-over rule; `status`
+     is the richer answer. A row is complete when EITHER says so, so blobs
+     written before this existed keep working. */
+  status: DelegStatus;
+  /** When it was actually finished. Only meaningful with status 'completed'. */
+  completedOn: string;
+  /** The re-committed date. Only meaningful with status 'notdone'. */
+  newDate: string;
+  /** What happens next — deliberately not "why it didn't happen". */
+  note: string;
 }
 
 /** A snapshot of one closing day. `date` is always ISO `YYYY-MM-DD`. */
@@ -62,15 +83,27 @@ export const fixTask = (t: unknown): Task => {
   return { text: asStr(o.text), done: asBool(o.done) };
 };
 
+export const asDelegStatus = (v: unknown): DelegStatus =>
+  v === 'completed' || v === 'notdone' ? v : '';
+
 export const fixDeleg = (d: unknown): Deleg => {
   const o = asObj(d);
+  const status = asDelegStatus(o.status);
+  const done = asBool(o.done);
   return {
     id: withId(o.id),
     text: asStr(o.text),
     who: asStr(o.who),
     due: asStr(o.due),
-    done: asBool(o.done),
+    /* Kept in step with `status`, in BOTH directions. An old blob has `done`
+       and no `status`; a row completed through the new control has `status`
+       and must still show a tick on a client that only reads `done`. */
+    done: done || status === 'completed',
     whoUserId: asStr(o.whoUserId),
+    status: status || (done ? 'completed' : ''),
+    completedOn: asStr(o.completedOn),
+    newDate: asStr(o.newDate),
+    note: asStr(o.note),
   };
 };
 
@@ -83,6 +116,10 @@ export const blankDeleg = (): Deleg => ({
   due: '',
   done: false,
   whoUserId: '',
+  status: '',
+  completedOn: '',
+  newDate: '',
+  note: '',
 });
 
 /** Exactly `n` tasks — pads short arrays and truncates long ones, because several
