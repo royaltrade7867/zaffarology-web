@@ -8,7 +8,8 @@
  * paired with a `satisfied` verdict and free-text remarks — effectively named
  * performance judgments. Anything that exports it is exporting that.
  */
-import { asStr, asYN, objArr, strArr, withId, type Loose, type YN } from './types';
+import { asObj, asStr, asYN, fixDeleg, objArr, strArr, withId, type Deleg, type Loose, type YN } from './types';
+import { normalize as normP3, type P3State } from './pillar-3';
 import { makeInitial as initIdea, normalize as normIdea, type IdeaState } from './idea';
 import { makeInitial as initRecords, normalize as normRecords, type P7State } from './records';
 
@@ -135,12 +136,31 @@ export interface System {
   records?: P7State;
 }
 
+/** A filed (chased and put away) delegation in a business's Delegation department. */
+export interface DelegFiled {
+  text: string;
+  date: string;
+}
+
+/** The Delegation department's own list — Pillar 1's delegate or follow-up. */
+export interface DelegationBoard {
+  items: Deleg[];
+  filed: DelegFiled[];
+}
+
 export interface Department {
   id: string;
   name: string;
   /** "D1", "D2", … unique within the whole pillar, like system numbers. */
   num: string;
   systems: System[];
+  /**
+   * The "AM Planning & PM Achievement ($)" department's daily board — the
+   * same shape as Pillar 3, one per business. Only present once used.
+   */
+  amPm?: P3State;
+  /** The "Delegation" department's delegate / follow-up list. Only present once used. */
+  delegation?: DelegationBoard;
 }
 
 export interface Business {
@@ -193,10 +213,13 @@ export const numOf = (raw: unknown): number => {
  * renaming a department would change; a renamed department reverts to the
  * ordinary 12-section system, which is the honest behaviour.
  */
-export type DeptKind = 'systems' | 'idea-loyalty' | 'idea-ai' | 'records';
+export type DeptKind = 'systems' | 'am-pm' | 'delegation' | 'idea-loyalty' | 'idea-ai' | 'records';
 
 export const deptKind = (name: string): DeptKind => {
   const n = name.trim().toLowerCase();
+  // Zaffar, 18 Sep 2026: these two work like Pillar 3 and Pillar 1.
+  if (n === 'am planning & pm achievement ($)' || n === 'am planning & pm achievement') return 'am-pm';
+  if (n === 'delegation') return 'delegation';
   if (n === 'loyalty') return 'idea-loyalty';
   if (n === 'ai') return 'idea-ai';
   if (n === 'record keeping') return 'records';
@@ -390,6 +413,14 @@ const fixSystem = (s: Loose): System => ({
   ...(s.records ? { records: normRecords(s.records as never) } : {}),
 });
 
+const fixDelegation = (v: unknown): DelegationBoard => {
+  const o = asObj(v);
+  return {
+    items: objArr(o.items, fixDeleg),
+    filed: objArr(o.filed, (f) => ({ text: asStr(f.text), date: asStr(f.date) })),
+  };
+};
+
 const fixDept = (d: Loose): Department => ({
   id: withId(d.id),
   name: asStr(d.name),
@@ -397,6 +428,10 @@ const fixDept = (d: Loose): Department => ({
   // assigns one, so the value is only ever missing in transit.
   num: asStr(d.num),
   systems: objArr(d.systems, fixSystem),
+  /* Carried through explicitly (this builder rebuilds from a whitelist) and
+     only when present, so a department that never used its board stays small. */
+  ...(d.amPm ? { amPm: normP3(d.amPm as never) } : {}),
+  ...(d.delegation ? { delegation: fixDelegation(d.delegation) } : {}),
 });
 
 const fixBiz = (b: Loose): Business => ({

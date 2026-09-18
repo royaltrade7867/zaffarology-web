@@ -255,7 +255,7 @@ const uiFiles = [
 /* ----------------------------- input typing ------------------------------ */
 
 {
-  const p3 = read("src/pillars/pillar-3.tsx");
+  const p3 = read("src/components/am-pm-board.tsx");
   // `inputMode="text"` on a money field raises the alphabetic keyboard on a
   // phone, and the field accepted `abc-!@#$` verbatim.
   ck("the money field asks for a number", /inputMode="decimal"/.test(p3));
@@ -330,8 +330,9 @@ const uiFiles = [
   // M11 — silent truncation.
   const ui = read("src/components/ui.tsx");
   ck("a near-full field says how much is left", /export function CharsLeft/.test(ui));
-  for (const f of ["pillar-1", "pillar-2", "pillar-3"]) {
-    ck(`${f} shows the counter`, /<CharsLeft /.test(read(`src/pillars/${f}.tsx`)));
+  // Pillar 3's board (and its counter) lives in the shared AmPmBoard since 18 Sep 2026.
+  for (const [f, file] of [["pillar-1", "src/pillars/pillar-1.tsx"], ["pillar-2", "src/pillars/pillar-2.tsx"], ["pillar-3", "src/components/am-pm-board.tsx"]]) {
+    ck(`${f} shows the counter`, /<CharsLeft /.test(read(file)));
   }
 
   // N1 / N2 — a placeholder-only field announced its own value, or nothing.
@@ -339,7 +340,7 @@ const uiFiles = [
      (ui.match(/aria-label=\{rest\["aria-label"\] \?\? \(label \? undefined : rest\.placeholder\)\}/g) ?? []).length === 2);
 
   // N3 — the AM plan check toggle.
-  const p3 = read("src/pillars/pillar-3.tsx");
+  const p3 = read("src/components/am-pm-board.tsx");
   ck("the achievement toggle is named", /aria-label=\{`\$\{task\.done \? "Achieved" : "Not achieved"\}/.test(p3));
   ck("and exposes its pressed state", /aria-pressed=\{task\.done\}/.test(p3));
 
@@ -355,7 +356,7 @@ const uiFiles = [
 /* -------------------- responsive audit, 13 Sep 2026 ---------------------- */
 
 {
-  const p3 = read("src/pillars/pillar-3.tsx");
+  const p3 = read("src/components/am-pm-board.tsx");
   /* The money field regressed ONCE already: a scripted edit dropped the
      replacement inside a comment, so `inputMode="decimal"` was commented out
      and `inputMode="text"` shipped. Assert on code with comments stripped. */

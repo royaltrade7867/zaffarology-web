@@ -18,6 +18,7 @@ import { readFileSync } from "node:fs";
 
 import {
   asRating,
+  deptKind,
   isStandardDept,
   normalize as normP5,
   ratingToYN,
@@ -96,6 +97,32 @@ ck("a business that already lost a standard department is left as it is", lost.b
 // The rule is by name, never a stored flag the phone could drop.
 ck("no 'standard' flag is written into the blob", !JSON.stringify(p5).includes('"standard"'));
 
+/* ----------- C1 / C2: the AM-PM and Delegation department boards ----------- */
+
+ck("the AM/PM department is recognised", deptKind("AM Planning & PM Achievement ($)") === "am-pm" && deptKind("am planning & pm achievement") === "am-pm");
+ck("the Delegation department is recognised", deptKind(" Delegation ") === "delegation");
+ck("an ordinary department stays an ordinary one", deptKind("Warehouse") === "systems");
+ck("a department that never used a board saves no board",
+   !("amPm" in p5.businesses[0].departments[0]) && !("delegation" in p5.businesses[0].departments[0]));
+
+const withBoards = trip(normP5, {
+  businesses: [{ id: "b", name: "B", seeded: true, departments: [
+    { id: "am", name: "AM Planning & PM Achievement ($)", systems: [],
+      amPm: { work: { text: "Close the uniform order", done: true }, dod: [{ text: "Call five buyers", done: false }], extra: [], pm: "Closed it", money: "1200", filed: [], day: "2026-09-18", history: [] } },
+    { id: "dg", name: "Delegation", systems: [],
+      delegation: { items: [{ id: "x1", text: "Chase the invoice", who: "Bilal", due: "2026-09-25", done: false, whoUserId: "" }], filed: [{ text: "Old task → Ayesha", date: "17 Sep 2026" }] } },
+  ] }],
+});
+const am = withBoards.businesses[0].departments[0].amPm;
+ck("the AM/PM board round-trips", am?.work.text === "Close the uniform order" && am.work.done && am.pm === "Closed it" && am.money === "1200");
+ck("the AM/PM board always has exactly 5 do-or-die slots", am?.dod.length === 5 && am.dod[0].text === "Call five buyers");
+const dg = withBoards.businesses[0].departments[1].delegation;
+ck("the Delegation list round-trips with who and deadline", dg?.items[0].who === "Bilal" && dg.items[0].due === "2026-09-25");
+ck("the Delegation filed archive round-trips", dg?.filed[0].text === "Old task → Ayesha");
+const amSrc = readFileSync("src/pillars/pillar-5-business-systems.tsx", "utf8");
+ck("Pillar 5 renders Pillar 3's board, not a copy", /<AmPmBoard/.test(amSrc) && /<AmPmBoard/.test(readFileSync("src/pillars/pillar-3.tsx", "utf8")));
+ck("Pillar 5 renders Pillar 1's delegate list, not a copy", /<DelegateSection/.test(amSrc));
+
 /* ------------------------- Pillar 1 data safety ------------------------- */
 
 const oldP1 = {
@@ -115,13 +142,15 @@ ck("the goal is stored exactly as typed", p1.goals[0].goal === "grow the bakery"
 const p1src = readFileSync("src/pillars/pillar-1.tsx", "utf8");
 const p5src = readFileSync("src/pillars/pillar-5-business-systems.tsx", "utf8");
 const taskSrc = readFileSync("src/components/task.tsx", "utf8");
+const delegSrc = readFileSync("src/components/delegate-section.tsx", "utf8");
 
 ck("goal capitals are CSS, never written into state",
    /className="[^"]*\buppercase\b/.test(p1src) && !/x\.goal = [^;]*toUpperCase/.test(p1src));
 ck("the goal-name tab strip is gone", !p1src.includes('role="tablist"'));
-ck("delegations have a deadline bound to `due`", /x\.deleg\[i\]\.due = iso/.test(p1src));
-ck("delegate add button wording", p1src.includes('label="+ Delegate task or follow-up"'));
-ck("delegate placeholder wording", p1src.includes('placeholder="What would you like to delegate?"'));
+ck("delegations have a deadline bound to `due`", /x\.due = iso/.test(delegSrc));
+ck("delegate add button wording", delegSrc.includes('label="+ Delegate task or follow-up"'));
+ck("delegate placeholder wording", delegSrc.includes('placeholder="What would you like to delegate?"'));
+ck("Pillar 1 renders the shared delegate list", /<DelegateSection/.test(p1src));
 ck("the shared task row confirms before any delete", /confirmThen\(onDelete\)/.test(taskSrc) && /a\.kind === "delete" \? \(\) => void confirmThen/.test(taskSrc));
 ck("\"Schedule another training\" is gone", !/Schedule another training/.test(p5src));
 ck("Yes/No verdicts replaced by the four boxes", !/<YesNoRow/.test(p5src) && (p5src.match(/<RatingRow /g) ?? []).length === 3);

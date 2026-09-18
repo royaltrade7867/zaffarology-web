@@ -4,11 +4,15 @@ import { useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Close } from "@/components/icons";
 
 import { pillarByNumber, Accents, HEADING, FIELD_EMPTY } from "@/lib/pillars";
-import { newId } from "@/lib/dates";
+import { newId, shortDate } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, SectionLabel, AddButton, capFirst, useAutoGrow, GrowField } from "@/components/ui";
-import { PersonField, DateField, PassNote } from "@/components/task";
+import { PersonField, DateField, PassNote, FiledBox } from "@/components/task";
+import { AmPmBoard } from "@/components/am-pm-board";
+import { DelegateSection } from "@/components/delegate-section";
+import { blankDeleg } from "@/pillars/schemas/types";
+import { makeInitial as blankAmPm } from "@/pillars/schemas/pillar-3";
 import { useDialog } from "@/components/dialog";
 
 /**
@@ -28,6 +32,7 @@ import {
   blankPair,
   blankSystem,
   deptAccent,
+  deptKind,
   isStandardDept,
   makeInitial,
   normalize as normalizeP8,
@@ -38,6 +43,7 @@ import {
   systemNum,
   type Business,
   type Department,
+  type DelegationBoard,
   type EffortPair,
   type Evaluation,
   type P8State,
@@ -363,7 +369,10 @@ function DeptBlock({
   dialog: ReturnType<typeof useDialog>;
 }) {
   const count = dept.systems.length;
-  const sub = `${count} ${count === 1 ? "system" : "systems"}`;
+  /** AM Planning & PM Achievement and Delegation carry their own board. */
+  const kind = deptKind(dept.name);
+  const board = kind === "am-pm" ? "Daily AM / PM board" : kind === "delegation" ? "Delegate or follow-up" : "";
+  const sub = `${board ? `${board} · ` : ""}${count} ${count === 1 ? "system" : "systems"}`;
   /** One of the five every business runs: no delete control at all. */
   const standard = isStandardDept(dept.name);
   const sys = count ? dept.systems[Math.min(sysIdx, count - 1)] : null;
@@ -372,6 +381,20 @@ function DeptBlock({
     const b = st.businesses.find((x) => x.id === biz.id);
     const d = b?.departments.find((x) => x.id === dept.id);
     if (d) mut(d);
+  };
+
+  /* The boards are created on first write, so a department nobody has used
+     adds nothing to the saved blob. */
+  const deleg: DelegationBoard = dept.delegation ?? { items: [], filed: [] };
+  const inDeleg = (mut: (b: DelegationBoard) => void) =>
+    update((st) => inDept(st, (d) => { if (!d.delegation) d.delegation = { items: [], filed: [] }; mut(d.delegation); }));
+  const fileDeleg = (i: number) => {
+    const d = deleg.items[i];
+    if (!d?.text.trim()) return void dialog.alert("This task is empty, nothing to file.");
+    inDeleg((b) => {
+      b.filed = [{ text: d.text + (d.who ? ` → ${d.who}` : ""), date: shortDate() }, ...b.filed];
+      b.items.splice(i, 1);
+    });
   };
 
   return (
@@ -432,6 +455,42 @@ function DeptBlock({
         /* The rule carries the DEPARTMENT's colour, so the systems underneath
            are visibly tied to the row that opened them. */
         <div className="border-t border-line px-3 py-3">
+          {/* Zaffar, 18 Sep 2026: this department works like Pillar 3 — the
+              same board, one per business. */}
+          {kind === "am-pm" ? (
+            <div className="mb-3 rounded-xl border border-line p-3 sm:p-4">
+              <AmPmBoard
+                state={dept.amPm ?? blankAmPm()}
+                update={(mut) => update((st) => inDept(st, (d) => { if (!d.amPm) d.amPm = blankAmPm(); mut(d.amPm); }))}
+              />
+            </div>
+          ) : null}
+          {/* …and this one like Pillar 1's delegate or follow-up. */}
+          {kind === "delegation" ? (
+            <div className="mb-3 rounded-xl border border-line p-3 sm:p-4">
+              <DelegateSection
+                items={deleg.items}
+                onAdd={() => inDeleg((b) => { b.items.push(blankDeleg()); })}
+                onEdit={(i, mut) => inDeleg((b) => { if (b.items[i]) mut(b.items[i]); })}
+                onRemove={(i) => inDeleg((b) => { b.items.splice(i, 1); })}
+                onFile={fileDeleg}
+              />
+              <FiledBox
+                title="Filed Tasks"
+                empty="Nothing filed yet."
+                clearLabel="Clear all filed"
+                hasItems={deleg.filed.length > 0}
+                onClear={async () => { if (await dialog.confirm("Delete everything in the filed archive?", { confirmLabel: "Delete all", danger: true })) inDeleg((b) => { b.filed = []; }); }}
+              >
+                {deleg.filed.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2.5 py-2 border-b border-line">
+                    <span className="min-w-0 flex-1 break-words text-[13px] text-ink">{f.text}</span>
+                    <span className="text-[11px] text-muted">{f.date}</span>
+                  </div>
+                ))}
+              </FiledBox>
+            </div>
+          ) : null}
           {/* The systems sit in their own bordered box inside the department. */}
           <div className="rounded-xl border border-line p-3">
           <p className="mb-2 font-heading text-[11px] tracking-[0.14em]" style={{ color: "var(--muted)" }}>SYSTEMS</p>

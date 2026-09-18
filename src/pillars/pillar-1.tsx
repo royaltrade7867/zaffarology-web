@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, MiwBox, SectionLabel, AddButton, TextArea, CharsLeft, GrowField } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
+import { DelegateSection } from "@/components/delegate-section";
 import {
   TaskRow,
   Footer,
@@ -223,10 +224,10 @@ export default function Pillar1() {
     { label: "Delete", kind: "delete", onClick: () => setG((x) => { x.extra.splice(i, 1); }) },
     { label: "File", kind: "file", onClick: () => fileTask(g.extra[i].text, "extra", () => setG((x) => { x.extra.splice(i, 1); })) },
   ];
-  const delegActions = (i: number): TaskAction[] => [
-    { label: "Delete", kind: "delete", onClick: () => setG((x) => { x.deleg.splice(i, 1); }) },
-    { label: "File", kind: "file", onClick: () => { const d = g.deleg[i]; fileTask(d.text + (d.who ? ` → ${d.who}` : ""), "deleg", () => setG((x) => { x.deleg.splice(i, 1); })); } },
-  ];
+  const fileDeleg = (i: number) => {
+    const d = g.deleg[i];
+    fileTask(d.text + (d.who ? ` → ${d.who}` : ""), "deleg", () => setG((x) => { x.deleg.splice(i, 1); }));
+  };
 
   // Extra-mile: only add another once the last one has text.
   const lastExtraFilled = !g.extra.length || !!g.extra[g.extra.length - 1].text.trim();
@@ -408,40 +409,18 @@ export default function Pillar1() {
         <AddButton label="+ Add extra-mile task" accent={GREEN} dimmed={!lastExtraFilled} onClick={addExtra} />
       </section>
 
-      <section className="mb-8">
-        <SectionLabel text="Delegate or Follow Up" small="tick when you've chased it" color={BLUE} />
-        {g.deleg.map((d, i) => (
-          <TaskRow
-            key={d.id || i}
-            accent={BLUE}
-            symbol="→"
-            value={d.text}
-            done={d.done}
-            onChange={(text) => setG((x) => { x.deleg[i].text = text; })}
-            onToggle={(v) => setG((x) => { x.deleg[i].done = v; })}
-            onDelete={() => setG((x) => { x.deleg.splice(i, 1); })}
-            actions={delegActions(i)}
-            locked={i > 0 && !g.deleg[i - 1].text.trim()}
-            placeholder="What would you like to delegate?"
-            showWho
-            who={d.who}
-            onChangeWho={(text) => setG((x) => { x.deleg[i].who = text; })}
-            /* The deadline. `due` was always in the shared shape, and the
-               reports already print it and count overdue items; this screen
-               simply never let anyone set it. */
-            below={
-              <div className="max-w-[260px]">
-                <DateField label="Deadline" value={d.due} onChange={(iso) => setG((x) => { x.deleg[i].due = iso; })} />
-              </div>
-            }
-          />
-        ))}
-        {/* blankDeleg(), never an inline literal: a new row needs a real `id`
-            (task assignments point at it) plus `due`/`whoUserId`. Without one,
-            `withId` mints a fresh random id on every load until a save lands,
-            so an assignment made on the phone loses its "Sent to X" badge. */}
-        <AddButton label="+ Delegate task or follow-up" accent={BLUE} onClick={() => setG((x) => { x.deleg.push(blankDeleg()); })} />
-      </section>
+      {/* blankDeleg(), never an inline literal: a new row needs a real `id`
+          (task assignments point at it) plus `due`/`whoUserId`. Without one,
+          `withId` mints a fresh random id on every load until a save lands,
+          so an assignment made on the phone loses its "Sent to X" badge. */}
+      <DelegateSection
+        items={g.deleg}
+        accent={BLUE}
+        onAdd={() => setG((x) => { x.deleg.push(blankDeleg()); })}
+        onEdit={(i, mut) => setG((x) => { if (x.deleg[i]) mut(x.deleg[i]); })}
+        onRemove={(i) => setG((x) => { x.deleg.splice(i, 1); })}
+        onFile={fileDeleg}
+      />
 
       {/* Previous days, grouped per goal/project */}
       <DayReport
