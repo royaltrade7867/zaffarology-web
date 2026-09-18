@@ -14,12 +14,41 @@ import { makeInitial as initRecords, normalize as normRecords, type P7State } fr
 
 export type { YN } from './types';
 
+/**
+ * Zaffar's four-box verdict for training, evaluation and fortnightly review.
+ *
+ * It sits ALONGSIDE `satisfied`, never instead of it: `satisfied` is what the
+ * pass/fail notes, the implementation-date gate, the reports and the phone app
+ * all read. Every rating change writes both (see `ratingToYN`), so an app that
+ * only knows `satisfied` still sees the right pass/fail.
+ */
+export type Rating = '' | 'excellent' | 'good' | 'average' | 'poor';
+
+export const RATINGS: Exclude<Rating, ''>[] = ['excellent', 'good', 'average', 'poor'];
+
+export const asRating = (v: unknown): Rating =>
+  v === 'excellent' || v === 'good' || v === 'average' || v === 'poor' ? v : '';
+
+/** EXCELLENT / GOOD pass, AVERAGE / POOR do not (agreed 18 Sep 2026). */
+export const ratingToYN = (r: Rating): YN =>
+  r === 'excellent' || r === 'good' ? 'yes' : r === 'average' || r === 'poor' ? 'no' : '';
+
+/**
+ * The box to show as picked. A record from before ratings existed — or saved by
+ * a build that drops `rating` — has only `satisfied`; it shows as GOOD or POOR,
+ * the nearest box on the right side of pass/fail. Display only: nothing is
+ * written until someone picks a box.
+ */
+export const shownRating = (r: Rating, satisfied: YN): Rating =>
+  r || (satisfied === 'yes' ? 'good' : satisfied === 'no' ? 'poor' : '');
+
 export interface Training {
   id: string;
   trainee: string;
   trainer: string;
   date: string;
   satisfied: YN;
+  rating: Rating;
   remarks: string;
 }
 
@@ -29,6 +58,7 @@ export interface Evaluation {
   evaluator: string;
   evalDate: string;
   satisfied: YN;
+  rating: Rating;
   implDate: string;
   remarks: string;
 }
@@ -39,6 +69,7 @@ export interface Review {
   reviewer: string;
   date: string;
   satisfied: YN;
+  rating: Rating;
   remarks: string;
 }
 
@@ -176,8 +207,9 @@ export const deptKind = (name: string): DeptKind => {
  * The five departments every business is expected to run, in Zaffar's order.
  *
  * Seeded into a business ONCE — on create, and once retroactively for
- * businesses that pre-date this. They are ordinary departments afterwards:
- * renameable, deletable, and never re-added once removed.
+ * businesses that pre-date this. They cannot be deleted from the screen
+ * (`isStandardDept`, 18 Sep 2026); a business that lost one before that rule
+ * still never has it re-added.
  */
 export const DEFAULT_DEPARTMENTS = [
   'AM Planning & PM Achievement ($)',
@@ -186,6 +218,19 @@ export const DEFAULT_DEPARTMENTS = [
   'AI',
   'Record Keeping',
 ] as const;
+
+/**
+ * One of the five standard departments — these cannot be deleted.
+ *
+ * Decided by NAME, the same way their colour is, rather than by a stored flag:
+ * the phone app rebuilds departments from a fixed field list, so a flag written
+ * here would be dropped by the next phone save and the department would
+ * silently become deletable again.
+ */
+export const isStandardDept = (name: string): boolean => {
+  const n = name.trim().toLowerCase();
+  return DEFAULT_DEPARTMENTS.some((d) => d.trim().toLowerCase() === n);
+};
 
 /**
  * The colour a department is drawn in.
@@ -206,8 +251,7 @@ export type DeptAccent = 'plum' | 'gold' | 'teal' | 'green' | 'brown' | 'red' | 
 const CUSTOM_DEPT_ACCENTS: DeptAccent[] = ['gold', 'teal', 'green', 'brown', 'red', 'blue'];
 
 export function deptAccent(name: string, index: number): DeptAccent {
-  const n = name.trim().toLowerCase();
-  if (DEFAULT_DEPARTMENTS.some((d) => d.trim().toLowerCase() === n)) return 'plum';
+  if (isStandardDept(name)) return 'plum';
   return CUSTOM_DEPT_ACCENTS[index % CUSTOM_DEPT_ACCENTS.length];
 }
 
@@ -287,6 +331,7 @@ const fixTraining = (t: Loose): Training => ({
   trainer: asStr(t.trainer),
   date: asStr(t.date),
   satisfied: asYN(t.satisfied),
+  rating: asRating(t.rating),
   remarks: asStr(t.remarks),
 });
 
@@ -296,6 +341,7 @@ const fixEval = (t: Loose): Evaluation => ({
   evaluator: asStr(t.evaluator),
   evalDate: asStr(t.evalDate),
   satisfied: asYN(t.satisfied),
+  rating: asRating(t.rating),
   implDate: asStr(t.implDate),
   remarks: asStr(t.remarks),
 });
@@ -306,6 +352,7 @@ const fixReview = (t: Loose): Review => ({
   reviewer: asStr(t.reviewer),
   date: asStr(t.date),
   satisfied: asYN(t.satisfied),
+  rating: asRating(t.rating),
   remarks: asStr(t.remarks),
 });
 
