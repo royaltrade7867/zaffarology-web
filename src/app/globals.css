@@ -350,6 +350,21 @@ textarea {
   outline: none;
 }
 
+/* …EXCEPT on a field, where the ring is redundant and looked wrong.
+   A button or a link has nothing else to say "you are here", so it keeps the
+   ring. A text field does: its border darkens (`--line-focus`), the caret sits
+   in it blinking in gold, and the selection is gold too. Adding a gold halo on
+   top of a gold-bordered, gold-carets box was three signals for one state, and
+   the halo is the one that reads as an error.
+
+   This is NOT `outline: none` with nothing put back — the border change is the
+   replacement, and it is visible to a keyboard user and a mouse user alike. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;

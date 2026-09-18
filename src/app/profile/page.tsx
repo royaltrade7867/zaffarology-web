@@ -7,8 +7,8 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AuthGuard } from "@/components/shell";
 import { friendlyTimestamp } from "@/lib/dates";
-import { STORE_NAMES, isStoreManaged } from "@/lib/api";
-import { Button, cx } from "@/components/ui";
+import { STORE_NAMES, isStoreManaged, api, apiErrorMessage, setToken } from "@/lib/api";
+import { Button, TextField, cx } from "@/components/ui";
 import { useTheme, type ThemeChoice } from "@/lib/theme";
 import { useDialog } from "@/components/dialog";
 
@@ -87,6 +87,7 @@ function ProfileInner() {
 
         <div>
           <ThemePicker />
+          <PasswordCard />
 
           <div className="mt-8 space-y-2">
             <Button label="Log out" variant="ghost" onClick={async () => { await signOut(); router.replace("/"); }} />
@@ -195,6 +196,126 @@ function BillingCard() {
         </Link>
       ) : null}
     </div>
+  );
+}
+
+/** The minimum the backend enforces (`ChangePasswordIn`). Stated in the UI so
+ *  the rule is visible before the server rejects it, not after. */
+const MIN_PASSWORD = 8;
+
+/**
+ * Change your password while signed in.
+ *
+ * Collapsed until asked for: on a settings page every open form reads as
+ * something you are expected to fill in, and most visits are not here to change
+ * a password.
+ *
+ * The backend returns a FRESH token, because changing a password bumps
+ * `token_version` and evicts every session — including this one. Storing that
+ * token is what stops the change logging you out of the device that made it.
+ */
+function PasswordCard() {
+  const dialog = useDialog();
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const reset = () => {
+    setCurrent("");
+    setNext("");
+    setConfirm("");
+    setError(null);
+  };
+
+  const submit = async () => {
+    // Checked here as well as server-side: a mismatch or a short password is
+    // worth saying immediately rather than after a round trip.
+    if (!current) return setError("Enter your current password.");
+    if (next.length < MIN_PASSWORD) return setError(`Your new password needs at least ${MIN_PASSWORD} characters.`);
+    if (next !== confirm) return setError("The two new passwords do not match.");
+    if (next === current) return setError("The new password must be different from your current one.");
+
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await api.post<{ message: string; access_token?: string }>("/auth/change-password", {
+        current_password: current,
+        new_password: next,
+      });
+      // Keep this device signed in. Without it the very next request 401s,
+      // because the token that made this change was just invalidated.
+      if (res.access_token) setToken(res.access_token);
+      reset();
+      setOpen(false);
+      await dialog.alert("Password changed", "Any other devices have been signed out.");
+    } catch (err) {
+      setError(apiErrorMessage(err, "Could not change your password. Please try again."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mt-8 max-w-sm">
+      <h2 className="font-heading text-[12px] uppercase tracking-wide text-muted">Password</h2>
+
+      {!open ? (
+        <div className="mt-2">
+          <Button label="Change password" variant="ghost" onClick={() => setOpen(true)} />
+        </div>
+      ) : (
+        <form
+          className="mt-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <TextField
+            label="Current password"
+            value={current}
+            onChange={setCurrent}
+            type="password"
+            autoComplete="current-password"
+            maxLength={128}
+            placeholder="Your password now"
+          />
+          <TextField
+            label="New password"
+            value={next}
+            onChange={setNext}
+            type="password"
+            autoComplete="new-password"
+            maxLength={128}
+            placeholder={`At least ${MIN_PASSWORD} characters`}
+          />
+          <TextField
+            label="Confirm new password"
+            value={confirm}
+            onChange={setConfirm}
+            type="password"
+            autoComplete="new-password"
+            maxLength={128}
+            placeholder="Type it again"
+            error={error ?? undefined}
+          />
+          <div className="space-y-2">
+            <Button type="submit" label="Save new password" onClick={() => void submit()} loading={busy} />
+            <Button
+              label="Cancel"
+              variant="ghost"
+              onClick={() => {
+                reset();
+                setOpen(false);
+              }}
+            />
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
 

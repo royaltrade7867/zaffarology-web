@@ -278,7 +278,7 @@ export function PersonTagField({
         <div className="relative">
           <div
             className={cx(
-              "flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-xl border border-line px-2.5 py-1.5 transition-colors focus-within:border-gold",
+              "flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-xl border border-line px-2.5 py-1.5 transition-colors focus-within:border-line-focus",
             )}
             /* The pillar rule, like every other fillable box: red while empty,
                green once written in. This one was missed, so an empty

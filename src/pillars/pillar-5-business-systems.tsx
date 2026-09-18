@@ -413,7 +413,7 @@ function DeptBlock({
       className="mb-2.5 overflow-hidden rounded-2xl border-[1.5px] bg-surface shadow-sm transition-colors"
       style={{ borderColor: open ? tint : "var(--line)" }}
     >
-      <div className="flex items-center gap-1 pr-2 transition-colors hover:bg-line-soft focus-within:border-gold">
+      <div className="flex items-center gap-1 pr-2 transition-colors hover:bg-line-soft">
         <button
           type="button"
           onClick={onToggle}
