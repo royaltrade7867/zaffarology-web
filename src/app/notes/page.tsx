@@ -19,7 +19,7 @@ import { AuthGuard } from "@/components/shell";
 import { MeetingEditor } from "@/components/meeting-editor";
 import { VoiceNotes } from "@/components/voice-notes";
 import { Back, ChevronLeft, ChevronRight, MeetingIcon, NoteIcon, Pin, Plus, Trash } from "@/components/icons";
-import { Loading, TextArea, cx } from "@/components/ui";
+import { GrowField, Loading, TextArea, cx } from "@/components/ui";
 import { useNotes } from "@/lib/use-notes";
 import type { ApiMeeting, ApiNote, NoteTag } from "@/lib/notes-api";
 import { useDialog } from "@/components/dialog";
@@ -39,9 +39,12 @@ type Filter = NoteTag | null;
  * deleting one that has something in it.
  */
 const isMeetingBlank = (m: ApiMeeting): boolean =>
+  /* `date` and `time` are NOT checked. They are pre-filled with now at
+     creation, so requiring them to be empty would mean no meeting is ever
+     blank — and every one someone opened and backed out of would be kept
+     forever. What makes a meeting worth keeping is something the user typed,
+     and a date the app filled in by itself is not that. */
   !m.title.trim() &&
-  !m.date.trim() &&
-  !m.time.trim() &&
   !m.place.trim() &&
   !m.agenda.trim() &&
   !m.notes.trim() &&
@@ -359,9 +362,12 @@ function NotesAndMeetings() {
           onChange={(t) => editNote(openNote.id, { tag: t })}
         />
 
-        <input
+        {/* `GrowField`, not an `<input>`: a long title used to scroll sideways
+            inside a one-line box with only part of it ever visible. It strips
+            newlines, so this is still one logical line — it just wraps. */}
+        <GrowField
           value={openNote.title}
-          onChange={(e) => editNote(openNote.id, { title: e.target.value })}
+          onChange={(v) => editNote(openNote.id, { title: v })}
           placeholder="Title"
           maxLength={200}
           autoFocus
@@ -374,7 +380,11 @@ function NotesAndMeetings() {
           placeholder="Write it down…"
           maxLength={20000}
           maxBreaks={400}
-          className="min-h-[45vh]"
+          /* No `min-h` any more: starts at one line and grows with what is
+             written, like every other field in the app. It was `min-h-[45vh]`,
+             nearly half a screen of empty box before a word was typed, which
+             made a two-line note look unfinished. `useAutoGrow` still takes it
+             to its ceiling and then scrolls. */
         />
 
         <VoiceNotes noteId={openNote.id} compact onCountChange={onVoiceCount} />

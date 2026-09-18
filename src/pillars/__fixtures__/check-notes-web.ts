@@ -43,10 +43,19 @@ ck("a meeting with only tagged attendees is kept",
    !blankMeeting({ ...base, attendee_ids: [7] }));
 
 /* The predicate in the source must list every text field the API defines —
-   a field added to ApiMeeting but not here would be treated as "blank". */
-const apiTextFields = ["title", "date", "time", "place", "agenda", "notes", "decisions", "next_steps", "attendees"];
+   a field added to ApiMeeting but not here would be treated as "blank".
+
+   EXCEPT `date` and `time`, which are pre-filled with now when a meeting is
+   created. Checking them would mean no meeting is ever blank, so every one
+   opened and backed out of would be kept forever. They are asserted ABSENT
+   below, so re-adding one fails this fixture rather than passing quietly. */
+const apiTextFields = ["title", "place", "agenda", "notes", "decisions", "next_steps", "attendees"];
 for (const f of apiTextFields) {
   ck("isMeetingBlank checks " + f, new RegExp("!m\\." + f + "\\.trim\\(\\)").test(page));
+}
+for (const f of ["date", "time"]) {
+  ck("isMeetingBlank does NOT check " + f + " (it is pre-filled)",
+     !new RegExp("!m\\." + f + "\\.trim\\(\\)").test(page));
 }
 ck("isMeetingBlank checks attendee_ids", /m\.attendee_ids\.length === 0/.test(page));
 

@@ -18,7 +18,7 @@ import { Back, Plus, Trash } from "@/components/icons";
 import { PersonTagField } from "@/components/person-tag-field";
 import { VoiceNotes } from "@/components/voice-notes";
 import { usePartnersWithAdd, type Partner } from "@/lib/use-connections";
-import { SectionLabel, TextArea, cx } from "@/components/ui";
+import { GrowField, SectionLabel, TextArea, cx } from "@/components/ui";
 import { DateField } from "@/components/task";
 import type { ApiMeeting } from "@/lib/notes-api";
 
@@ -53,21 +53,39 @@ function Field({
      one, so the bounds went with it. */
   type?: "text" | "time";
 }) {
+  const box = "w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-on-card outline-none transition-colors focus:border-line-focus";
+  const fill = { backgroundColor: value.trim() ? "var(--field)" : "var(--field-empty)" };
+
   return (
     <label className="block mb-3">
       <span className="block text-[12px] font-semibold text-muted mb-1">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        // A time input rejects maxLength and warns in the console.
-        maxLength={type === "text" ? maxLength : undefined}
-        autoCorrect="off"
-        spellCheck={false}
-        style={{ backgroundColor: value.trim() ? "var(--field)" : "var(--field-empty)" }}
-        className="w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-on-card outline-none transition-colors focus:border-line-focus"
-      />
+      {/* One line that GROWS, like every field on a pillar screen. These were
+          `<input>`s, which cannot wrap: a long attendee list or a place name
+          scrolled sideways inside a 44px box and only a fraction was ever
+          visible. `GrowField` strips newlines, so it still behaves as one
+          logical line — it just shows all of it.
+
+          The time picker stays a real `<input type="time">`: it is a browser
+          control, not free text. */}
+      {type === "time" ? (
+        <input
+          type="time"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          style={fill}
+          className={box}
+        />
+      ) : (
+        <GrowField
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          style={fill}
+          className={box}
+        />
+      )}
     </label>
   );
 }
@@ -171,13 +189,11 @@ export function MeetingEditor({
       </div>
 
       <SectionLabel text="Meeting" small="what it was and when" color={ACCENT} />
-      <Field
-        label="Title"
-        value={meeting.title}
-        onChange={(v) => onChange({ title: v })}
-        placeholder="e.g. Monday leadership huddle"
-        maxLength={200}
-      />
+      {/* WHEN first, then what it was called. Date and time are filled in
+          already (a meeting is created as it happens), so the first thing the
+          user actually has to type is the title — putting it under the two
+          pre-filled fields means the cursor lands on the first empty box
+          instead of stepping past two that are already done. */}
       <div className="grid gap-x-3 sm:grid-cols-2">
         {/* The same day/month/year wheel the pillars use, not the browser's
             calendar: it cannot produce the "+012025-03-04" a native date input
@@ -202,6 +218,13 @@ export function MeetingEditor({
           maxLength={40}
         />
       </div>
+      <Field
+        label="Title"
+        value={meeting.title}
+        onChange={(v) => onChange({ title: v })}
+        placeholder="e.g. Monday leadership huddle"
+        maxLength={200}
+      />
       <Field
         label="Place"
         value={meeting.place}

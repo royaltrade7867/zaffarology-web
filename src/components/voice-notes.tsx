@@ -21,6 +21,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Close, Mic, Pause, Play, Trash } from "@/components/icons";
 import { cx } from "@/components/ui";
 import { apiErrorMessage } from "@/lib/api";
+import { friendlyTimestamp } from "@/lib/dates";
 import { reportError } from "@/lib/error-reporting";
 import { useDialog } from "@/components/dialog";
 import {
@@ -237,6 +238,29 @@ export function VoiceNotes({
     if (rec && rec.state !== "inactive") rec.stop();
   };
 
+  /**
+   * "Voice note 1", "Voice note 2", … — the first number not already taken.
+   *
+   * Every recording used to save as the literal string "Voice note", so a list
+   * of five was five identical rows and the only way to tell them apart was to
+   * play them. Numbering by `notes.length + 1` would repeat after a delete, so
+   * the used numbers are collected and the first gap is taken instead: delete
+   * "Voice note 2" of three and the next recording is 2 again, not 4.
+   *
+   * Only the numbered defaults count. A recording the user renamed to
+   * "Voice note from Tuesday" is their title, not a claim on a number.
+   */
+  const nextDefaultTitle = (): string => {
+    const used = new Set<number>();
+    for (const n of notes) {
+      const m = /^Voice note (\d+)$/.exec(n.title.trim());
+      if (m) used.add(Number(m[1]));
+    }
+    let i = 1;
+    while (used.has(i)) i += 1;
+    return `Voice note ${i}`;
+  };
+
   const savePending = async () => {
     if (!pending || saving) return;
     setSaving(true);
@@ -244,7 +268,7 @@ export function VoiceNotes({
     try {
       await uploadVoiceNote({
         blob: pending.blob,
-        title: title.trim() || "Voice note",
+        title: title.trim() || nextDefaultTitle(),
         durationMs: pending.ms,
         noteId,
         meetingId,
@@ -378,7 +402,10 @@ export function VoiceNotes({
               }}
               maxLength={200}
               autoFocus
-              placeholder="Voice note"
+              /* Shows the name it will actually get if left blank, rather than
+                 the bare words "Voice note" — so the number is not a surprise
+                 after saving. */
+              placeholder={nextDefaultTitle()}
               style={{ backgroundColor: title.trim() ? "var(--field)" : "var(--field-empty)" }}
               className="w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-on-card outline-none focus:border-line-focus"
             />
@@ -477,8 +504,12 @@ export function VoiceNotes({
                 title="Rename"
               >
                 <span className="block break-words text-[14px] text-ink">{n.title}</span>
+                {/* Length AND when it was made. Duration alone could not tell
+                    two recordings apart; the date is what people actually
+                    remember a recording by. */}
                 <span className="block text-[11.5px] tabular-nums text-muted">
                   {mmss(n.duration_ms)}
+                  {n.created_at ? ` · ${friendlyTimestamp(n.created_at)}` : ""}
                 </span>
               </button>
               {standalone ? (

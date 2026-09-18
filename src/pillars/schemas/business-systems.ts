@@ -271,11 +271,26 @@ export const isStandardDept = (name: string): boolean => {
  */
 export type DeptAccent = 'plum' | 'gold' | 'teal' | 'green' | 'brown' | 'red' | 'blue';
 
-const CUSTOM_DEPT_ACCENTS: DeptAccent[] = ['gold', 'teal', 'green', 'brown', 'red', 'blue'];
+/** Every department the user adds themselves. One colour, not a cycle — see
+ *  `deptAccent`. */
+const CUSTOM_DEPT_ACCENT: DeptAccent = 'gold';
 
-export function deptAccent(name: string, index: number): DeptAccent {
-  if (isStandardDept(name)) return 'plum';
-  return CUSTOM_DEPT_ACCENTS[index % CUSTOM_DEPT_ACCENTS.length];
+/**
+ * TWO colours in total: plum for the five standard departments, gold for
+ * anything the user adds (Zaffar, 18 Sep 2026).
+ *
+ * Custom departments used to cycle a six-colour palette by position, which had
+ * the same failing the standard ones were fixed for: "Operations" was gold in
+ * one business and teal in another, and reordering recoloured a department that
+ * had not changed. One colour says the only thing worth saying — standard, or
+ * mine.
+ *
+ * `index` is kept in the signature so every existing caller still compiles, and
+ * so a future rule that does depend on position has somewhere to go.
+ */
+export function deptAccent(name: string, index?: number): DeptAccent {
+  void index;
+  return isStandardDept(name) ? 'plum' : CUSTOM_DEPT_ACCENT;
 }
 
 export const blankDepartment = (name: string, n: number): Department => ({

@@ -277,7 +277,18 @@ export function useNotes() {
 
   const addMeeting = useCallback(async (tag: NoteTag): Promise<ApiMeeting | null> => {
     try {
-      const created = await createMeeting({ tag, date: "" });
+      /* Today's date and the current time, pre-filled. A meeting is recorded as
+         it happens, so both were being typed back in by hand every time — and a
+         meeting saved with no date sorts and reads as though it never had one.
+         Both stay editable for a meeting being written up later.
+
+         Local time, NOT `toISOString()`: that converts to UTC, which in
+         Australia lands the evening's meetings on tomorrow's date. */
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const created = await createMeeting({ tag, date, time });
       setMeetings((prev) => [created, ...prev]);
       return created;
     } catch (err) {
