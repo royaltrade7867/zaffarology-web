@@ -52,6 +52,7 @@ export function DelegateSection({
   partners,
   onTag,
   statusNoteFor,
+  onAddPerson,
 }: {
   items: Deleg[];
   accent?: string;
@@ -66,6 +67,9 @@ export function DelegateSection({
   onTag?: (i: number, p: Partner | null, notify?: boolean) => void;
   /** "Sent to X, waiting" / "X marked this done", per row. */
   statusNoteFor?: (d: Deleg) => string | null;
+  /** Add someone to the team from the tag field, when the typed name matches
+   *  nobody. Omit it and the field just keeps the free-typed name. */
+  onAddPerson?: (typedName: string) => Promise<void>;
 }) {
   const actions = (i: number): TaskAction[] => [
     { label: "Delete", kind: "delete", onClick: () => onRemove(i) },
@@ -206,6 +210,7 @@ export function DelegateSection({
                   tagUserId={d.whoUserId}
                   onTag={(p, notify) => onTag!(idx, p, notify)}
                   statusNote={statusNoteFor?.(d) ?? null}
+                  onAddPerson={onAddPerson}
                 />
               ) : null}
 

@@ -14,7 +14,7 @@ import { DelegateSection } from "@/components/delegate-section";
 import { PersonTagField } from "@/components/person-tag-field";
 import { IdeaBoard, type IdeaCfg } from "@/components/idea-board";
 import { RecordsBoard } from "@/components/records-board";
-import { usePartners } from "@/lib/use-connections";
+import { usePartnersWithAdd } from "@/lib/use-connections";
 import { blankDeleg } from "@/pillars/schemas/types";
 import { makeInitial as initIdea } from "@/pillars/schemas/idea";
 import { makeInitial as initRecords } from "@/pillars/schemas/records";
@@ -376,7 +376,7 @@ function DeptBlock({
 }) {
   /* For the Delegation department's "To whom". Same shared cache as
      `SystemDetail`'s call, so this is not a second fetch. */
-  const { partners } = usePartners();
+  const { partners, addPerson } = usePartnersWithAdd();
   const count = dept.systems.length;
   /** AM Planning & PM Achievement and Delegation carry their own board. */
   const kind = deptKind(dept.name);
@@ -490,6 +490,7 @@ function DeptBlock({
                 onTag={(i, p) => inDeleg((b) => {
                   if (b.items[i]) b.items[i].whoUserId = p ? String(p.userId) : "";
                 })}
+                onAddPerson={addPerson}
               />
               <FiledBox
                 title="Filed Tasks"
@@ -663,7 +664,7 @@ function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Busines
   /* Called here rather than threaded down from the screen: this is the only
      place in Pillar 5 that needs it, and the hook shares one cached fetch
      across every caller, so a second call costs nothing. */
-  const { partners } = usePartners();
+  const { partners, addPerson } = usePartnersWithAdd();
   /**
    * The ONLY way sections 7 and 8 may be edited.
    *
@@ -700,6 +701,7 @@ function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Busines
         partners={partners}
         tagUserId={sys.responsibleUserId}
         onTag={(p) => updateSys((s) => { s.responsibleUserId = p ? String(p.userId) : ""; })}
+        onAddPerson={addPerson}
       />
 
       <Section n={3} title="Accountable Person" />
@@ -710,6 +712,7 @@ function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Busines
         partners={partners}
         tagUserId={sys.accountableUserId}
         onTag={(p) => updateSys((s) => { s.accountableUserId = p ? String(p.userId) : ""; })}
+        onAddPerson={addPerson}
       />
 
       <Section n={4} title="Guide, Helper & Reporting Person" />
@@ -720,6 +723,7 @@ function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Busines
         partners={partners}
         tagUserId={sys.guideUserId}
         onTag={(p) => updateSys((s) => { s.guideUserId = p ? String(p.userId) : ""; })}
+        onAddPerson={addPerson}
       />
 
       <Section n={5} title="Staff's Job Progression" />

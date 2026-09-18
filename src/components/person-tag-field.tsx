@@ -36,6 +36,7 @@ export function PersonTagField({
   multi = false,
   maxLength = 2000,
   statusNote,
+  onAddPerson,
 }: {
   label?: string;
   value: string;
@@ -52,6 +53,15 @@ export function PersonTagField({
   maxLength?: number;
   /** "Sent to X, waiting" / "X marked this done" — shown under the field. */
   statusNote?: string | null;
+  /**
+   * Add someone to the team from here, when the name typed matches nobody.
+   *
+   * Omit it and the field behaves as before — a name with no match is simply
+   * free text, which is still valid. Given it, an "Add to my team" row appears
+   * under the suggestions so the user does not have to leave a half-filled task
+   * to go to the Team page. Resolves once the invite has been sent.
+   */
+  onAddPerson?: (typedName: string) => Promise<void>;
 }) {
   const dialog = useDialog();
   const [focused, setFocused] = useState(false);
@@ -108,6 +118,37 @@ export function PersonTagField({
     return pool.slice(0, MAX_SUGGESTIONS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [partners, draft, focused, hasTag, multi, value]);
+
+  /**
+   * Offer "add to my team" when the typed name matches nobody.
+   *
+   * Deliberately NOT shown while a suggestion already matches exactly — that
+   * person is in the team, and offering to add them again would be nonsense.
+   * Also hidden once a tag is set, and while a request is in flight.
+   */
+  const [adding, setAdding] = useState(false);
+  const typed = draft.trim();
+  const exactMatch = partners.some(
+    (p) => p.name.trim().toLowerCase() === typed.toLowerCase() || p.email.toLowerCase() === typed.toLowerCase(),
+  );
+  const showAdd = !!onAddPerson && focused && !hasTag && typed.length > 1 && !exactMatch;
+
+  /**
+   * Add the typed person to the team, without leaving this task.
+   *
+   * The invite needs an EMAIL, and what is typed here is usually a name — so
+   * ask for the address. If they typed an address already, use it and skip the
+   * question rather than asking them to repeat themselves.
+   */
+  const addPerson = async () => {
+    if (!onAddPerson || adding) return;
+    setAdding(true);
+    try {
+      await onAddPerson(typed);
+    } finally {
+      setAdding(false);
+    }
+  };
 
   /** Ask before anything leaves, then tag. */
   const pick = async (p: Partner) => {
@@ -288,7 +329,7 @@ export function PersonTagField({
             />
           </div>
 
-          {suggestions.length ? (
+          {suggestions.length || showAdd ? (
             <ul
               id={listId}
               role="listbox"
@@ -321,6 +362,43 @@ export function PersonTagField({
                   </button>
                 </li>
               ))}
+
+              {/* Not in the team yet. Sits BELOW the matches and is separated by
+                  a rule, so it never competes with picking a real person — and
+                  it is not a `role="option"`, because it does not tag anyone;
+                  it opens the add flow. */}
+              {showAdd ? (
+                <li className={cx(suggestions.length > 0 && "border-t border-line")}>
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    disabled={adding}
+                    // mousedown, not click: blur would close the list first.
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      void addPerson();
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-line-soft disabled:opacity-60"
+                  >
+                    <span
+                      aria-hidden
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[15px] leading-none"
+                      style={{ backgroundColor: accent ?? "var(--gold)", color: "var(--on-accent)" }}
+                    >
+                      +
+                    </span>
+                    <span className="min-w-0 text-[13.5px] text-heading">
+                      {adding ? (
+                        "Adding…"
+                      ) : (
+                        <>
+                          Add <span className="font-semibold break-words">{typed}</span> to my team
+                        </>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              ) : null}
             </ul>
           ) : null}
         </div>

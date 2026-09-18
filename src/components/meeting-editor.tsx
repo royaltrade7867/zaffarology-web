@@ -17,7 +17,7 @@
 import { Back, Plus, Trash } from "@/components/icons";
 import { PersonTagField } from "@/components/person-tag-field";
 import { VoiceNotes } from "@/components/voice-notes";
-import { usePartners, type Partner } from "@/lib/use-connections";
+import { usePartnersWithAdd, type Partner } from "@/lib/use-connections";
 import { SectionLabel, TextArea, cx } from "@/components/ui";
 import { DateField } from "@/components/task";
 import type { ApiMeeting } from "@/lib/notes-api";
@@ -95,7 +95,7 @@ export function MeetingEditor({
    * Decisions: a numbered list, stored as one newline-separated string.
    * Always at least one row, so there is something to type into.
    */
-  const { partners } = usePartners();
+  const { partners, addPerson } = usePartnersWithAdd();
 
   /**
    * Ids only. The field writes the visible text itself, so touching `attendees`
@@ -217,6 +217,7 @@ export function MeetingEditor({
         accent={ACCENT}
         partners={partners}
         onTag={addAttendee}
+        onAddPerson={addPerson}
         multi
         maxLength={2000}
       />

@@ -18,7 +18,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/lib/auth-context";
 import { reportError } from "@/lib/error-reporting";
+import { apiErrorMessage } from "@/lib/api";
+import { useDialog } from "@/components/dialog";
 import {
+  inviteConnection,
   loadConnections,
   loadIncomingAssignments,
   loadOutgoingAssignments,
@@ -53,6 +56,11 @@ export function usePartners() {
   const { user } = useAuth();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loaded, setLoaded] = useState(false);
+  /* Bumped to re-fetch. Adding someone from a tag field has to make them
+     selectable straight away — without this they exist on the server but not in
+     this list until the page is reloaded, which reads as the invite failing. */
+  const [tick, setTick] = useState(0);
+  const refresh = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
     let active = true;
@@ -84,9 +92,58 @@ export function usePartners() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [user, tick]);
 
-  return { partners, loaded };
+  return { partners, loaded, refresh };
+}
+
+/**
+ * Partners, plus "add someone to the team from right here".
+ *
+ * Every person field in the app offers the same thing when a typed name matches
+ * nobody, so the handler lives once rather than five times. It returns what
+ * `PersonTagField`'s `onAddPerson` expects, so a caller wires it straight
+ * through.
+ *
+ * Adding refreshes the list, which is the point: without it the invited person
+ * exists on the server but not in the dropdown until a reload, and that reads
+ * as the invite having failed.
+ */
+export function usePartnersWithAdd() {
+  const { partners, loaded, refresh } = usePartners();
+  const dialog = useDialog();
+
+  const addPerson = useCallback(
+    async (typedName: string) => {
+      /* The invite is keyed on an EMAIL, but these fields usually hold a name.
+         Ask for the address — unless they typed one, in which case asking them
+         to repeat it is just friction. */
+      const looksLikeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(typedName);
+      const email = looksLikeEmail
+        ? typedName
+        : await dialog.prompt(`Add ${typedName} to your team`, {
+            placeholder: "their@email.com",
+            confirmLabel: "Send invite",
+          });
+      if (!email?.trim()) return;
+      try {
+        await inviteConnection(email.trim());
+        refresh();
+        /* `/connections/invite` answers identically for every outcome — already
+           connected, no account, a stranger — so this cannot claim to know
+           which happened. It covers both real paths instead. */
+        await dialog.alert(
+          "Invite sent",
+          `If ${email.trim()} can be added, they've been invited. Someone with an account joins your team straight away — otherwise they join when they sign up with that address.`,
+        );
+      } catch (err) {
+        await dialog.alert(apiErrorMessage(err, "Could not send that invite. Please try again."));
+      }
+    },
+    [dialog, refresh],
+  );
+
+  return { partners, loaded, refresh, addPerson };
 }
 
 /**

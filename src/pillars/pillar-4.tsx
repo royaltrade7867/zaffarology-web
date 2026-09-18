@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, Close } from "@/components/icons";
 import { PersonTagField } from "@/components/person-tag-field";
 import { assignTask, unassignTask } from "@/lib/connections-api";
 import { apiErrorMessage } from "@/lib/api";
-import { usePartners, useIncomingAssignments, useOutgoingAssignments, type Partner } from "@/lib/use-connections";
+import { usePartnersWithAdd, useIncomingAssignments, useOutgoingAssignments, type Partner } from "@/lib/use-connections";
 import { Loading, SectionLabel, AddButton, useAutoGrow } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
 /**
@@ -83,7 +83,7 @@ export default function Pillar4() {
   const { state, update, loaded, status, retrySave } = usePillarState<P4State>(pillar.key, makeInitial, normalize);
   const [cur, setCur] = useState(0);
   // Assignments live on server rows, never in the blob — see use-connections.ts.
-  const { partners } = usePartners();
+  const { partners, addPerson } = usePartnersWithAdd();
   const [assignTick, setAssignTick] = useState(0);
   const incoming = useIncomingAssignments(assignTick);
   const outgoing = useOutgoingAssignments(pillar.key, assignTick);
@@ -276,6 +276,7 @@ export default function Pillar4() {
               partners={partners}
               tagUserId={item.assigneeUserId}
               onTag={onTag}
+              onAddPerson={addPerson}
               statusNote={
                 sent
                   ? (sent.status === "completed"

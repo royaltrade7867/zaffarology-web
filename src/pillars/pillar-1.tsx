@@ -10,7 +10,7 @@ import { PillarScaffold } from "@/components/pillar-scaffold";
 import { Loading, MiwBox, SectionLabel, AddButton, TextArea, CharsLeft, GrowField } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
 import { DelegateSection } from "@/components/delegate-section";
-import { usePartners, useOutgoingAssignments, type Partner } from "@/lib/use-connections";
+import { usePartnersWithAdd, useOutgoingAssignments, type Partner } from "@/lib/use-connections";
 import { assignTask, unassignTask } from "@/lib/connections-api";
 import { apiErrorMessage } from "@/lib/api";
 import {
@@ -115,7 +115,7 @@ export default function Pillar1() {
      `if (!loaded)` return below — a hook after an early return is a different
      hook order on the two paths, which React rejects at runtime. That exact
      mistake has shipped in this codebase before. */
-  const { partners } = usePartners();
+  const { partners, addPerson } = usePartnersWithAdd();
   const [assignTick, setAssignTick] = useState(0);
   const [assigning, setAssigning] = useState(false);
   const outgoing = useOutgoingAssignments(pillar.key, assignTick);
@@ -489,6 +489,7 @@ export default function Pillar1() {
         onFile={fileDeleg}
         partners={partners}
         onTag={onTagDeleg}
+        onAddPerson={addPerson}
         statusNoteFor={(d) => {
           const sent = outgoing.byTaskId[d.id];
           if (!sent) return null;
