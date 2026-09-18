@@ -18,7 +18,9 @@ import { friendlyISO } from "@/lib/dates";
 import { AuthGuard } from "@/components/shell";
 import { MeetingEditor } from "@/components/meeting-editor";
 import { VoiceNotes } from "@/components/voice-notes";
-import { Back, ChevronLeft, ChevronRight, MeetingIcon, NoteIcon, Pin, Plus, Trash } from "@/components/icons";
+import { Back, ChevronLeft, ChevronRight, MeetingIcon, NoteIcon, Pin, Plus, Share, Trash } from "@/components/icons";
+import { ShareSheet } from "@/components/share-sheet";
+import { meetingAsText } from "@/lib/notes-share-api";
 import { GrowField, Loading, TextArea, cx } from "@/components/ui";
 import { useNotes } from "@/lib/use-notes";
 import type { ApiMeeting, ApiNote, NoteTag } from "@/lib/notes-api";
@@ -112,6 +114,10 @@ function NotesAndMeetings() {
   const [undo, setUndo] = useState<{ what: "note" | "meeting"; id: number } | null>(null);
 
   const [kind, setKind] = useState<Kind>("notes");
+  /** What the share sheet is currently showing, or null. Held here rather than
+   *  per-card so the sheet has ONE mount point and works from the list and the
+   *  open editor alike. */
+  const [sharing, setSharing] = useState<{ title: string; body: string } | null>(null);
   const [openNoteId, setOpenNoteId] = useState<number | null>(null);
   const [openMeetingId, setOpenMeetingId] = useState<number | null>(null);
   // Index within the current list, so Prev/Next walks what is shown.
@@ -121,15 +127,9 @@ function NotesAndMeetings() {
   const list: (ApiNote | ApiMeeting)[] = kind === "notes" ? notes : meetings;
   const idx = Math.min(cur, Math.max(0, list.length - 1));
 
-  /**
-   * The tag to give a new item when no filter is active: whatever the most
-   * recent item of this kind used. Derived from the data rather than held in
-   * state, so it survives a reload, and it falls back to the sensible default
-   * for each kind on an empty list.
-   */
-  const lastTag: NoteTag =
-    (kind === "notes" ? notes[0]?.tag : meetings[0]?.tag) ??
-    (kind === "meetings" ? "business" : "personal");
+  /* `lastTag` is gone with the filter. A new item's tag now comes from the TAB
+     it was created under, not from whatever the previous item happened to use
+     — see `newItem` below. */
 
   /**
    * Whether the open item has recordings, and therefore is NOT empty even with
@@ -345,6 +345,18 @@ function NotesAndMeetings() {
             >
               <Pin size={17} filled={openNote.pinned} />
             </button>
+            {/* Share sits before delete and is not tinted red: two icon
+                buttons side by side, one of which destroys the note, should
+                not look alike. */}
+            <button
+              type="button"
+              onClick={() => setSharing({ title: openNote.title.trim() || "Note", body: openNote.body })}
+              aria-label="Share this note"
+              title="Share"
+              className="rounded-lg p-2 text-heading transition-colors hover:bg-line-soft"
+            >
+              <Share size={17} />
+            </button>
             <button
               type="button"
               onClick={() => confirmDelete("note", openNote.id)}
@@ -356,10 +368,10 @@ function NotesAndMeetings() {
           </div>
         </div>
 
-        <TagPicker
-          value={openNote.tag}
-          onChange={(t) => editNote(openNote.id, { tag: t })}
-        />
+        {/* The Personal / Business picker is gone: the tab a note was created
+            under decides its tag, and offering to change it here would move
+            the note out of the list it is being read in. The `tag` field is
+            still set on create — the phone app filters by it. */}
 
         {/* `GrowField`, not an `<input>`: a long title used to scroll sideways
             inside a one-line box with only part of it ever visible. It strips
@@ -390,6 +402,13 @@ function NotesAndMeetings() {
 
         {error ? (
           <p className="mt-2 text-[13px] font-semibold text-danger" role="alert">{error}</p>
+        ) : null}
+
+        {/* Mounted in BOTH return paths: this one returns early, so a sheet
+            rendered only in the list view would never appear from inside an
+            open note. */}
+        {sharing ? (
+          <ShareSheet title={sharing.title} body={sharing.body} onClose={() => setSharing(null)} />
         ) : null}
       </div>
     );
@@ -515,11 +534,19 @@ function NotesAndMeetings() {
                 className="rounded-2xl border border-line bg-surface p-5 transition-shadow hover:shadow-md"
               >
                 {"body" in item ? (
-                  <NoteCard note={item} onOpen={() => setOpenNoteId(item.id)} />
+                  <NoteCard
+                    note={item}
+                    onOpen={() => setOpenNoteId(item.id)}
+                    onShare={() => setSharing({ title: item.title.trim() || "Note", body: item.body })}
+                  />
                 ) : (
                   <MeetingCard
                     meeting={item as ApiMeeting}
                     onOpen={() => setOpenMeetingId(item.id)}
+                    onShare={() => setSharing({
+                      title: (item as ApiMeeting).title.trim() || "Meeting notes",
+                      body: meetingAsText(item as ApiMeeting),
+                    })}
                   />
                 )}
               </article>
@@ -529,9 +556,20 @@ function NotesAndMeetings() {
           <div className="lg:hidden">
             <article className="rounded-2xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
               {current && "body" in current ? (
-                <NoteCard note={current} onOpen={() => setOpenNoteId(current.id)} />
+                <NoteCard
+                  note={current}
+                  onOpen={() => setOpenNoteId(current.id)}
+                  onShare={() => setSharing({ title: current.title.trim() || "Note", body: current.body })}
+                />
               ) : current ? (
-                <MeetingCard meeting={current as ApiMeeting} onOpen={() => setOpenMeetingId(current.id)} />
+                <MeetingCard
+                  meeting={current as ApiMeeting}
+                  onOpen={() => setOpenMeetingId(current.id)}
+                  onShare={() => setSharing({
+                    title: (current as ApiMeeting).title.trim() || "Meeting notes",
+                    body: meetingAsText(current as ApiMeeting),
+                  })}
+                />
               ) : null}
             </article>
 
@@ -563,34 +601,15 @@ function NotesAndMeetings() {
             defaults to `personal`, which is the side it is recorded from. */}
         <VoiceNotes />
       </div>
+
+      {sharing ? (
+        <ShareSheet title={sharing.title} body={sharing.body} onClose={() => setSharing(null)} />
+      ) : null}
     </div>
   );
 }
 
 /* -------------------------------- pieces -------------------------------- */
-
-function TagPicker({ value, onChange }: { value: NoteTag; onChange: (t: NoteTag) => void }) {
-  return (
-    <div className="mb-3 flex gap-2">
-      {(["personal", "business"] as NoteTag[]).map((t) => {
-        const on = value === t;
-        return (
-          <button
-            key={t}
-            onClick={() => onChange(t)}
-            aria-pressed={on}
-            className={cx(
-              "rounded-lg border px-3 py-1.5 text-[12.5px] font-semibold capitalize transition-colors",
-              on ? "border-gold text-gold" : "border-line text-muted hover:bg-line-soft",
-            )}
-          >
-            {t}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function NavButton({ dir, disabled, onClick }: { dir: "prev" | "next"; disabled: boolean; onClick: () => void }) {
   const Icon = dir === "prev" ? ChevronLeft : ChevronRight;
@@ -612,17 +631,30 @@ function NavButton({ dir, disabled, onClick }: { dir: "prev" | "next"; disabled:
   );
 }
 
-function NoteCard({ note, onOpen }: { note: ApiNote; onOpen: () => void }) {
+function NoteCard({ note, onOpen, onShare }: { note: ApiNote; onOpen: () => void; onShare: () => void }) {
   const when = stamp(note.updated_at ?? note.created_at);
   return (
-    <button type="button" onClick={onOpen} className="block w-full text-left">
+    /* The header row sits OUTSIDE the open-button: the whole card used to be
+       one `<button>`, and a share button nested inside it would be a button
+       within a button — invalid, and a click would trigger both. */
+    <div>
+      {/* No tag chip. The tab above already says Personal or Business, so a
+          PERSONAL badge on every card in the Personal list repeated it on
+          every row. */}
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted ring-1 ring-line">
-          {note.tag}
-        </span>
         {note.pinned ? <Pin size={14} filled title="Pinned" className="text-gold" /> : null}
-        {when ? <span className="ml-auto text-[11px] tabular-nums text-muted">{when}</span> : null}
+        {when ? <span className="text-[11px] tabular-nums text-muted">{when}</span> : null}
+        <button
+          type="button"
+          onClick={onShare}
+          aria-label={`Share ${note.title.trim() || "this note"}`}
+          title="Share"
+          className="-my-1 ml-auto rounded-lg p-1.5 text-muted transition-colors hover:bg-line-soft hover:text-heading"
+        >
+          <Share size={15} />
+        </button>
       </div>
+      <button type="button" onClick={onOpen} className="block w-full text-left">
       <h2 className="font-heading text-[19px] leading-snug text-heading">
         {note.title.trim() || "Untitled note"}
       </h2>
@@ -640,22 +672,31 @@ function NoteCard({ note, onOpen }: { note: ApiNote; onOpen: () => void }) {
       ) : (
         <p className="mt-1.5 text-[13px] italic text-muted">Nothing written yet</p>
       )}
-    </button>
+      </button>
+    </div>
   );
 }
 
-function MeetingCard({ meeting, onOpen }: { meeting: ApiMeeting; onOpen: () => void }) {
+function MeetingCard({ meeting, onOpen, onShare }: { meeting: ApiMeeting; onOpen: () => void; onShare: () => void }) {
   const decisions = meeting.decisions.split("\n").filter((d) => d.trim());
   return (
-    <button type="button" onClick={onOpen} className="block w-full text-left">
+    <div>
+      {/* No tag chip — the tab says Business already. */}
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted ring-1 ring-line">
-          {meeting.tag}
-        </span>
         {meeting.date ? (
-          <span className="ml-auto text-[11px] tabular-nums text-muted">{friendlyISO(meeting.date) ?? meeting.date}</span>
+          <span className="text-[11px] tabular-nums text-muted">{friendlyISO(meeting.date) ?? meeting.date}</span>
         ) : null}
+        <button
+          type="button"
+          onClick={onShare}
+          aria-label={`Share ${meeting.title.trim() || "this meeting"}`}
+          title="Share"
+          className="-my-1 ml-auto rounded-lg p-1.5 text-muted transition-colors hover:bg-line-soft hover:text-heading"
+        >
+          <Share size={15} />
+        </button>
       </div>
+      <button type="button" onClick={onOpen} className="block w-full text-left">
       <h2 className="font-heading text-[19px] leading-snug text-heading">
         {meeting.title.trim() || "Untitled meeting"}
       </h2>
@@ -678,7 +719,8 @@ function MeetingCard({ meeting, onOpen }: { meeting: ApiMeeting; onOpen: () => v
       ) : (
         <p className="mt-1.5 text-[13px] italic text-muted">No decisions recorded yet</p>
       )}
-    </button>
+      </button>
+    </div>
   );
 }
 
