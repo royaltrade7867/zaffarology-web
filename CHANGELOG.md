@@ -2,6 +2,34 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-19 - All five standard departments now work the same way
+
+**AM/PM and Delegation were the odd ones out.** Expanding either department
+showed its board immediately, while Loyalty, AI and Record Keeping each asked you
+to create a system first and opened the board inside it. The two boards now live
+on a SYSTEM as well, so every standard department behaves alike: add a system,
+open it, get the board.
+
+- Each system carries its own board, exactly as Loyalty/AI/Record Keeping do, so
+  a business can keep "Delegation → Warehouse" and "Delegation → Sales" apart.
+- `System.amPm` and `System.delegation` are new in the shared schema, carried
+  explicitly through `fixSystem` (a whitelist rebuild drops anything unnamed).
+- **Existing work is migrated, not stranded.** `normalize` lifts an old
+  department-level board into the department's first system, creating one if it
+  has none. It is idempotent, and never overwrites a board already edited at
+  system level.
+- The old `Department.amPm` / `Department.delegation` are deprecated but still
+  read AND still written. An older phone build knows only those fields, so
+  stripping them would blank that user's board until they update.
+- An untouched board migrates nothing: a seeded P3 board is non-empty (it has a
+  `day` and five blank rows), and moving one would manufacture a phantom "S1" in
+  a department the user never opened.
+- The empty state now names what a system will open — "add one below to start its
+  daily AM / PM board" — rather than the generic "add one below".
+
+New fixture `check-dept-boards-to-systems.ts` (25 checks) covers the lift, the
+idempotence, the round trip and the no-phantom-systems rule.
+
 ## 2026-09-16 - Real checkout, and subscription status from every store
 
 **`/pricing` sells for real.** It uses `@revenuecat/purchases-js` (pinned to

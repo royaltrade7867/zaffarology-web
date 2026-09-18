@@ -134,15 +134,26 @@ export interface System {
    */
   idea?: IdeaState;
   records?: P7State;
+  /**
+   * Payload for a system in the AM/PM or Delegation department.
+   *
+   * These sit on the SYSTEM, not the department (19 Sep 2026), so all five
+   * standard departments behave alike: create a system, open it, get the board.
+   * Before that date both lived on `Department`, which made these two the only
+   * departments whose work appeared without a system — see `liftDeptBoards`,
+   * which moves the older shape up into a system on load.
+   */
+  amPm?: P3State;
+  delegation?: DelegationBoard;
 }
 
-/** A filed (chased and put away) delegation in a business's Delegation department. */
+/** A filed (chased and put away) delegation in a Delegation system. */
 export interface DelegFiled {
   text: string;
   date: string;
 }
 
-/** The Delegation department's own list — Pillar 1's delegate or follow-up. */
+/** A Delegation system's own list — Pillar 1's delegate or follow-up. */
 export interface DelegationBoard {
   items: Deleg[];
   filed: DelegFiled[];
@@ -155,11 +166,18 @@ export interface Department {
   num: string;
   systems: System[];
   /**
-   * The "AM Planning & PM Achievement ($)" department's daily board — the
-   * same shape as Pillar 3, one per business. Only present once used.
+   * Where the AM/PM and Delegation boards used to live, before they moved onto
+   * the system (19 Sep 2026).
+   *
+   * Still READ — `liftDeptBoards` lifts them into a system on load — and still
+   * carried by `fixDept` so that an older client, which writes these and knows
+   * nothing of the system-level fields, does not have its data dropped by a save
+   * from this one. Never write them from new code.
+   *
+   * @deprecated Read for migration only; write `System.amPm` / `System.delegation`.
    */
   amPm?: P3State;
-  /** The "Delegation" department's delegate / follow-up list. Only present once used. */
+  /** @deprecated See `amPm` above. */
   delegation?: DelegationBoard;
 }
 
@@ -400,6 +418,14 @@ const fixPair = (p: Loose): EffortPair => ({
   result: asStr(p.result),
 });
 
+const fixDelegation = (v: unknown): DelegationBoard => {
+  const o = asObj(v);
+  return {
+    items: objArr(o.items, fixDeleg),
+    filed: objArr(o.filed, (f) => ({ text: asStr(f.text), date: asStr(f.date) })),
+  };
+};
+
 const fixSystem = (s: Loose): System => ({
   id: withId(s.id),
   num: asStr(s.num),
@@ -426,15 +452,9 @@ const fixSystem = (s: Loose): System => ({
      an ordinary system stays free of them. */
   ...(s.idea ? { idea: normIdea(s.idea as never) } : {}),
   ...(s.records ? { records: normRecords(s.records as never) } : {}),
+  ...(s.amPm ? { amPm: normP3(s.amPm as never) } : {}),
+  ...(s.delegation ? { delegation: fixDelegation(s.delegation) } : {}),
 });
-
-const fixDelegation = (v: unknown): DelegationBoard => {
-  const o = asObj(v);
-  return {
-    items: objArr(o.items, fixDeleg),
-    filed: objArr(o.filed, (f) => ({ text: asStr(f.text), date: asStr(f.date) })),
-  };
-};
 
 const fixDept = (d: Loose): Department => ({
   id: withId(d.id),
@@ -457,6 +477,24 @@ const fixBiz = (b: Loose): Business => ({
   // unnamed field is dropped. Losing this would re-seed on every single load.
   seeded: b.seeded === true,
 });
+
+/**
+ * Does an old department-level board hold anything a user typed?
+ *
+ * `makeInitial()` already fills a P3 board with `day` and five blank do-or-die
+ * rows, so `!!dept.amPm` is true for a board nobody ever wrote in. Migrating one
+ * of those would manufacture a system — and therefore a visible "S1" — inside a
+ * department the user never opened. Only real work is worth moving.
+ */
+const hasAmPmWork = (v: P3State | undefined): boolean => {
+  if (!v) return false;
+  if (v.work.text.trim() || v.pm.trim() || v.money.trim()) return true;
+  if (v.filed.length || v.history.length) return true;
+  return [...v.dod, ...v.extra].some((t) => t.text.trim());
+};
+
+const hasDelegWork = (v: DelegationBoard | undefined): boolean =>
+  !!v && (v.filed.length > 0 || v.items.some((i) => i.text.trim() || i.who.trim()));
 
 export const normalize = (st: P8State): P8State => {
   const loose = st as unknown as Loose;
@@ -488,6 +526,42 @@ export const normalize = (st: P8State): P8State => {
         if (!s.pairs.length) s.pairs = [blankPair()];
         // The mirrors are derived, never authoritative.
         syncPairMirrors(s);
+      }
+    }
+  }
+
+  /* ---- lift the old department-level AM/PM and Delegation boards ----
+
+     Until 19 Sep 2026 these two departments held their board directly, so their
+     work appeared the moment the department was expanded — the only two of the
+     five that needed no system. They now sit on a SYSTEM like Loyalty, AI and
+     Record Keeping, so all five behave alike.
+
+     A blob written before that carries `Department.amPm` / `Department.delegation`.
+     Move each into the department's FIRST system, creating one if the department
+     has none, and leave the old field in place: an older phone build still reads
+     only the department field, and deleting it here would blank that user's board
+     until they upgrade. `fixDept` therefore still carries both.
+
+     Only ever moves into a system that does not already hold a board of that
+     kind, so this is idempotent — it runs on every load and the second run finds
+     the destination occupied and does nothing. Empty boards are not worth a
+     system, so they are skipped entirely. */
+  for (const b of businesses) {
+    for (const d of b.departments) {
+      const kind = deptKind(d.name);
+      const board =
+        kind === 'am-pm' ? (hasAmPmWork(d.amPm) ? 'amPm' : '')
+        : kind === 'delegation' ? (hasDelegWork(d.delegation) ? 'delegation' : '')
+        : '';
+      if (!board) continue;
+      // An untouched seeded department has no systems yet; give the board one.
+      if (!d.systems.length) d.systems.push(blankSystem(d.name, 1));
+      const first = d.systems[0];
+      if (board === 'amPm') {
+        if (!first.amPm) first.amPm = d.amPm;
+      } else if (!first.delegation) {
+        first.delegation = d.delegation;
       }
     }
   }

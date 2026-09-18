@@ -39,6 +39,7 @@ import {
   blankSystem,
   deptAccent,
   deptKind,
+  type DeptKind,
   isStandardDept,
   makeInitial,
   normalize as normalizeP8,
@@ -359,6 +360,23 @@ function AddRow({ placeholder, onAdd, autoFocus }: { placeholder: string; onAdd:
  * system and its 12 sections unreachable without a pointer. Delete cannot nest
  * inside that button, so it is its sibling.
  */
+/** What adding the first system to this department actually opens. */
+const emptyHint = (kind: DeptKind): string => {
+  switch (kind) {
+    case "am-pm":
+      return "No systems yet. Add one below to start its daily AM / PM board.";
+    case "delegation":
+      return "No systems yet. Add one below to start its delegate or follow-up list.";
+    case "idea-loyalty":
+    case "idea-ai":
+      return "No systems yet. Add one below to start its idea board.";
+    case "records":
+      return "No systems yet. Add one below to start its A-Z record index.";
+    default:
+      return "No systems yet, add one below.";
+  }
+};
+
 function DeptBlock({
   biz, dept, tint, open, sysIdx, onToggle, onStepSys, onOpenSystem, onAddedSystem, update, dialog,
 }: {
@@ -374,9 +392,6 @@ function DeptBlock({
   update: (m: (st: P8State) => void) => void;
   dialog: ReturnType<typeof useDialog>;
 }) {
-  /* For the Delegation department's "To whom". Same shared cache as
-     `SystemDetail`'s call, so this is not a second fetch. */
-  const { partners, addPerson } = usePartnersWithAdd();
   const count = dept.systems.length;
   /** AM Planning & PM Achievement and Delegation carry their own board. */
   const kind = deptKind(dept.name);
@@ -390,20 +405,6 @@ function DeptBlock({
     const b = st.businesses.find((x) => x.id === biz.id);
     const d = b?.departments.find((x) => x.id === dept.id);
     if (d) mut(d);
-  };
-
-  /* The boards are created on first write, so a department nobody has used
-     adds nothing to the saved blob. */
-  const deleg: DelegationBoard = dept.delegation ?? { items: [], filed: [] };
-  const inDeleg = (mut: (b: DelegationBoard) => void) =>
-    update((st) => inDept(st, (d) => { if (!d.delegation) d.delegation = { items: [], filed: [] }; mut(d.delegation); }));
-  const fileDeleg = (i: number) => {
-    const d = deleg.items[i];
-    if (!d?.text.trim()) return void dialog.alert("This task is empty, nothing to file.");
-    inDeleg((b) => {
-      b.filed = [{ text: d.text + (d.who ? ` → ${d.who}` : ""), date: shortDate() }, ...b.filed];
-      b.items.splice(i, 1);
-    });
   };
 
   return (
@@ -464,56 +465,22 @@ function DeptBlock({
         /* The rule carries the DEPARTMENT's colour, so the systems underneath
            are visibly tied to the row that opened them. */
         <div className="border-t border-line px-3 py-3">
-          {/* Zaffar, 18 Sep 2026: this department works like Pillar 3 — the
-              same board, one per business. */}
-          {kind === "am-pm" ? (
-            <div className="mb-3 rounded-xl border border-line p-3 sm:p-4">
-              <AmPmBoard
-                state={dept.amPm ?? blankAmPm()}
-                update={(mut) => update((st) => inDept(st, (d) => { if (!d.amPm) d.amPm = blankAmPm(); mut(d.amPm); }))}
-              />
-            </div>
-          ) : null}
-          {/* …and this one like Pillar 1's delegate or follow-up. */}
-          {kind === "delegation" ? (
-            <div className="mb-3 rounded-xl border border-line p-3 sm:p-4">
-              <DelegateSection
-                items={deleg.items}
-                onAdd={() => inDeleg((b) => { b.items.push(blankDeleg()); })}
-                onEdit={(i, mut) => inDeleg((b) => { if (b.items[i]) mut(b.items[i]); })}
-                onRemove={(i) => inDeleg((b) => { b.items.splice(i, 1); })}
-                onFile={fileDeleg}
-                partners={partners}
-                /* Records who, without sending an assignment: these rows live
-                   in the Pillar 5 blob and have no stable task identity the
-                   assignments table could point at. */
-                onTag={(i, p) => inDeleg((b) => {
-                  if (b.items[i]) b.items[i].whoUserId = p ? String(p.userId) : "";
-                })}
-                onAddPerson={addPerson}
-              />
-              <FiledBox
-                title="Filed Tasks"
-                empty="Nothing filed yet."
-                clearLabel="Clear all filed"
-                hasItems={deleg.filed.length > 0}
-                onClear={async () => { if (await dialog.confirm("Delete everything in the filed archive?", { confirmLabel: "Delete all", danger: true })) inDeleg((b) => { b.filed = []; }); }}
-              >
-                {deleg.filed.map((f, i) => (
-                  <div key={i} className="flex items-center gap-2.5 py-2 border-b border-line">
-                    <span className="min-w-0 flex-1 break-words text-[13px] text-ink">{f.text}</span>
-                    <span className="text-[11px] text-muted">{f.date}</span>
-                  </div>
-                ))}
-              </FiledBox>
-            </div>
-          ) : null}
+          {/* Zaffar, 19 Sep 2026: the AM/PM and Delegation boards used to render
+              here, straight onto the department. They now live on a SYSTEM, like
+              Loyalty, AI and Record Keeping, so all five standard departments
+              behave the same way — create a system, open it, get the board. */}
           {/* The systems sit in their own bordered box inside the department. */}
           <div className="rounded-xl border border-line p-3">
           <p className="mb-2 font-heading text-[11px] tracking-[0.14em]" style={{ color: "var(--muted)" }}>SYSTEMS</p>
 
           {count === 0 ? (
-            <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No systems yet, add one below.</p>
+            /* Says what the system will GIVE you, not merely that none exists.
+               These five departments each open a different board, and "add one
+               below" alone left it unclear that the daily AM/PM board or the
+               delegate list is what a system here unlocks. */
+            <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>
+              {emptyHint(kind)}
+            </p>
           ) : (
             <>
               {count > 1 ? (
@@ -599,16 +566,28 @@ function DeptBlock({
 /**
  * Which editor a SYSTEM opens, decided by the department it sits in.
  *
- * Loyalty and AI open the idea board, Record Keeping the A-Z index; everything
- * else gets the ordinary 12-section editor. Mirrors the phone's `SystemBody`,
- * and it is why `System.idea` / `System.records` exist in the shared schema.
+ * AM/PM opens the daily board, Delegation the delegate-or-follow-up list,
+ * Loyalty and AI the idea board, Record Keeping the A-Z index; everything else
+ * gets the ordinary 12-section editor. It is why `System.amPm` /
+ * `System.delegation` / `System.idea` / `System.records` exist in the schema.
  *
- * Both sub-states are allocated on FIRST WRITE (`?? initIdea()`), so a system
+ * Every sub-state is allocated on FIRST WRITE (`?? initIdea()`), so a system
  * nobody has opened stays small in the blob.
  */
 function SystemBody({ sys, biz, dept, updateSys }: { sys: System; biz: Business; dept: Department; updateSys: (m: (s: System) => void) => void }) {
   const kind = deptKind(dept.name);
 
+  if (kind === "am-pm") {
+    return (
+      <AmPmBoard
+        state={sys.amPm ?? blankAmPm()}
+        update={(mut) => updateSys((s) => { s.amPm = s.amPm ?? blankAmPm(); mut(s.amPm); })}
+      />
+    );
+  }
+  if (kind === "delegation") {
+    return <DelegationBody sys={sys} updateSys={updateSys} />;
+  }
   if (kind === "idea-loyalty" || kind === "idea-ai") {
     const loyalty = kind === "idea-loyalty";
     return (
@@ -630,6 +609,70 @@ function SystemBody({ sys, biz, dept, updateSys }: { sys: System; biz: Business;
     );
   }
   return <SystemDetail sys={sys} biz={biz} dept={dept} updateSys={updateSys} />;
+}
+
+/**
+ * A system in the Delegation department: Pillar 1's delegate-or-follow-up list.
+ *
+ * Its own component because it needs hooks — a connections fetch and the dialog
+ * — which cannot sit inside a branch of `SystemBody`.
+ */
+function DelegationBody({ sys, updateSys }: { sys: System; updateSys: (m: (s: System) => void) => void }) {
+  /* Same shared cache as `SystemDetail`'s call, so this is not a second fetch. */
+  const { partners, addPerson } = usePartnersWithAdd();
+  const dialog = useDialog();
+
+  /* Created on first write, so a system nobody has used adds nothing to the blob. */
+  const board: DelegationBoard = sys.delegation ?? { items: [], filed: [] };
+  const edit = (mut: (b: DelegationBoard) => void) =>
+    updateSys((s) => { s.delegation = s.delegation ?? { items: [], filed: [] }; mut(s.delegation); });
+
+  const file = (i: number) => {
+    const d = board.items[i];
+    if (!d?.text.trim()) return void dialog.alert("This task is empty, nothing to file.");
+    edit((b) => {
+      b.filed = [{ text: d.text + (d.who ? ` → ${d.who}` : ""), date: shortDate() }, ...b.filed];
+      b.items.splice(i, 1);
+    });
+  };
+
+  return (
+    <>
+      <DelegateSection
+        items={board.items}
+        onAdd={() => edit((b) => { b.items.push(blankDeleg()); })}
+        onEdit={(i, mut) => edit((b) => { if (b.items[i]) mut(b.items[i]); })}
+        onRemove={(i) => edit((b) => { b.items.splice(i, 1); })}
+        onFile={file}
+        partners={partners}
+        /* Records who, without sending an assignment: these rows live in the
+           Pillar 5 blob and have no stable task identity the assignments table
+           could point at. */
+        onTag={(i, p) => edit((b) => {
+          if (b.items[i]) b.items[i].whoUserId = p ? String(p.userId) : "";
+        })}
+        onAddPerson={addPerson}
+      />
+      <FiledBox
+        title="Filed Tasks"
+        empty="Nothing filed yet."
+        clearLabel="Clear all filed"
+        hasItems={board.filed.length > 0}
+        onClear={async () => {
+          if (await dialog.confirm("Delete everything in the filed archive?", { confirmLabel: "Delete all", danger: true })) {
+            edit((b) => { b.filed = []; });
+          }
+        }}
+      >
+        {board.filed.map((f, i) => (
+          <div key={i} className="flex items-center gap-2.5 py-2 border-b border-line">
+            <span className="min-w-0 flex-1 break-words text-[13px] text-ink">{f.text}</span>
+            <span className="text-[11px] text-muted">{f.date}</span>
+          </div>
+        ))}
+      </FiledBox>
+    </>
+  );
 }
 
 /** Wording that differs between the two idea boards, kept verbatim from the
