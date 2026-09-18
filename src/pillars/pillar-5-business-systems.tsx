@@ -11,6 +11,8 @@ import { Loading, SectionLabel, AddButton, capFirst, useAutoGrow, GrowField } fr
 import { PersonField, DateField, PassNote, FiledBox } from "@/components/task";
 import { AmPmBoard } from "@/components/am-pm-board";
 import { DelegateSection } from "@/components/delegate-section";
+import { PersonTagField } from "@/components/person-tag-field";
+import { usePartners } from "@/lib/use-connections";
 import { blankDeleg } from "@/pillars/schemas/types";
 import { makeInitial as blankAmPm } from "@/pillars/schemas/pillar-3";
 import { useDialog } from "@/components/dialog";
@@ -368,6 +370,9 @@ function DeptBlock({
   update: (m: (st: P8State) => void) => void;
   dialog: ReturnType<typeof useDialog>;
 }) {
+  /* For the Delegation department's "To whom". Same shared cache as
+     `SystemDetail`'s call, so this is not a second fetch. */
+  const { partners } = usePartners();
   const count = dept.systems.length;
   /** AM Planning & PM Achievement and Delegation carry their own board. */
   const kind = deptKind(dept.name);
@@ -474,6 +479,13 @@ function DeptBlock({
                 onEdit={(i, mut) => inDeleg((b) => { if (b.items[i]) mut(b.items[i]); })}
                 onRemove={(i) => inDeleg((b) => { b.items.splice(i, 1); })}
                 onFile={fileDeleg}
+                partners={partners}
+                /* Records who, without sending an assignment: these rows live
+                   in the Pillar 5 blob and have no stable task identity the
+                   assignments table could point at. */
+                onTag={(i, p) => inDeleg((b) => {
+                  if (b.items[i]) b.items[i].whoUserId = p ? String(p.userId) : "";
+                })}
               />
               <FiledBox
                 title="Filed Tasks"
@@ -580,6 +592,10 @@ function DeptBlock({
 /* ---------- system detail: 12 headings ---------- */
 
 function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Business; dept: Department; updateSys: (m: (s: System) => void) => void }) {
+  /* Called here rather than threaded down from the screen: this is the only
+     place in Pillar 5 that needs it, and the hook shares one cached fetch
+     across every caller, so a second call costs nothing. */
+  const { partners } = usePartners();
   /**
    * The ONLY way sections 7 and 8 may be edited.
    *
@@ -604,14 +620,39 @@ function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Busines
       <Section n={1} title="Reporting Frequency" />
       <TextField value={sys.freq} onChange={(v) => updateSys((s) => { s.freq = v; })} placeholder="e.g. Daily / Weekly / Monthly" />
 
+      {/* The three person fields tag a connection, matching the phone. Note
+          these only RECORD who it is — unlike Pillars 1 and 4, tagging here
+          sends no assignment, because a system's responsible person is a
+          standing role, not a task with a deadline. Mobile does the same. */}
       <Section n={2} title="Responsible Person" />
-      <TextField value={sys.responsible} onChange={(v) => updateSys((s) => { s.responsible = v; })} placeholder="Who does the work?" />
+      <PersonTagField
+        value={sys.responsible}
+        onChangeText={(v) => updateSys((s) => { s.responsible = v; })}
+        placeholder="Who does the work?"
+        partners={partners}
+        tagUserId={sys.responsibleUserId}
+        onTag={(p) => updateSys((s) => { s.responsibleUserId = p ? String(p.userId) : ""; })}
+      />
 
       <Section n={3} title="Accountable Person" />
-      <TextField value={sys.accountable} onChange={(v) => updateSys((s) => { s.accountable = v; })} placeholder="Who answers for the result?" />
+      <PersonTagField
+        value={sys.accountable}
+        onChangeText={(v) => updateSys((s) => { s.accountable = v; })}
+        placeholder="Who answers for the result?"
+        partners={partners}
+        tagUserId={sys.accountableUserId}
+        onTag={(p) => updateSys((s) => { s.accountableUserId = p ? String(p.userId) : ""; })}
+      />
 
       <Section n={4} title="Guide, Helper & Reporting Person" />
-      <TextField value={sys.guide} onChange={(v) => updateSys((s) => { s.guide = v; })} placeholder="Who guides, helps, and receives the report?" />
+      <PersonTagField
+        value={sys.guide}
+        onChangeText={(v) => updateSys((s) => { s.guide = v; })}
+        placeholder="Who guides, helps, and receives the report?"
+        partners={partners}
+        tagUserId={sys.guideUserId}
+        onTag={(p) => updateSys((s) => { s.guideUserId = p ? String(p.userId) : ""; })}
+      />
 
       <Section n={5} title="Staff's Job Progression" />
       <TextField value={sys.progression} onChange={(v) => updateSys((s) => { s.progression = v; })} placeholder="Where can this role grow to?" />
