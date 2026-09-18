@@ -125,12 +125,12 @@ export default function Pillar2() {
             onChange={(e) => update((s) => { s.problem = e.target.value; })}
             placeholder="What exactly is the problem?"
             maxLength={300}
-            rows={2}
+            rows={1}
             autoCorrect="off"
             spellCheck={false}
             ref={problemRef}
             style={{ backgroundColor: state.problem.trim() ? "var(--field-empty)" : "var(--field-red)" }}
-            className="w-full rounded-lg px-2 py-2 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder min-h-[60px]"
+            className="w-full rounded-lg px-2 py-2 font-semibold text-[16px] text-on-card outline-none placeholder:text-placeholder resize-none leading-snug"
           />
             <CharsLeft value={state.problem} max={300} />
         </MiwBox>

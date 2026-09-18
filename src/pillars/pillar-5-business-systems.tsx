@@ -4,11 +4,15 @@ import { useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Close } from "@/components/icons";
 
 import { pillarByNumber, Accents, HEADING, FIELD_EMPTY } from "@/lib/pillars";
-import { newId } from "@/lib/dates";
+import { newId, shortDate } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { PillarScaffold } from "@/components/pillar-scaffold";
-import { Loading, SectionLabel, AddButton, capFirst, useAutoGrow } from "@/components/ui";
-import { PersonField, DateField, YesNoRow, PassNote } from "@/components/task";
+import { Loading, SectionLabel, AddButton, capFirst, useAutoGrow, GrowField } from "@/components/ui";
+import { PersonField, DateField, PassNote, FiledBox } from "@/components/task";
+import { AmPmBoard } from "@/components/am-pm-board";
+import { DelegateSection } from "@/components/delegate-section";
+import { blankDeleg } from "@/pillars/schemas/types";
+import { makeInitial as blankAmPm } from "@/pillars/schemas/pillar-3";
 import { useDialog } from "@/components/dialog";
 
 /**
@@ -29,19 +33,24 @@ import {
   blankSystem,
   deptAccent,
   deptKind,
+  isStandardDept,
   makeInitial,
   normalize as normalizeP8,
+  RATINGS,
+  ratingToYN,
+  shownRating,
   syncPairMirrors,
   systemNum,
   type Business,
   type Department,
+  type DelegationBoard,
   type EffortPair,
   type Evaluation,
   type P8State,
+  type Rating,
   type Review,
   type System,
   type Training,
-  type YN,
 } from "@/pillars/schemas/business-systems";
 
 const pillar = pillarByNumber(5)!;
@@ -79,12 +88,31 @@ export default function Pillar8() {
    *  reopening a department returns to the system you were on. */
   const [sysIdx, setSysIdx] = useState<Record<string, number>>({});
   const [editing, setEditing] = useState<Editing | null>(null);
+  /** The "Add a new business" name box, opened from the header row. */
+  const [addingBiz, setAddingBiz] = useState(false);
   if (!loaded) return <Loading />;
 
   const businesses = state.businesses;
   // Clamp: deleting the last business must not strand the navigator past the end.
   const idx = Math.min(bi, Math.max(0, businesses.length - 1));
   const biz = businesses[idx] ?? null;
+
+  const addBusiness = (nm: string) => {
+    update((st) => {
+      st.businesses.push({
+        id: newId(),
+        name: nm,
+        // Numbers are placeholders: the normalizer renumbers every
+        // department by position on load, in both apps.
+        departments: DEFAULT_DEPARTMENTS.map((d, i) => blankDepartment(d, i + 1)),
+        seeded: true,
+      });
+    });
+    // Land on what was just created, not on whichever was showing.
+    setBi(businesses.length);
+    setOpenDept(null);
+    setAddingBiz(false);
+  };
 
   const updateSys = (mut: (s: System) => void) =>
     update((st) => {
@@ -134,7 +162,18 @@ export default function Pillar8() {
       {biz ? (
         <>
           <Hierarchy biz={biz} />
-          <div className="mb-4 flex items-center justify-end">
+          {/* Add and Delete side by side, at the top, next to the business
+              they act on. */}
+          <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setAddingBiz((o) => !o)}
+              aria-expanded={addingBiz}
+              className="tap-row flex items-center gap-1 rounded-lg border-[1.5px] px-3 py-1.5 text-[12.5px] font-semibold transition-opacity hover:opacity-80"
+              style={{ borderColor: NAVY, color: NAVY }}
+            >
+              <span aria-hidden className="text-[15px] leading-none">+</span> Add a new business
+            </button>
             <button
               type="button"
               onClick={() =>
@@ -144,11 +183,17 @@ export default function Pillar8() {
                   setOpenDept(null);
                 })
               }
-              className="tap-row rounded px-2 text-[12px] font-semibold text-muted transition-colors hover:text-danger"
+              className="tap-row rounded-lg border-[1.5px] border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted transition-colors hover:border-danger hover:text-danger"
             >
               Delete this business
             </button>
           </div>
+          {addingBiz ? (
+            <div className="zaff-reveal mb-5 rounded-2xl border border-line bg-surface p-3.5">
+              <SectionLabel text="Add a new business" small="each one gets the five standard departments" color={NAVY} />
+              <AddRow placeholder="New business name…" onAdd={addBusiness} autoFocus />
+            </div>
+          ) : null}
 
           {/* "click", not "tap": this is the website. */}
           <SectionLabel text="Departments" small="click one to see its systems" color={NAVY} />
@@ -191,37 +236,15 @@ export default function Pillar8() {
           />
         </>
       ) : (
+        /* No business yet: the name box is the whole page, so it is simply open. */
         <div className="mb-2 rounded-2xl border border-dashed border-line px-3.5 py-4">
+          <SectionLabel text="Add a new business" small="each one gets the five standard departments" color={NAVY} />
           <span className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>
-            No business yet, add your first below.
+            No business yet, add your first one here.
           </span>
+          <AddRow placeholder="New business name…" onAdd={addBusiness} />
         </div>
       )}
-
-      {/* Adding a business belongs HERE, at the bottom of the one business on
-          screen — never inside a department or system list, where it read as
-          "add a business inside this department". */}
-      <div className="mt-8 border-t border-line pt-5">
-        <SectionLabel text="Add a business" small="each one gets the five standard departments" color={NAVY} />
-        <AddRow
-          placeholder="New business name…"
-          onAdd={(nm) => {
-            update((st) => {
-              st.businesses.push({
-                id: newId(),
-                name: nm,
-                // Numbers are placeholders: the normalizer renumbers every
-                // department by position on load, in both apps.
-                departments: DEFAULT_DEPARTMENTS.map((d, i) => blankDepartment(d, i + 1)),
-                seeded: true,
-              });
-            });
-            // Land on what was just created, not on whichever was showing.
-            setBi(businesses.length);
-            setOpenDept(null);
-          }}
-        />
-      </div>
     </PillarScaffold>
   );
 }
@@ -254,8 +277,8 @@ function Hierarchy({ biz, dept, sys, onBack }: { biz: Business; dept?: Departmen
         </p>
       ) : null}
       {sys ? (
-        <p className="mt-0.5 break-words font-heading text-[13px] leading-tight tracking-[0.08em]" style={{ color: NAVY }}>
-          {sys.num} · {(sys.name || "Untitled system").toUpperCase()}
+        <p className="mt-0.5 break-words text-[14px] font-semibold leading-tight" style={{ color: NAVY }}>
+          {sys.num} · {(sys.name || "Untitled system").toLowerCase()}
         </p>
       ) : null}
     </div>
@@ -285,7 +308,7 @@ function Stepper({
 }
 
 /** The name box + ADD button shared by the business and department lists. */
-function AddRow({ placeholder, onAdd }: { placeholder: string; onAdd: (name: string) => void }) {
+function AddRow({ placeholder, onAdd, autoFocus }: { placeholder: string; onAdd: (name: string) => void; autoFocus?: boolean }) {
   const dialog = useDialog();
   const inputRef = useRef<HTMLInputElement>(null);
   const [val, setVal] = useState("");
@@ -307,6 +330,7 @@ function AddRow({ placeholder, onAdd }: { placeholder: string; onAdd: (name: str
         autoCorrect="off"
         spellCheck={false}
         ref={inputRef}
+        autoFocus={autoFocus}
         value={val}
         onChange={(e) => setVal(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
@@ -345,7 +369,12 @@ function DeptBlock({
   dialog: ReturnType<typeof useDialog>;
 }) {
   const count = dept.systems.length;
-  const sub = `${count} ${count === 1 ? "system" : "systems"}`;
+  /** AM Planning & PM Achievement and Delegation carry their own board. */
+  const kind = deptKind(dept.name);
+  const board = kind === "am-pm" ? "Daily AM / PM board" : kind === "delegation" ? "Delegate or follow-up" : "";
+  const sub = `${board ? `${board} · ` : ""}${count} ${count === 1 ? "system" : "systems"}`;
+  /** One of the five every business runs: no delete control at all. */
+  const standard = isStandardDept(dept.name);
   const sys = count ? dept.systems[Math.min(sysIdx, count - 1)] : null;
 
   const inDept = (st: P8State, mut: (d: Department) => void) => {
@@ -354,8 +383,27 @@ function DeptBlock({
     if (d) mut(d);
   };
 
+  /* The boards are created on first write, so a department nobody has used
+     adds nothing to the saved blob. */
+  const deleg: DelegationBoard = dept.delegation ?? { items: [], filed: [] };
+  const inDeleg = (mut: (b: DelegationBoard) => void) =>
+    update((st) => inDept(st, (d) => { if (!d.delegation) d.delegation = { items: [], filed: [] }; mut(d.delegation); }));
+  const fileDeleg = (i: number) => {
+    const d = deleg.items[i];
+    if (!d?.text.trim()) return void dialog.alert("This task is empty, nothing to file.");
+    inDeleg((b) => {
+      b.filed = [{ text: d.text + (d.who ? ` → ${d.who}` : ""), date: shortDate() }, ...b.filed];
+      b.items.splice(i, 1);
+    });
+  };
+
   return (
-    <div className="mb-2.5 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
+    /* An open department takes its own colour as its border, so it and the
+       systems inside it read as one block. Open/closed behaviour is unchanged. */
+    <div
+      className="mb-2.5 overflow-hidden rounded-2xl border-[1.5px] bg-surface shadow-sm transition-colors"
+      style={{ borderColor: open ? tint : "var(--line)" }}
+    >
       <div className="flex items-center gap-1 pr-2 transition-colors hover:bg-line-soft focus-within:border-gold">
         <button
           type="button"
@@ -384,6 +432,9 @@ function DeptBlock({
             <span className="mt-0.5 block text-[12.5px]" style={{ color: "var(--muted)" }}>{sub}</span>
           </span>
         </button>
+        {standard ? (
+          <span className="sr-only">Standard department, cannot be deleted</span>
+        ) : (
         <button
           onClick={() =>
             confirmDel(dialog, `Delete department "${dept.name}" and its systems?`, () =>
@@ -397,12 +448,51 @@ function DeptBlock({
           title={`Delete ${dept.name}`}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-danger"
         ><Close size={13} /></button>
+        )}
       </div>
 
       {open ? (
         /* The rule carries the DEPARTMENT's colour, so the systems underneath
            are visibly tied to the row that opened them. */
-        <div className="border-t border-line px-3 py-3" style={{ borderLeft: `3px solid ${tint}` }}>
+        <div className="border-t border-line px-3 py-3">
+          {/* Zaffar, 18 Sep 2026: this department works like Pillar 3 — the
+              same board, one per business. */}
+          {kind === "am-pm" ? (
+            <div className="mb-3 rounded-xl border border-line p-3 sm:p-4">
+              <AmPmBoard
+                state={dept.amPm ?? blankAmPm()}
+                update={(mut) => update((st) => inDept(st, (d) => { if (!d.amPm) d.amPm = blankAmPm(); mut(d.amPm); }))}
+              />
+            </div>
+          ) : null}
+          {/* …and this one like Pillar 1's delegate or follow-up. */}
+          {kind === "delegation" ? (
+            <div className="mb-3 rounded-xl border border-line p-3 sm:p-4">
+              <DelegateSection
+                items={deleg.items}
+                onAdd={() => inDeleg((b) => { b.items.push(blankDeleg()); })}
+                onEdit={(i, mut) => inDeleg((b) => { if (b.items[i]) mut(b.items[i]); })}
+                onRemove={(i) => inDeleg((b) => { b.items.splice(i, 1); })}
+                onFile={fileDeleg}
+              />
+              <FiledBox
+                title="Filed Tasks"
+                empty="Nothing filed yet."
+                clearLabel="Clear all filed"
+                hasItems={deleg.filed.length > 0}
+                onClear={async () => { if (await dialog.confirm("Delete everything in the filed archive?", { confirmLabel: "Delete all", danger: true })) inDeleg((b) => { b.filed = []; }); }}
+              >
+                {deleg.filed.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2.5 py-2 border-b border-line">
+                    <span className="min-w-0 flex-1 break-words text-[13px] text-ink">{f.text}</span>
+                    <span className="text-[11px] text-muted">{f.date}</span>
+                  </div>
+                ))}
+              </FiledBox>
+            </div>
+          ) : null}
+          {/* The systems sit in their own bordered box inside the department. */}
+          <div className="rounded-xl border border-line p-3">
           <p className="mb-2 font-heading text-[11px] tracking-[0.14em]" style={{ color: "var(--muted)" }}>SYSTEMS</p>
 
           {count === 0 ? (
@@ -422,7 +512,7 @@ function DeptBlock({
                 />
               ) : null}
               {sys ? (
-                <div className="flex items-center gap-1 rounded-xl border border-line pr-2 transition-colors hover:bg-line-soft">
+                <div className="flex items-center gap-1 rounded-xl border-[1.5px] pr-2 transition-colors hover:bg-line-soft" style={{ borderColor: NAVY }}>
                   <button
                     type="button"
                     onClick={() => onOpenSystem(sys.id)}
@@ -436,8 +526,10 @@ function DeptBlock({
                     >
                       {sys.num}
                     </span>
-                    <span className="min-w-0 flex-1 break-words font-heading text-[13px] tracking-[0.06em]" style={{ color: NAVY }}>
-                      {(sys.name || "Untitled system").toUpperCase()}
+                    {/* Systems in small letters, departments in capitals, so the two
+                        tiers never read alike. Display only: stored as typed. */}
+                    <span className="min-w-0 flex-1 break-words text-[15px] font-semibold" style={{ color: NAVY }}>
+                      {(sys.name || "Untitled system").toLowerCase()}
                     </span>
                     <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted"><ChevronRight size={16} /></span>
                   </button>
@@ -479,6 +571,7 @@ function DeptBlock({
               onAddedSystem(created.id);
             }}
           />
+          </div>
         </div>
       ) : null}
     </div>
@@ -505,7 +598,7 @@ function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Busines
     <div>
       <div className="flex items-center gap-2.5 mb-5">
         <span className="flex h-6 min-w-[40px] items-center justify-center rounded px-1.5 text-on-accent font-heading text-[11px]" style={{ backgroundColor: NAVY }}>{sys.num}</span>
-        <p className="flex-1 font-heading text-[18px]" style={{ color: HEADING }}>{sys.name.toUpperCase()}</p>
+        <p className="flex-1 text-[19px] font-bold" style={{ color: HEADING }}>{sys.name.toLowerCase()}</p>
       </div>
 
       <Section n={1} title="Reporting Frequency" />
@@ -524,7 +617,7 @@ function SystemDetail({ sys, biz, dept, updateSys }: { sys: System; biz: Busines
       <TextField value={sys.progression} onChange={(v) => updateSys((s) => { s.progression = v; })} placeholder="Where can this role grow to?" />
 
       <Section n={6} title="Job Description" small="the most important things to do, add as many as needed" />
-      <EditableList items={sys.jobs} onChange={(v) => updateSys((s) => { s.jobs = v; })} placeholder={(i) => `Most important thing ${i}`} addLabel="+ Add another important thing" />
+      <EditableList items={sys.jobs} onChange={(v) => updateSys((s) => { s.jobs = v; })} placeholder={(i) => `One most essential, exact goal ${i} (with expected outcome)`} addLabel="+ ONE MOST ESSENTIAL, EXACT GOAL (WITH EXPECTED OUTCOME)" />
 
       {/* Sections 7 and 8 are two views of ONE `pairs` array — row n of each is
           one pair. They must never be bound to `efforts`/`results`, which are
@@ -623,7 +716,7 @@ function TrainingSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: S
   if (!sys.trainings.length) {
     return <>
       <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No training yet, add the first one below.</p>
-      <AddButton label="+ Add training / give another training" accent={Accents.green} onClick={() => updateSys((s) => { s.trainings.push({ id: newId(), trainee: "", trainer: "", date: "", satisfied: "", remarks: "" }); })} />
+      <AddButton label="+ Add training / give another training" accent={Accents.green} onClick={() => updateSys((s) => { s.trainings.push({ id: newId(), trainee: "", trainer: "", date: "", satisfied: "", rating: "", remarks: "" }); })} />
     </>;
   }
   return (
@@ -641,18 +734,18 @@ function TrainingSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: S
                 remarks read as an afterthought to a decision already taken. */}
             <FLabel>Remarks of the Trainer</FLabel>
             <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.trainings[i].remarks = v; })} placeholder="How did the training go?" />
-            <FLabel>Trainer Satisfied With The Training?</FLabel>
-            <YesNoRow value={t.satisfied} onChange={(v) => updateSys((s) => { s.trainings[i].satisfied = v; })} yesLabel="✓ Satisfied" noLabel="✗ Not Satisfied" />
+            <FLabel>How Was The Training?</FLabel>
+            <RatingRow label="Training rating" value={shownRating(t.rating, t.satisfied)} onChange={(r) => updateSys((s) => { s.trainings[i].rating = r; s.trainings[i].satisfied = ratingToYN(r); })} />
             {t.satisfied === "yes" ? <PassNote kind="pass">✓ {name} trained well, ready for evaluation (section 11).</PassNote> : null}
             {t.satisfied === "no" ? <>
               <PassNote kind="fail">✗ Trainer not satisfied, {t.trainee.trim() || "trainee"} needs another training session.</PassNote>
-              <AddButton label={`+ Give another training to ${t.trainee.trim() || "the trainee"}`} accent={Accents.green} onClick={() => updateSys((s) => { s.trainings.push({ id: newId(), trainee: t.trainee, trainer: t.trainer, date: "", satisfied: "", remarks: `Repeat training, trainer not satisfied with training ${i + 1}` }); })} />
+              <AddButton label={`+ Give another training to ${t.trainee.trim() || "the trainee"}`} accent={Accents.green} onClick={() => updateSys((s) => { s.trainings.push({ id: newId(), trainee: t.trainee, trainer: t.trainer, date: "", satisfied: "", rating: "", remarks: `Repeat training, trainer not satisfied with training ${i + 1}` }); })} />
             </> : null}
             <DelLink onClick={() => confirmDel(dialog, "Delete this training record?", () => updateSys((s) => { s.trainings.splice(i, 1); }))} />
           </div>
         );
       })}
-      <AddButton label="+ Add training / give another training" accent={Accents.green} onClick={() => updateSys((s) => { s.trainings.push({ id: newId(), trainee: "", trainer: "", date: "", satisfied: "", remarks: "" }); })} />
+      <AddButton label="+ Add training / give another training" accent={Accents.green} onClick={() => updateSys((s) => { s.trainings.push({ id: newId(), trainee: "", trainer: "", date: "", satisfied: "", rating: "", remarks: "" }); })} />
     </div>
   );
 }
@@ -663,7 +756,7 @@ function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Syste
   if (!sys.evals.length) {
     return <>
       <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No evaluation yet, add the first one below.</p>
-      <AddButton label="+ Add evaluation / evaluate again" accent={Accents.green} onClick={() => updateSys((s) => { s.evals.push({ id: newId(), trainee: lastTrainee, evaluator: "", evalDate: "", satisfied: "", implDate: "", remarks: "" }); })} />
+      <AddButton label="+ Add evaluation / evaluate again" accent={Accents.green} onClick={() => updateSys((s) => { s.evals.push({ id: newId(), trainee: lastTrainee, evaluator: "", evalDate: "", satisfied: "", rating: "", implDate: "", remarks: "" }); })} />
     </>;
   }
   return (
@@ -681,21 +774,20 @@ function EvalSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Syste
                 a "yes", so it can only be set once the evaluation has passed. */}
             <FLabel>Remarks of Evaluation</FLabel>
             <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.evals[i].remarks = v; })} placeholder="What did the evaluation find?" />
-            <FLabel>Evaluator Satisfied?</FLabel>
-            <YesNoRow value={t.satisfied} onChange={(v) => updateSys((s) => { s.evals[i].satisfied = v; })} yesLabel="✓ Yes, Satisfied" noLabel="✗ No, Not Satisfied" />
+            <FLabel>Evaluation Result</FLabel>
+            <RatingRow label="Evaluation rating" value={shownRating(t.rating, t.satisfied)} onChange={(r) => updateSys((s) => { s.evals[i].rating = r; s.evals[i].satisfied = ratingToYN(r); })} />
             {t.satisfied === "yes" ? <>
               <PassNote kind="pass">✓ {name} passed the evaluation, announce the implementation date:</PassNote>
               <DateField label="Implementation Date" value={t.implDate} onChange={(v) => updateSys((s) => { s.evals[i].implDate = v; })} />
             </> : null}
             {t.satisfied === "no" ? <>
               <PassNote kind="fail">✗ {name} failed the evaluation, another training session is needed. No implementation date.</PassNote>
-              <AddButton label={`+ Schedule another training for ${t.trainee.trim() || "the trainee"}`} accent={Accents.green} onClick={() => { updateSys((s) => { s.trainings.push({ id: newId(), trainee: t.trainee, trainer: "", date: "", satisfied: "", remarks: `Re-training after failed evaluation ${i + 1}` }); }); void dialog.alert(`A new training has been added in section 10 for ${t.trainee.trim() || "the trainee"}.`); }} />
             </> : null}
             <DelLink onClick={() => confirmDel(dialog, "Delete this evaluation record?", () => updateSys((s) => { s.evals.splice(i, 1); }))} />
           </div>
         );
       })}
-      <AddButton label="+ Add evaluation / evaluate again" accent={Accents.green} onClick={() => updateSys((s) => { s.evals.push({ id: newId(), trainee: lastTrainee, evaluator: "", evalDate: "", satisfied: "", implDate: "", remarks: "" }); })} />
+      <AddButton label="+ Add evaluation / evaluate again" accent={Accents.green} onClick={() => updateSys((s) => { s.evals.push({ id: newId(), trainee: lastTrainee, evaluator: "", evalDate: "", satisfied: "", rating: "", implDate: "", remarks: "" }); })} />
     </div>
   );
 }
@@ -710,7 +802,7 @@ function ReviewSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Sys
   if (!sys.reviews.length) {
     return <>
       <p className="text-[13px] leading-snug" style={{ color: "var(--muted)" }}>No review yet, add the first one below.</p>
-      <AddButton label="+ Add fortnightly review" accent={Accents.green} onClick={() => updateSys((s) => { s.reviews.push({ id: newId(), trainee: lastTrainee, reviewer: "", date: "", satisfied: "", remarks: "" }); })} />
+      <AddButton label="+ Add fortnightly review" accent={Accents.green} onClick={() => updateSys((s) => { s.reviews.push({ id: newId(), trainee: lastTrainee, reviewer: "", date: "", satisfied: "", rating: "", remarks: "" }); })} />
     </>;
   }
   /* Grouped by PERSON, then stepped through that person's reviews.
@@ -769,14 +861,26 @@ function ReviewSection({ sys, updateSys }: { sys: System; updateSys: (m: (s: Sys
         <PersonField label="Trainee's Name" value={t.trainee} placeholder="Who is being reviewed?" onChange={(v) => updateSys((s) => { s.reviews[i].trainee = v; })} />
         <PersonField label="Reviewer" value={t.reviewer} placeholder="Who is reviewing?" onChange={(v) => updateSys((s) => { s.reviews[i].reviewer = v; })} />
         <DateField label="Review Date" value={t.date} onChange={(v) => updateSys((s) => { s.reviews[i].date = v; })} />
-        <FLabel>Reviewer Satisfied?</FLabel>
-        <YesNoRow value={t.satisfied} onChange={(v) => updateSys((s) => { s.reviews[i].satisfied = v; })} yesLabel="✓ Satisfied" noLabel="✗ Not Satisfied" />
-        <p className="font-heading text-[9px] mt-2 mb-0.5" style={{ letterSpacing: "1.5px", color: Accents.red }}>🔒 CONFIDENTIAL REMARKS ABOUT THE TRAINEE</p>
-        <Area value={t.remarks} onChange={(v) => updateSys((s) => { s.reviews[i].remarks = v; })} placeholder="For the reviewer's eyes, honest, confidential notes on the trainee…" />
+        <FLabel>Fortnightly Progress</FLabel>
+        <RatingRow label="Fortnightly progress rating" value={shownRating(t.rating, t.satisfied)} onChange={(r) => updateSys((s) => { s.reviews[i].rating = r; s.reviews[i].satisfied = ratingToYN(r); })} />
+        {/* On a fail the confidential note changes register: a serif italic,
+            so it reads as a private, handwritten-style note rather than one
+            more form field. A pass or an unanswered review stays as it was. */}
+        {t.satisfied === "no" ? (
+          <p className="mt-3 mb-1 text-[14px] italic" style={{ fontFamily: SERIF, color: Accents.red }}>🔒 Confidential remarks about the trainee</p>
+        ) : (
+          <p className="font-heading text-[9px] mt-2 mb-0.5" style={{ letterSpacing: "1.5px", color: Accents.red }}>🔒 CONFIDENTIAL REMARKS ABOUT THE TRAINEE</p>
+        )}
+        <Area
+          value={t.remarks}
+          onChange={(v) => updateSys((s) => { s.reviews[i].remarks = v; })}
+          placeholder="For the reviewer's eyes, honest, confidential notes on the trainee…"
+          confidential={t.satisfied === "no"}
+        />
         <DelLink onClick={() => confirmDel(dialog, "Delete this review record?", () => updateSys((s) => { s.reviews.splice(i, 1); }))} />
       </div>
 
-      <AddButton label="+ Add fortnightly review" accent={Accents.green} onClick={() => updateSys((s) => { s.reviews.push({ id: newId(), trainee: lastTrainee, reviewer: "", date: "", satisfied: "", remarks: "" }); })} />
+      <AddButton label="+ Add fortnightly review" accent={Accents.green} onClick={() => updateSys((s) => { s.reviews.push({ id: newId(), trainee: lastTrainee, reviewer: "", date: "", satisfied: "", rating: "", remarks: "" }); })} />
     </div>
   );
 }
@@ -814,12 +918,13 @@ const FLabel = ({ children }: { children: ReactNode }) => (
   <span className="block text-[13px] text-muted mt-1 mb-1">{children}</span>
 );
 const TextField = ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (
-  <input
+  <GrowField
     autoCorrect="off"
     spellCheck={false}
     value={value}
-    onChange={(e) => onChange(e.target.value)}
+    onChange={onChange}
     placeholder={placeholder}
+    aria-label={placeholder}
     maxLength={120}
     /* `var(--field)`, never `transparent`. The ink here is `on-card` (near
        black) because a field is white paper in both themes — so a transparent
@@ -830,25 +935,74 @@ const TextField = ({ value, onChange, placeholder }: { value: string; onChange: 
     className="w-full min-h-[40px] rounded-xl border-[1.5px] px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
   />
 );
-const Area = ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => {
+/** Starts at one line and grows; unlike `TextField` it keeps line breaks,
+ *  because remarks are paragraphs. */
+const Area = ({ value, onChange, placeholder, confidential }: { value: string; onChange: (v: string) => void; placeholder: string; confidential?: boolean }) => {
   const ref = useAutoGrow(value);
   return (
     <textarea
       ref={ref}
+      rows={1}
       autoCorrect="off"
       spellCheck={false}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
+      aria-label={placeholder}
       maxLength={400}
       style={{
         backgroundColor: value.trim() ? FIELD_EMPTY : "var(--field-red)",
         borderColor: value.trim() ? "var(--field-empty-border)" : "var(--field-red-border)",
+        ...(confidential ? { fontFamily: SERIF, fontStyle: "italic", fontSize: "15.5px" } : {}),
       }}
-      className="w-full min-h-[52px] rounded-xl border-[1.5px] px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
+      className="w-full resize-none rounded-xl border-[1.5px] px-3 py-2 text-[14.5px] leading-snug text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
     />
   );
 };
+
+/** Georgia is on every desktop and phone; the rest are fallbacks. No download. */
+const SERIF = "Georgia, 'Times New Roman', Times, serif";
+
+const RATING_STYLE: Record<Exclude<Rating, "">, { label: string; color: string }> = {
+  excellent: { label: "EXCELLENT", color: Accents.green },
+  good: { label: "GOOD", color: "var(--p6)" },
+  average: { label: "AVERAGE", color: Accents.gold },
+  poor: { label: "POOR", color: Accents.red },
+};
+
+/**
+ * Zaffar's four boxes: EXCELLENT, GOOD, AVERAGE, POOR — pick one.
+ *
+ * Real buttons with `aria-pressed`, 44px tall. The picked box is filled AND
+ * carries a tick, so the choice does not rest on colour alone.
+ */
+function RatingRow({ value, onChange, label }: { value: Rating; onChange: (r: Exclude<Rating, "">) => void; label: string }) {
+  return (
+    <div role="group" aria-label={label} className="my-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {RATINGS.map((r) => {
+        const on = value === r;
+        const { label: text, color } = RATING_STYLE[r];
+        return (
+          <button
+            key={r}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onChange(r)}
+            className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border-[1.5px] px-2 text-[12.5px] font-bold tracking-[0.06em] transition-colors"
+            style={{
+              borderColor: on ? color : "var(--line)",
+              backgroundColor: on ? color : "var(--surface)",
+              color: on ? "var(--on-accent)" : "var(--muted)",
+            }}
+          >
+            {on ? <span aria-hidden>✓</span> : null}
+            {text}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 const DelLink = ({ onClick }: { onClick: () => void }) => (
   <button onClick={onClick} className="mt-1 block text-[12px] font-semibold underline" style={{ color: Accents.red }}>Delete</button>
 );
@@ -882,17 +1036,17 @@ function PairSideList({
   return (
     <div>
       {list.map((p, i) => (
-        <div key={p.id} className="flex items-center gap-3 py-2 border-b border-line">
-          <span className="font-heading text-[14px] w-5 text-center" style={{ color: NAVY }}>{i + 1}</span>
-          <input
+        <div key={p.id} className="flex items-start gap-3 py-2 border-b border-line">
+          <span className="font-heading text-[14px] w-5 text-center pt-1.5" style={{ color: NAVY }}>{i + 1}</span>
+          <GrowField
             autoCorrect="off"
             spellCheck={false}
             value={p[side]}
-            onChange={(e) => {
-              const v = e.target.value;
+            onChange={(v) => {
               onChangePairs((l) => { if (l[i]) l[i][side] = v; });
             }}
             placeholder={placeholder(i + 1)}
+            aria-label={placeholder(i + 1)}
             maxLength={200}
             style={{ backgroundColor: p[side].trim() ? FIELD_EMPTY : "var(--field-red)" }}
             className="flex-1 min-w-0 rounded-md px-2 py-1.5 text-[14px] text-on-card outline-none placeholder:text-placeholder"
@@ -942,14 +1096,15 @@ function EditableList({ items, onChange, placeholder, addLabel }: { items: strin
   return (
     <div>
       {list.map((it, i) => (
-        <div key={i} className="flex items-center gap-3 py-2 border-b border-line">
-          <span className="font-heading text-[14px] w-5 text-center" style={{ color: NAVY }}>{i + 1}</span>
-          <input
+        <div key={i} className="flex items-start gap-3 py-2 border-b border-line">
+          <span className="font-heading text-[14px] w-5 text-center pt-1.5" style={{ color: NAVY }}>{i + 1}</span>
+          <GrowField
             autoCorrect="off"
             spellCheck={false}
             value={it}
-            onChange={(e) => { const n = [...list]; n[i] = e.target.value; onChange(n); }}
+            onChange={(v) => { const n = [...list]; n[i] = v; onChange(n); }}
             placeholder={placeholder(i + 1)}
+            aria-label={placeholder(i + 1)}
             maxLength={200}
             style={{ backgroundColor: it.trim() ? FIELD_EMPTY : "var(--field-red)" }}
             className="flex-1 min-w-0 rounded-md px-2 py-1.5 text-[14px] text-on-card outline-none placeholder:text-placeholder"
@@ -957,7 +1112,14 @@ function EditableList({ items, onChange, placeholder, addLabel }: { items: strin
           <button
             aria-label={`Delete ${placeholder(i + 1).toLowerCase()}`}
             title={`Delete ${placeholder(i + 1).toLowerCase()}`}
-            onClick={() => { const n = list.filter((_, x) => x !== i); onChange(n.length ? n : [""]); }}
+            onClick={() => {
+              const remove = () => { const n = list.filter((_, x) => x !== i); onChange(n.length ? n : [""]); };
+              // A blank row loses nothing, so it goes without asking.
+              if (!it.trim()) return remove();
+              void dialog
+                .confirm(`Delete ${placeholder(i + 1).toLowerCase()}?`, { body: `"${it.trim().slice(0, 60)}${it.trim().length > 60 ? "…" : ""}" will be removed.`, confirmLabel: "Delete", danger: true })
+                .then((ok) => { if (ok) remove(); });
+            }}
             /* 13px icon in a `tap-target` box: WCAG 2.2 target size, and the
                icon alone gave a screen reader nothing to announce. */
             className="tap-target text-[15px]"

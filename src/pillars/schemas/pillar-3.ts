@@ -51,6 +51,36 @@ export const makeInitial = (): P3State => ({
   history: [],
 });
 
+/** Whether today's board has anything worth keeping in history. */
+export const hasDay = (s: P3State): boolean =>
+  !!(
+    s.work.text.trim() ||
+    s.dod.some((t) => t.text.trim()) ||
+    s.extra.some((t) => t.text.trim()) ||
+    s.pm.trim() ||
+    s.money.trim()
+  );
+
+/**
+ * Snapshot the whole closing day into history, then clear everything for a
+ * fresh day. Shared by Pillar 3 and the Pillar 5 "AM Planning & PM
+ * Achievement" department, which runs the same board per business.
+ */
+export function rollover(s: P3State, closingDate: string): void {
+  if (hasDay(s)) {
+    const snap: DaySnap = { date: closingDate, work: s.work, dod: s.dod, extra: s.extra, pm: s.pm, money: s.money };
+    // Collapse multiple rolls on the same closing date into one entry.
+    if (s.history[0]?.date === closingDate) s.history[0] = snap;
+    else s.history = [snap, ...s.history].slice(0, 180);
+  }
+  s.work = { text: '', done: false };
+  s.dod = Array.from({ length: 5 }, () => ({ text: '', done: false }));
+  s.extra = [];
+  s.pm = '';
+  s.money = '';
+  s.day = todayKey();
+}
+
 const asSection = (v: unknown): Section =>
   v === 'work' || v === 'dod' || v === 'extra' ? v : 'work';
 

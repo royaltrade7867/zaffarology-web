@@ -8,11 +8,40 @@
  * paired with a `satisfied` verdict and free-text remarks — effectively named
  * performance judgments. Anything that exports it is exporting that.
  */
-import { asStr, asYN, objArr, strArr, withId, type Loose, type YN } from './types';
+import { asObj, asStr, asYN, fixDeleg, objArr, strArr, withId, type Deleg, type Loose, type YN } from './types';
+import { normalize as normP3, type P3State } from './pillar-3';
 import { makeInitial as initIdea, normalize as normIdea, type IdeaState } from './idea';
 import { makeInitial as initRecords, normalize as normRecords, type P7State } from './records';
 
 export type { YN } from './types';
+
+/**
+ * Zaffar's four-box verdict for training, evaluation and fortnightly review.
+ *
+ * It sits ALONGSIDE `satisfied`, never instead of it: `satisfied` is what the
+ * pass/fail notes, the implementation-date gate, the reports and the phone app
+ * all read. Every rating change writes both (see `ratingToYN`), so an app that
+ * only knows `satisfied` still sees the right pass/fail.
+ */
+export type Rating = '' | 'excellent' | 'good' | 'average' | 'poor';
+
+export const RATINGS: Exclude<Rating, ''>[] = ['excellent', 'good', 'average', 'poor'];
+
+export const asRating = (v: unknown): Rating =>
+  v === 'excellent' || v === 'good' || v === 'average' || v === 'poor' ? v : '';
+
+/** EXCELLENT / GOOD pass, AVERAGE / POOR do not (agreed 18 Sep 2026). */
+export const ratingToYN = (r: Rating): YN =>
+  r === 'excellent' || r === 'good' ? 'yes' : r === 'average' || r === 'poor' ? 'no' : '';
+
+/**
+ * The box to show as picked. A record from before ratings existed — or saved by
+ * a build that drops `rating` — has only `satisfied`; it shows as GOOD or POOR,
+ * the nearest box on the right side of pass/fail. Display only: nothing is
+ * written until someone picks a box.
+ */
+export const shownRating = (r: Rating, satisfied: YN): Rating =>
+  r || (satisfied === 'yes' ? 'good' : satisfied === 'no' ? 'poor' : '');
 
 export interface Training {
   id: string;
@@ -20,6 +49,7 @@ export interface Training {
   trainer: string;
   date: string;
   satisfied: YN;
+  rating: Rating;
   remarks: string;
 }
 
@@ -29,6 +59,7 @@ export interface Evaluation {
   evaluator: string;
   evalDate: string;
   satisfied: YN;
+  rating: Rating;
   implDate: string;
   remarks: string;
 }
@@ -39,6 +70,7 @@ export interface Review {
   reviewer: string;
   date: string;
   satisfied: YN;
+  rating: Rating;
   remarks: string;
 }
 
@@ -104,12 +136,31 @@ export interface System {
   records?: P7State;
 }
 
+/** A filed (chased and put away) delegation in a business's Delegation department. */
+export interface DelegFiled {
+  text: string;
+  date: string;
+}
+
+/** The Delegation department's own list — Pillar 1's delegate or follow-up. */
+export interface DelegationBoard {
+  items: Deleg[];
+  filed: DelegFiled[];
+}
+
 export interface Department {
   id: string;
   name: string;
   /** "D1", "D2", … unique within the whole pillar, like system numbers. */
   num: string;
   systems: System[];
+  /**
+   * The "AM Planning & PM Achievement ($)" department's daily board — the
+   * same shape as Pillar 3, one per business. Only present once used.
+   */
+  amPm?: P3State;
+  /** The "Delegation" department's delegate / follow-up list. Only present once used. */
+  delegation?: DelegationBoard;
 }
 
 export interface Business {
@@ -162,10 +213,13 @@ export const numOf = (raw: unknown): number => {
  * renaming a department would change; a renamed department reverts to the
  * ordinary 12-section system, which is the honest behaviour.
  */
-export type DeptKind = 'systems' | 'idea-loyalty' | 'idea-ai' | 'records';
+export type DeptKind = 'systems' | 'am-pm' | 'delegation' | 'idea-loyalty' | 'idea-ai' | 'records';
 
 export const deptKind = (name: string): DeptKind => {
   const n = name.trim().toLowerCase();
+  // Zaffar, 18 Sep 2026: these two work like Pillar 3 and Pillar 1.
+  if (n === 'am planning & pm achievement ($)' || n === 'am planning & pm achievement') return 'am-pm';
+  if (n === 'delegation') return 'delegation';
   if (n === 'loyalty') return 'idea-loyalty';
   if (n === 'ai') return 'idea-ai';
   if (n === 'record keeping') return 'records';
@@ -176,8 +230,9 @@ export const deptKind = (name: string): DeptKind => {
  * The five departments every business is expected to run, in Zaffar's order.
  *
  * Seeded into a business ONCE — on create, and once retroactively for
- * businesses that pre-date this. They are ordinary departments afterwards:
- * renameable, deletable, and never re-added once removed.
+ * businesses that pre-date this. They cannot be deleted from the screen
+ * (`isStandardDept`, 18 Sep 2026); a business that lost one before that rule
+ * still never has it re-added.
  */
 export const DEFAULT_DEPARTMENTS = [
   'AM Planning & PM Achievement ($)',
@@ -186,6 +241,19 @@ export const DEFAULT_DEPARTMENTS = [
   'AI',
   'Record Keeping',
 ] as const;
+
+/**
+ * One of the five standard departments — these cannot be deleted.
+ *
+ * Decided by NAME, the same way their colour is, rather than by a stored flag:
+ * the phone app rebuilds departments from a fixed field list, so a flag written
+ * here would be dropped by the next phone save and the department would
+ * silently become deletable again.
+ */
+export const isStandardDept = (name: string): boolean => {
+  const n = name.trim().toLowerCase();
+  return DEFAULT_DEPARTMENTS.some((d) => d.trim().toLowerCase() === n);
+};
 
 /**
  * The colour a department is drawn in.
@@ -206,8 +274,7 @@ export type DeptAccent = 'plum' | 'gold' | 'teal' | 'green' | 'brown' | 'red' | 
 const CUSTOM_DEPT_ACCENTS: DeptAccent[] = ['gold', 'teal', 'green', 'brown', 'red', 'blue'];
 
 export function deptAccent(name: string, index: number): DeptAccent {
-  const n = name.trim().toLowerCase();
-  if (DEFAULT_DEPARTMENTS.some((d) => d.trim().toLowerCase() === n)) return 'plum';
+  if (isStandardDept(name)) return 'plum';
   return CUSTOM_DEPT_ACCENTS[index % CUSTOM_DEPT_ACCENTS.length];
 }
 
@@ -287,6 +354,7 @@ const fixTraining = (t: Loose): Training => ({
   trainer: asStr(t.trainer),
   date: asStr(t.date),
   satisfied: asYN(t.satisfied),
+  rating: asRating(t.rating),
   remarks: asStr(t.remarks),
 });
 
@@ -296,6 +364,7 @@ const fixEval = (t: Loose): Evaluation => ({
   evaluator: asStr(t.evaluator),
   evalDate: asStr(t.evalDate),
   satisfied: asYN(t.satisfied),
+  rating: asRating(t.rating),
   implDate: asStr(t.implDate),
   remarks: asStr(t.remarks),
 });
@@ -306,6 +375,7 @@ const fixReview = (t: Loose): Review => ({
   reviewer: asStr(t.reviewer),
   date: asStr(t.date),
   satisfied: asYN(t.satisfied),
+  rating: asRating(t.rating),
   remarks: asStr(t.remarks),
 });
 
@@ -343,6 +413,14 @@ const fixSystem = (s: Loose): System => ({
   ...(s.records ? { records: normRecords(s.records as never) } : {}),
 });
 
+const fixDelegation = (v: unknown): DelegationBoard => {
+  const o = asObj(v);
+  return {
+    items: objArr(o.items, fixDeleg),
+    filed: objArr(o.filed, (f) => ({ text: asStr(f.text), date: asStr(f.date) })),
+  };
+};
+
 const fixDept = (d: Loose): Department => ({
   id: withId(d.id),
   name: asStr(d.name),
@@ -350,6 +428,10 @@ const fixDept = (d: Loose): Department => ({
   // assigns one, so the value is only ever missing in transit.
   num: asStr(d.num),
   systems: objArr(d.systems, fixSystem),
+  /* Carried through explicitly (this builder rebuilds from a whitelist) and
+     only when present, so a department that never used its board stays small. */
+  ...(d.amPm ? { amPm: normP3(d.amPm as never) } : {}),
+  ...(d.delegation ? { delegation: fixDelegation(d.delegation) } : {}),
 });
 
 const fixBiz = (b: Loose): Business => ({
