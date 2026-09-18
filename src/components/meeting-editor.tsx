@@ -14,13 +14,17 @@
  * `addAttendee` handles ids ONLY — the field owns the text. Writing both from
  * here raced the field and overwrote the chips with the raw draft.
  */
-import { Back, Plus, Trash } from "@/components/icons";
+import { useState } from "react";
+
+import { Back, Plus, Share, Trash } from "@/components/icons";
 import { PersonTagField } from "@/components/person-tag-field";
 import { VoiceNotes } from "@/components/voice-notes";
 import { usePartnersWithAdd, type Partner } from "@/lib/use-connections";
 import { GrowField, SectionLabel, TextArea, cx } from "@/components/ui";
 import { DateField } from "@/components/task";
 import type { ApiMeeting } from "@/lib/notes-api";
+import { ShareSheet } from "@/components/share-sheet";
+import { meetingAsText } from "@/lib/notes-share-api";
 
 const ACCENT = "var(--gold)";
 
@@ -109,6 +113,7 @@ export function MeetingEditor({
    *  does not throw away a meeting whose only content is audio. */
   onVoiceCountChange?: (n: number) => void;
 }) {
+  const [sharing, setSharing] = useState(false);
   /**
    * Decisions: a numbered list, stored as one newline-separated string.
    * Always at least one row, so there is something to type into.
@@ -177,6 +182,18 @@ export function MeetingEditor({
           <span className="text-[12px] text-muted" aria-live="polite">
             {saveError ? "" : unsaved ? "Saving…" : "Saved automatically"}
           </span>
+          {/* Share sits BEFORE delete and is not tinted red: two icon buttons
+              side by side, one of which destroys the meeting, should not look
+              alike. */}
+          <button
+            type="button"
+            onClick={() => setSharing(true)}
+            aria-label="Share this meeting"
+            title="Share"
+            className="rounded-lg p-2 text-heading transition-colors hover:bg-line-soft"
+          >
+            <Share size={17} />
+          </button>
           <button
             type="button"
             onClick={onDelete}
@@ -188,6 +205,12 @@ export function MeetingEditor({
         </div>
       </div>
 
+      {/* ONE card around the whole meeting.
+          The gold-bordered box used to sit around Decisions alone, which made
+          that one section look like the meeting and left the rest floating on
+          the page. A meeting is a single document — it gets a single surface,
+          and the sections inside are separated by their labels. */}
+      <div className="rounded-2xl border bg-surface p-4 sm:p-5" style={{ borderColor: ACCENT }}>
       <SectionLabel text="Meeting" small="what it was and when" color={ACCENT} />
       {/* WHEN first, then what it was called. Date and time are filled in
           already (a meeting is created as it happens), so the first thing the
@@ -268,7 +291,10 @@ export function MeetingEditor({
       {/* The parts people come back for. Tinted with the card colour, not an
           accent wash — accent text on an accent tint sat at 4.01:1. The accent
           border alone carries the emphasis. */}
-      <section className="mt-6 rounded-2xl border bg-surface p-4" style={{ borderColor: ACCENT }}>
+      {/* A plain section now, not a card: the whole meeting is the card, and a
+          bordered box inside a bordered box read as two documents. A rule above
+          it is enough to set it apart. */}
+      <section className="mt-6 border-t border-line pt-5">
         <SectionLabel text="Decisions" small="what was actually agreed" color={ACCENT} />
         {/* A numbered list, not one box: a meeting produces several distinct
             decisions, and running them together loses which is which. */}
@@ -329,9 +355,14 @@ export function MeetingEditor({
           />
         </div>
       </section>
+      </div>
 
       {/* Recordings of this meeting. Scoped by meeting id, so they live here
-          rather than in the Notes tab's general list. */}
+          rather than in the Notes tab's general list.
+
+          OUTSIDE the meeting card on purpose: a recording is attached to the
+          meeting, not part of the written record — and it is the one thing
+          sharing deliberately leaves out. */}
       <VoiceNotes meetingId={meeting.id} compact onCountChange={onVoiceCountChange} />
 
       {/* Never claim saved while a write failed. */}
@@ -339,6 +370,16 @@ export function MeetingEditor({
         <p className="mt-4 text-[13px] font-semibold text-danger" role="alert">
           {saveError}
         </p>
+      ) : null}
+
+      {/* Built at open time, so it carries what is on screen now rather than
+          whatever the meeting held when the editor mounted. */}
+      {sharing ? (
+        <ShareSheet
+          title={meeting.title.trim() || "Meeting notes"}
+          body={meetingAsText(meeting)}
+          onClose={() => setSharing(false)}
+        />
       ) : null}
     </div>
   );

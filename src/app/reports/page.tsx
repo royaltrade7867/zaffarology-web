@@ -105,11 +105,11 @@ function Reports() {
      screen scaled up, with every group a full-width band. */
   return (
     <div className="max-w-[46rem]">
-      <h1 className="font-heading text-[26px] leading-tight text-heading">SHARE YOUR WORK</h1>
-      <p className="mt-1 max-w-[62ch] text-[13.5px] leading-relaxed text-muted">
-        Send your pillars to your coach or a business partner, or keep a copy for
-        yourself.
-      </p>
+      {/* Named after the tab that leads here. It read "SHARE YOUR WORK" over a
+          line about coaches and business partners — a pitch on a page someone
+          has already chosen to open, and the wrong name for what this does:
+          most of the time it is used to download a copy, not to send one. */}
+      <h1 className="font-heading text-[26px] leading-tight text-heading">REPORTS</h1>
 
       {/* What kind of report */}
       <div className="mt-6">

@@ -18,7 +18,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Check, Close, Mic, Pause, Play, Trash } from "@/components/icons";
+import { Check, Close, Mic, Pause, Pencil, Play, Trash } from "@/components/icons";
 import { cx } from "@/components/ui";
 import { apiErrorMessage } from "@/lib/api";
 import { friendlyTimestamp } from "@/lib/dates";
@@ -497,13 +497,23 @@ export function VoiceNotes({
               >
                 {playingId === n.id ? <Pause size={14} /> : <Play size={14} />}
               </button>
+              {/* The whole title block renames. It already did, but the only
+                  hint was a `title` tooltip — invisible on a phone and to
+                  anyone not hovering. The pencil says so. */}
               <button
                 type="button"
                 onClick={() => rename(n)}
-                className="min-w-0 flex-1 text-left"
+                aria-label={`Rename ${n.title}`}
+                className="group min-w-0 flex-1 text-left"
                 title="Rename"
               >
-                <span className="block break-words text-[14px] text-ink">{n.title}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="min-w-0 break-words text-[14px] text-ink">{n.title}</span>
+                  <Pencil
+                    size={12}
+                    className="shrink-0 text-muted transition-colors group-hover:text-heading"
+                  />
+                </span>
                 {/* Length AND when it was made. Duration alone could not tell
                     two recordings apart; the date is what people actually
                     remember a recording by. */}

@@ -56,6 +56,14 @@ export const Plus = (p: IconProps) => (
   <Svg {...p}><path d="M12 5v14M5 12h14" /></Svg>
 );
 
+/** Rename / edit. Used beside a title that can be changed in place. */
+export const Pencil = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4Z" />
+  </Svg>
+);
+
 export const Trash = (p: IconProps) => (
   <Svg {...p}>
     <path d="M4 7h16M10 11v6M14 11v6" />
