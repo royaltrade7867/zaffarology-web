@@ -370,10 +370,17 @@ export function DateField({ value, onChange, label }: { value: string; onChange:
         }}
         className="min-h-[40px] w-full min-w-0 rounded-xl border px-3 text-left text-[14.5px] text-on-card outline-none focus:border-gold"
       >
-        {/* `text-muted`, not `text-placeholder`: this is a BUTTON's label, not a
-            real `::placeholder`, and `--placeholder` is reserved for the latter
-            so the two cannot drift apart. */}
-        {value ? isoToDisplay(value) : <span className="text-muted">Choose a date</span>}
+        {/* NOT `text-muted`: that is the PAGE's token, and this label sits on a
+            FIELD. In dark mode `--muted` is #9db2cc, which lands at 1.44:1 on
+            the red empty wash — the "Choose a date" text was invisible.
+
+            The button already carries `text-on-card`, the sanctioned colour for
+            text on a field. Dimming it to 70% keeps it reading as unfilled while
+            measuring 5.21:1 on the worst surface (dark red wash) and 6.38:1 on
+            white — where `--placeholder` would be the natural choice, it is
+            banned outside a real `::placeholder` because that spelling has
+            shipped as a bug twice. */}
+        {value ? isoToDisplay(value) : <span className="opacity-70">Choose a date</span>}
       </button>
 
       {open ? (

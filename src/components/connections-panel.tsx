@@ -1,25 +1,28 @@
 "use client";
 
 /**
- * Connections: invite by email, accept, disconnect.
+ * Connections: add someone by email, disconnect.
  *
  * Mirrors `zaffarology-mobileapp/src/components/connections-panel.tsx`.
  *
- * The privacy rule is the load-bearing part: `/connections/invite` answers
- * byte-identically whether the address has an account, is already connected, is
- * the user themselves, or is a stranger. Anything else would turn this into a
- * way to discover who has a Zaffarology account. So the UI must not vary what
- * it shows based on the reply either — one message, always.
+ * There is no accept step. Adding a registered person connects you both
+ * immediately; an address with no account yet stays in "Invites sent" and
+ * connects the moment they register. So the only pending rows a user can ever
+ * see are their own outgoing invites to people who have not signed up.
+ *
+ * `/connections/invite` still answers byte-identically for every outcome, and
+ * this UI still shows one message regardless — but note the reply is no longer
+ * the only signal: an accepted row appears straight away, which does reveal
+ * that the address has an account. That trade was made deliberately.
  */
 import { useCallback, useEffect, useState } from "react";
 
-import { Check, Close, Mail, People, Plus } from "@/components/icons";
+import { Close, Mail, People, Plus } from "@/components/icons";
 import { cx } from "@/components/ui";
 import { apiErrorMessage } from "@/lib/api";
 import { reportError } from "@/lib/error-reporting";
 import { useDialog } from "@/components/dialog";
 import {
-  acceptConnection,
   inviteConnection,
   loadConnections,
   removeConnection,
@@ -101,14 +104,6 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
     }
   };
 
-  const accept = (r: ApiConnection) =>
-    withBusy(r.id, () => acceptConnection(r.id), "Could not accept that invite.");
-
-  const decline = async (r: ApiConnection) => {
-    if (!await dialog.confirm(`Decline the invite from ${nameOf(r)}?`, { confirmLabel: "Decline", danger: true })) return;
-    withBusy(r.id, () => removeConnection(r.id), "Could not decline that invite.");
-  };
-
   const disconnect = async (r: ApiConnection) => {
     if (
       !await dialog.confirm(
@@ -124,7 +119,8 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
     withBusy(r.id, () => removeConnection(r.id), "Could not withdraw that invite.");
   };
 
-  const incoming = rows.filter((r) => r.status === "pending" && r.direction === "incoming");
+  // No `incoming` list: nothing arrives needing approval any more. The only
+  // pending rows are outgoing invites to addresses with no account yet.
   const outgoing = rows.filter((r) => r.status === "pending" && r.direction === "outgoing");
   const accepted = rows.filter((r) => r.status === "accepted");
 
@@ -182,31 +178,6 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
         </p>
       ) : null}
 
-      {/* Requests waiting on me */}
-      {incoming.length ? (
-        <Group title="Invites received">
-          {incoming.map((r) => (
-            <Row key={r.id} r={r} sub="Wants to connect with you">
-              <IconButton
-                label={`Accept invite from ${nameOf(r)}`}
-                onClick={() => accept(r)}
-                disabled={busy.includes(r.id)}
-                tone="accept"
-              >
-                <Check size={17} />
-              </IconButton>
-              <IconButton
-                label={`Decline invite from ${nameOf(r)}`}
-                onClick={() => decline(r)}
-                disabled={busy.includes(r.id)}
-              >
-                <Close size={17} />
-              </IconButton>
-            </Row>
-          ))}
-        </Group>
-      ) : null}
-
       {/* Connected */}
       {accepted.length ? (
         <Group title="Connected">
@@ -224,16 +195,13 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
         </Group>
       ) : null}
 
-      {/* Sent, still waiting.
-
-          One wording for every sent invite. Branching on `user_id` announced
-          whether that address has an account — the very thing the identical
-          invite reply exists to hide. The server now also withholds the id and
-          name on an unaccepted outgoing row, so this is belt and braces. */}
+      {/* Sent, still waiting — only ever addresses with no account yet, since a
+          registered person connects on the spot. They join automatically when
+          they sign up with this address. */}
       {outgoing.length ? (
         <Group title="Invites sent">
           {outgoing.map((r) => (
-            <Row key={r.id} r={r} sub="Invited, waiting for them to accept">
+            <Row key={r.id} r={r} sub="Invited — they'll join when they sign up">
               <IconButton
                 label={`Withdraw invite to ${r.email}`}
                 onClick={() => cancelInvite(r)}
@@ -251,8 +219,8 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
           <People size={26} className="mx-auto text-muted" />
           <p className="mt-2 font-heading text-[16px] text-heading">No connections yet</p>
           <p className="mx-auto mt-1 max-w-[44ch] text-[13.5px] leading-relaxed text-muted">
-            Invite someone by email above. Once they accept, you can tag each
-            other on tasks and see them through.
+            Add someone by email above. You&rsquo;ll be connected straight away,
+            and can tag each other on tasks and see them through.
           </p>
         </div>
       ) : null}

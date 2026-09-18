@@ -187,8 +187,13 @@ ck("a failed refetch keeps the last known list",
 /* --------------------------- row-level safety ---------------------------- */
 
 ck("a row cannot be double-clicked into two calls", /busy\.includes\(/.test(panel));
+/* Two, not three: `decline` went when connections started accepting on
+   creation. The two that remain — disconnect, and withdraw a sent invite — are
+   the only destructive actions left on this panel, and both still confirm. */
 ck("destructive actions confirm first",
-   (panel.match(/dialog\.confirm\(/g) ?? []).length >= 3);
+   (panel.match(/dialog\.confirm\(/g) ?? []).length >= 2);
+ck("disconnecting confirms", /Disconnect from \$\{nameOf\(r\)\}/.test(panel));
+ck("withdrawing a sent invite confirms", /Withdraw the invite to \$\{r\.email\}/.test(panel));
 ck("marking done is optimistic and reverts on failure",
    /done \? "open" : "completed"/.test(hook));
 
