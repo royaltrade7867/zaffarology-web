@@ -39,16 +39,16 @@ export const APP_BADGE = '40 Years Of Business Success';
 export const APP_QUESTION = 'How can you achieve 40 years of business success in just 3 years?';
 
 export const HOW_TO_USE = {
-  title: 'How to Use This App',
-  purposeTitle: 'Purpose of This App',
+  title: 'How to Use This Platform',
+  purposeTitle: 'Purpose of This Platform',
   sections: [
     {
-      heading: 'Purpose of This App',
-      body: 'This app is designed to help participants understand, reflect on, and take immediate action on each Success Pillar. It is not only a reading tool, but a practical guide for personal and business growth.',
+      heading: 'Purpose of This Platform',
+      body: 'This platform is designed to help participants understand, reflect on, and take immediate action on each Success Pillar. It is not only a reading tool, but a practical guide for personal and business growth.',
     },
     {
       heading: 'Read, Understand and Reflect',
-      body: 'Participants should carefully read and understand each Success Pillar. As they go through the app, they should write their own notes, reflect on the key lessons, and connect the ideas to their own life, business, goals and challenges.',
+      body: 'Participants should carefully read and understand each Success Pillar. As they go through the platform, they should write their own notes, reflect on the key lessons, and connect the ideas to their own life, business, goals and challenges.',
     },
     {
       heading: 'Complete the Key Takeaways',
@@ -56,7 +56,7 @@ export const HOW_TO_USE = {
     },
     {
       heading: 'Take Practical Action',
-      body: 'The most important part of this app is execution. Participants should not only read the app, they must apply it. Each participant should identify practical actions they can implement in their personal or business life.',
+      body: 'The most important part of this platform is execution. Participants should not only read the platform, they must apply it. Each participant should identify practical actions they can implement in their personal or business life.',
     },
     {
       heading: 'Apply Within One Week',

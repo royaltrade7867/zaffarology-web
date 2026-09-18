@@ -102,7 +102,7 @@ export default function About() {
           Success in Just 3 Years.&rdquo;</em>
         </p>
         <p className="text-ink mt-3 leading-relaxed">
-          This app is the digital companion to the workbook: work through each pillar, track your do-or-die
+          This platform is the digital companion to the workbook: work through each pillar, track your do-or-die
           days, run 2-minute huddles, build repeatable business systems, and keep your records in order.
         </p>
       </div>

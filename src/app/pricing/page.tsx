@@ -354,7 +354,7 @@ export default function Pricing() {
           }}
           className="tap-row rounded px-2 text-[13.5px] font-semibold text-muted transition-colors hover:text-heading"
         >
-          {billing?.entitled ? "Back to the app" : "Back to my profile"}
+          {billing?.entitled ? "Back to the platform" : "Back to my profile"}
         </button>
       </div>
     </AuthShell>

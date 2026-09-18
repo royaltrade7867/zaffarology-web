@@ -29,7 +29,10 @@ export default function Welcome() {
         <span className="text-heading">TRANSFORMATION </span>
         <span className="text-gold">SYSTEM</span>
       </p>
-      <p className="mt-3 text-[17px] text-dim">A practical app to build, grow &amp; scale your business.</p>
+      <p className="mt-3 text-[17px] text-dim">
+        A practical business platform to help you build, grow and scale your
+        business, bringing 40 years of business success into just 3 powerful years.
+      </p>
 
       <div className="mt-10 w-full space-y-3">
         <Link href="/signup" className="block w-full rounded-xl bg-gold px-5 py-3.5 text-center font-semibold text-on-gold hover:bg-gold-hover">
