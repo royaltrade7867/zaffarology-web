@@ -23,6 +23,13 @@
   --dim: #2f4c6b;
   --line: #d3d9e2; /* hairline */
   --line-soft: #e6e9ef;
+  /* The border of the field you are typing in.
+     It used to be `--gold`, which drew a second, louder ring around a field
+     that ALREADY has the `:focus-visible` gold outline — two golds fighting on
+     one box. Focus is carried by that outline for keyboard users and by the
+     gold caret and selection for everyone; this only needs to say "this one",
+     so it is the hairline, darkened. */
+  --line-focus: #8a97a8;
   /* FIELDS ONLY. A field is white paper in both themes (white, or white under a
      green wash when empty), so this is one fixed value that never varies by
      theme. It must clear 4.5:1 on all three field surfaces, the darkest being
@@ -116,6 +123,9 @@
     --dim: #b8c8dd;
     --line: rgba(216, 227, 245, 0.18);
     --line-soft: rgba(216, 227, 245, 0.09);
+    /* A field stays white paper in the dark theme, so its focused border is a
+       darker grey than the hairline, not a lighter one. */
+    --line-focus: #8a97a8;
 
     /* Unchanged on purpose. A workbook's paper does not go dark — and a
        placeholder only ever sits ON a field, so it does not change either.
@@ -169,6 +179,7 @@
   --dim: #b8c8dd;
   --line: rgba(216, 227, 245, 0.18);
   --line-soft: rgba(216, 227, 245, 0.09);
+  --line-focus: #8a97a8;
 
   --field: #ffffff;
   --field-empty: #bce6ce;
@@ -213,6 +224,7 @@
   --color-dim: var(--dim);
   --color-line: var(--line);
   --color-line-soft: var(--line-soft);
+  --color-line-focus: var(--line-focus);
   --color-placeholder: var(--placeholder);
   --color-field: var(--field);
   --color-field-empty: var(--field-empty);

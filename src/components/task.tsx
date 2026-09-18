@@ -368,7 +368,7 @@ export function DateField({ value, onChange, label }: { value: string; onChange:
           backgroundColor: value ? FIELD_EMPTY : FIELD_RED,
           borderColor: value ? "var(--field-empty-border)" : FIELD_RED_BORDER,
         }}
-        className="min-h-[40px] w-full min-w-0 rounded-xl border px-3 text-left text-[14.5px] text-on-card outline-none focus:border-gold"
+        className="min-h-[40px] w-full min-w-0 rounded-xl border px-3 text-left text-[14.5px] text-on-card outline-none focus:border-line-focus"
       >
         {/* NOT `text-muted`: that is the PAGE's token, and this label sits on a
             FIELD. In dark mode `--muted` is #9db2cc, which lands at 1.44:1 on
@@ -466,7 +466,7 @@ export function PersonField({ label, value, placeholder, onChange, accent }: { l
           backgroundColor: value.trim() ? FIELD_EMPTY : FIELD_RED,
           borderColor: accent ?? (value.trim() ? "var(--field-empty-border)" : FIELD_RED_BORDER),
         }}
-        className="w-full min-h-[40px] rounded-xl border px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
+        className="w-full min-h-[40px] rounded-xl border px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-line-focus placeholder:text-placeholder"
       />
     </label>
   );

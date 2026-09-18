@@ -331,7 +331,7 @@ export default function Pillar4() {
               spellCheck={false}
               ref={noteRef}
               style={{ backgroundColor: item.note.trim() ? FIELD_EMPTY : "var(--field-red)", borderColor: item.note.trim() ? "var(--field-empty-border)" : "var(--field-red-border)" }}
-              className="w-full min-h-[64px] rounded-[10px] border-[1.5px] px-3 py-3 text-[15px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
+              className="w-full min-h-[40px] rounded-[10px] border-[1.5px] px-3 py-3 text-[15px] text-on-card outline-none focus:border-line-focus placeholder:text-placeholder"
             />
             <p className="text-[12px] font-semibold mt-1.5" style={{ color: countSentences(item.note) > 3 ? Accents.red : "var(--muted)" }}>
               {countSentences(item.note)} / 3 sentences{countSentences(item.note) > 3 ? ", too long, cut it down" : ""}

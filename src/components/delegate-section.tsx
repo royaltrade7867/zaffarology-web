@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
+
 import { Accents, FIELD_EMPTY } from "@/lib/pillars";
-import { SectionLabel, AddButton } from "@/components/ui";
+import { ChevronLeft, ChevronRight } from "@/components/icons";
+import { SectionLabel, AddButton, GrowField } from "@/components/ui";
 import { TaskRow, DateField, YesNoRow, type TaskAction } from "@/components/task";
 import { PersonTagField } from "@/components/person-tag-field";
 import type { Partner } from "@/lib/use-connections";
@@ -70,18 +73,105 @@ export function DelegateSection({
   ];
   const canTag = !!partners && !!onTag;
 
+  /* ONE task at a time, with Prev/Next — the same shape Pillar 1 uses for
+     goals. Stacking them meant a new task appeared below the last one, so by
+     the fifth the page was a wall of half-answered huddle blocks. Each row now
+     carries a person, a deadline, a done/not-done answer and possibly a note;
+     that is a page, not a line.
+
+     `cur` is clamped rather than stored safe: a row can be deleted from under
+     it, and an index past the end would render nothing at all. */
+  const [cur, setCur] = useState(0);
+  const idx = Math.min(cur, Math.max(0, items.length - 1));
+  const d = items[idx];
+
+  const goTo = (n: number) => setCur(Math.max(0, Math.min(n, items.length - 1)));
+
+  const navBtn = (off: boolean) => ({
+    borderColor: off ? "var(--line)" : accent,
+    color: off ? "var(--muted)" : accent,
+    cursor: off ? "not-allowed" : "pointer",
+  });
+
+  const add = () => {
+    onAdd();
+    // Land on the task just created, not wherever the pager happened to be.
+    setCur(items.length);
+  };
+
   return (
     <section className="mb-8">
       <SectionLabel text="Delegate or Follow Up" small="tick when you've chased it" color={accent} />
-      {items.map((d, i) => (
+
+      {/* The pager. Hidden for a single task: two disabled arrows around
+          "1 of 1" is furniture that explains nothing. */}
+      {items.length > 1 ? (
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            disabled={idx === 0}
+            onClick={() => goTo(idx - 1)}
+            aria-label="Previous delegated task"
+            title="Previous delegated task"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
+            style={navBtn(idx === 0)}
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div className="flex min-w-0 flex-col items-center gap-1.5">
+            <span aria-live="polite" className="font-heading text-[12px] uppercase tracking-wide text-ink">
+              {`Task ${idx + 1} of ${items.length}`}
+            </span>
+            <div className="flex items-center">
+              {items.map((it, i) => {
+                const on = i === idx;
+                return (
+                  <button
+                    key={it.id || i}
+                    type="button"
+                    onClick={() => goTo(i)}
+                    aria-label={`Go to task ${i + 1}${it.text.trim() ? `: ${it.text.trim()}` : ""}`}
+                    aria-current={on ? "true" : undefined}
+                    title={it.text.trim() || `Task ${i + 1}`}
+                    className="tap-target flex items-center justify-center"
+                  >
+                    <span
+                      aria-hidden
+                      className="block rounded-full transition-all"
+                      style={{
+                        width: on ? 20 : 8,
+                        height: 8,
+                        backgroundColor: on ? accent : "var(--line)",
+                      }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <button
+            type="button"
+            disabled={idx >= items.length - 1}
+            onClick={() => goTo(idx + 1)}
+            aria-label="Next delegated task"
+            title="Next delegated task"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border-[1.5px] transition-colors"
+            style={navBtn(idx >= items.length - 1)}
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      ) : null}
+
+      {d ? (
         <TaskRow
-          key={d.id || i}
+          key={d.id || idx}
           accent={accent}
           symbol="→"
           value={d.text}
           done={d.done}
-          onChange={(text) => onEdit(i, (x) => { x.text = text; })}
-          onToggle={(v) => onEdit(i, (x) => {
+          onChange={(text) => onEdit(idx, (x) => { x.text = text; })}
+          onToggle={(v) => onEdit(idx, (x) => {
             x.done = v;
             /* Keep the two answers in step. Un-ticking a row that was marked
                completed must not leave `status: 'completed'` behind, or the
@@ -90,16 +180,19 @@ export function DelegateSection({
             if (v && x.status !== "completed") x.status = "completed";
             if (!v && x.status === "completed") x.status = "";
           })}
-          onDelete={() => onRemove(i)}
-          actions={actions(i)}
-          locked={i > 0 && !items[i - 1].text.trim()}
+          onDelete={() => onRemove(idx)}
+          actions={actions(idx)}
+          /* No `locked` here any more. It existed to stop someone filling row 3
+             while row 2 was blank — visible when the rows were stacked. In a
+             pager you only ever see one, so a locked field would read as
+             broken, with the reason on a page you are not looking at. */
           placeholder="What would you like to delegate?"
           /* The plain who-field only when there is nothing to tag against;
              otherwise `PersonTagField` below owns it, and showing both would
              be two inputs for one value. */
           showWho={!canTag}
           who={d.who}
-          onChangeWho={(text) => onEdit(i, (x) => { x.who = text; })}
+          onChangeWho={(text) => onEdit(idx, (x) => { x.who = text; })}
           below={
             <div className="space-y-2">
               {canTag ? (
@@ -107,11 +200,11 @@ export function DelegateSection({
                   label="To whom"
                   value={d.who}
                   placeholder="Who owns it?"
-                  onChangeText={(t) => onEdit(i, (x) => { x.who = t; })}
+                  onChangeText={(t) => onEdit(idx, (x) => { x.who = t; })}
                   accent={accent}
                   partners={partners!}
                   tagUserId={d.whoUserId}
-                  onTag={(p, notify) => onTag!(i, p, notify)}
+                  onTag={(p, notify) => onTag!(idx, p, notify)}
                   statusNote={statusNoteFor?.(d) ?? null}
                 />
               ) : null}
@@ -119,7 +212,7 @@ export function DelegateSection({
               {/* The deadline. `due` was always in the shared shape, and the
                   reports already print it and count overdue items. */}
               <div className="max-w-[260px]">
-                <DateField label="Deadline" value={d.due} onChange={(iso) => onEdit(i, (x) => { x.due = iso; })} />
+                <DateField label="Deadline" value={d.due} onChange={(iso) => onEdit(idx, (x) => { x.due = iso; })} />
               </div>
 
               {/* Only ask once there is something to ask about. An empty row
@@ -129,7 +222,7 @@ export function DelegateSection({
                 <>
                   <YesNoRow
                     value={d.status === "completed" ? "yes" : d.status === "notdone" ? "no" : ""}
-                    onChange={(v) => onEdit(i, (x) => {
+                    onChange={(v) => onEdit(idx, (x) => {
                       if (v === "yes") {
                         x.status = "completed";
                         x.done = true;
@@ -150,7 +243,7 @@ export function DelegateSection({
                       <DateField
                         label="Completed On"
                         value={d.completedOn}
-                        onChange={(iso) => onEdit(i, (x) => { x.completedOn = iso; })}
+                        onChange={(iso) => onEdit(idx, (x) => { x.completedOn = iso; })}
                       />
                     </div>
                   ) : null}
@@ -167,22 +260,24 @@ export function DelegateSection({
                         <DateField
                           label="New Completion Date"
                           value={d.newDate}
-                          onChange={(iso) => onEdit(i, (x) => { x.newDate = iso; })}
+                          onChange={(iso) => onEdit(idx, (x) => { x.newDate = iso; })}
                         />
                       </div>
                       <FLabel>Note (optional, 1 to 3 sentences max)</FLabel>
-                      <textarea
+                      {/* `GrowField`, not a bare textarea: it carries
+                          `useAutoGrow`, so the box starts at one line and grows
+                          with the answer instead of opening as an empty
+                          three-line block. */}
+                      <GrowField
                         value={d.note}
-                        onChange={(e) => onEdit(i, (x) => { x.note = e.target.value; })}
+                        onChange={(v) => onEdit(idx, (x) => { x.note = v; })}
                         placeholder="What happens next. Not why it didn't happen."
                         maxLength={280}
-                        autoCorrect="off"
-                        spellCheck={false}
                         style={{
                           backgroundColor: d.note.trim() ? FIELD_EMPTY : "var(--field-red)",
                           borderColor: d.note.trim() ? "var(--field-empty-border)" : "var(--field-red-border)",
                         }}
-                        className="w-full min-h-[64px] rounded-[10px] border-[1.5px] px-3 py-3 text-[15px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
+                        className="w-full min-h-[40px] rounded-[10px] border-[1.5px] px-3 py-3 text-[15px] text-on-card outline-none focus:border-line-focus placeholder:text-placeholder"
                       />
                       <p
                         className="text-[12px] font-semibold mt-1.5"
@@ -198,8 +293,9 @@ export function DelegateSection({
             </div>
           }
         />
-      ))}
-      <AddButton label="+ Delegate task or follow-up" accent={accent} onClick={onAdd} />
+      ) : null}
+
+      <AddButton label="+ Delegate task or follow-up" accent={accent} onClick={add} />
     </section>
   );
 }

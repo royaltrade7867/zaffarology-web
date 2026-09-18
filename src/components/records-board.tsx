@@ -150,7 +150,7 @@ export function RecordsBoard({
                themed ink is right; on web every input is a field, and the
                theme fixture enforces it. */
             style={{ backgroundColor: "var(--field)", color: "var(--on-card)" }}
-            className="w-full min-h-[48px] rounded-xl border-[1.5px] border-line px-3.5 pr-10 text-[15px] outline-none transition-colors focus:border-gold"
+            className="w-full min-h-[48px] rounded-xl border-[1.5px] border-line px-3.5 pr-10 text-[15px] outline-none transition-colors focus:border-line-focus"
           />
           {search.trim() ? (
             <button

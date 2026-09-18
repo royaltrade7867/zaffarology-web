@@ -196,7 +196,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 maxLength={200}
                 // A field is white paper in both themes, so its ink is on-card.
                 style={{ backgroundColor: value.trim() ? "var(--field)" : "var(--field-empty)" }}
-                className="mt-3 w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-on-card outline-none transition-colors focus:border-gold"
+                className="mt-3 w-full min-h-[44px] rounded-xl border border-line px-3.5 py-2.5 text-[15px] text-on-card outline-none transition-colors focus:border-line-focus"
               />
             ) : null}
 

@@ -366,7 +366,7 @@ function NotesAndMeetings() {
           maxLength={200}
           autoFocus
           style={{ backgroundColor: openNote.title.trim() ? "var(--field)" : "var(--field-empty)" }}
-          className="mb-3 w-full rounded-xl border border-line px-3.5 py-3 font-heading text-[19px] text-on-card outline-none transition-colors focus:border-gold"
+          className="mb-3 w-full rounded-xl border border-line px-3.5 py-3 font-heading text-[19px] text-on-card outline-none transition-colors focus:border-line-focus"
         />
         <TextArea
           value={openNote.body}

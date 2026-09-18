@@ -149,7 +149,7 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
             placeholder="their@email.com"
             maxLength={254}
             style={{ backgroundColor: email.trim() ? "var(--field)" : "var(--field-empty)" }}
-            className="w-full min-h-[44px] rounded-xl border border-line pl-9 pr-3.5 py-2.5 text-[15px] text-on-card outline-none transition-colors focus:border-gold"
+            className="w-full min-h-[44px] rounded-xl border border-line pl-9 pr-3.5 py-2.5 text-[15px] text-on-card outline-none transition-colors focus:border-line-focus"
           />
         </div>
         <button

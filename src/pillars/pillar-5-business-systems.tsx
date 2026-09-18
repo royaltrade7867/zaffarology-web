@@ -343,7 +343,7 @@ function AddRow({ placeholder, onAdd, autoFocus }: { placeholder: string; onAdd:
         placeholder={placeholder}
         maxLength={80}
         style={{ backgroundColor: val.trim() ? FIELD_EMPTY : "var(--field-red)", borderColor: val.trim() ? "var(--field-empty-border)" : "var(--field-red-border)" }}
-        className="min-h-[40px] flex-1 rounded-xl border-[1.5px] border-line px-3.5 text-[14.5px] text-on-card outline-none focus:border-gold placeholder:text-placeholder"
+        className="min-h-[40px] flex-1 rounded-xl border-[1.5px] border-line px-3.5 text-[14.5px] text-on-card outline-none focus:border-line-focus placeholder:text-placeholder"
       />
       <button onClick={submit} style={{ backgroundColor: NAVY }} className="min-h-[40px] rounded-xl px-4 font-heading text-[11.5px] tracking-widest text-on-accent">ADD</button>
     </div>
@@ -1041,7 +1041,7 @@ const TextField = ({ value, onChange, placeholder }: { value: string; onChange: 
        `Area` below already did this correctly; this input was missed, and it is
        what makes sections 1-5 of the system editor unreadable in dark mode. */
     style={{ backgroundColor: value.trim() ? FIELD_EMPTY : "var(--field-red)", borderColor: value.trim() ? "var(--field-empty-border)" : "var(--field-red-border)" }}
-    className="w-full min-h-[40px] rounded-xl border-[1.5px] px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
+    className="w-full min-h-[40px] rounded-xl border-[1.5px] px-3 py-2 text-[14.5px] text-on-card outline-none focus:border-line-focus mb-1.5 placeholder:text-placeholder"
   />
 );
 /** Starts at one line and grows; unlike `TextField` it keeps line breaks,
@@ -1064,7 +1064,7 @@ const Area = ({ value, onChange, placeholder, confidential }: { value: string; o
         borderColor: value.trim() ? "var(--field-empty-border)" : "var(--field-red-border)",
         ...(confidential ? { fontFamily: SERIF, fontStyle: "italic", fontSize: "15.5px" } : {}),
       }}
-      className="w-full resize-none rounded-xl border-[1.5px] px-3 py-2 text-[14.5px] leading-snug text-on-card outline-none focus:border-gold mb-1.5 placeholder:text-placeholder"
+      className="w-full resize-none rounded-xl border-[1.5px] px-3 py-2 text-[14.5px] leading-snug text-on-card outline-none focus:border-line-focus mb-1.5 placeholder:text-placeholder"
     />
   );
 };

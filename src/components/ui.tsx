@@ -145,7 +145,7 @@ export function TextField({
         }}
         className={cx(
           "w-full min-h-[40px] rounded-xl border px-3 py-2 text-[14.5px] outline-none transition-colors",
-          "focus:border-gold",
+          "focus:border-line-focus",
           error ? "border-danger" : tinted ? "" : "border-line",
           // Keep the text clear of the toggle. Without it a long password runs
           // underneath the button — which is exactly when someone reveals it.
@@ -239,8 +239,17 @@ export function TextArea({ label, value, onChange, className, maxBreaks = MAX_IN
               ? "var(--field-empty-border)"
               : "var(--line)",
         }}
+        /* ONE line when empty, then it grows.
+           This was `min-h-[96px]` — three lines of empty box on every field,
+           whether the answer was a word or a paragraph, which made a form of
+           short questions look like a page of essays. `useAutoGrow` above
+           already sizes the box to its content on every render, so the floor
+           only needs to match a single-line input (40px, as `TextField` and the
+           date button use). A caller that genuinely wants a tall writing
+           surface passes its own `min-h-…` in `className`, which lands after
+           this and wins — that is how the notes editor keeps its 45vh. */
         className={cx(
-          "w-full min-h-[96px] rounded-xl border px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-gold",
+          "w-full min-h-[40px] rounded-xl border px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-line-focus",
           className,
         )}
       />
