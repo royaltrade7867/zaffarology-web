@@ -109,9 +109,11 @@ function ProfileInner() {
  * Subscription state, and the one link that manages it.
  *
  * Lives on Profile because Profile is reachable without a subscription — a
- * locked-out user has to be able to get here. RevenueCat hosts the portal
- * (cancel, change card, receipts), so `management_url` is the whole of the
- * "manage" UI; there is nothing to build.
+ * locked-out user has to be able to get here.
+ *
+ * A WEB subscription is sold by us through Stripe, so managing it is ours to
+ * build: `StripeManage` below does cancel, resume, card and receipts. Only a
+ * store-managed one (App Store, Play) links out to its own store.
  */
 function BillingCard() {
   const { billing, billingLoading } = useAuth();
@@ -184,14 +186,19 @@ function BillingCard() {
           subscribed with.
         </p>
       ) : null}
-      {billing.can_manage && billing.management_url ? (
+      {/* Only a STORE-managed subscription links out. A web one is sold by us
+          through Stripe and managed below, in our own UI — `management_url` on
+          those rows is a leftover RevenueCat portal link, and rendering it put
+          two "Manage subscription" buttons side by side, one of which led
+          somewhere that no longer knows about the subscription. */}
+      {storeManaged && billing.can_manage && billing.management_url ? (
         <a
           href={billing.management_url}
           target="_blank"
           rel="noreferrer noopener"
           className="tap-row mt-3 inline-flex rounded-lg border border-line px-3 text-[13px] font-semibold text-heading transition-colors hover:bg-line-soft"
         >
-          {storeManaged ? `Open ${STORE_NAMES[billing.store ?? "other"]}` : "Manage subscription"}
+          Open {STORE_NAMES[billing.store ?? "other"]}
         </a>
       ) : !paid ? (
         <Link
