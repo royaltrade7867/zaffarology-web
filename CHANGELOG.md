@@ -2,6 +2,35 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-19 - The pricing page now shows what you are buying
+
+It sold a price without ever naming the product, inside a 448px auth-form
+column where two plans could not be compared.
+
+- **It lays out its own page** instead of borrowing `AuthShell` (`max-w-md`).
+  Plans sit side by side from `sm:`; everything else reads at a book measure.
+  The reason `AuthShell` was there — letting an unsubscribed person reach the
+  page — is unchanged, since that came from having no `AuthGuard`, not from the
+  shell.
+- **Plans read as plans.** The price is the largest thing on the card, tabular
+  so the two line up; the title is a tracked label above it; the intro offer is
+  a gold chip. A chosen plan is marked by the border AND a tick, never colour
+  alone.
+- **A real radiogroup.** Arrow keys move between plans, focus follows the
+  selection, and only the chosen plan is in the tab order, so Tab crosses the
+  group once instead of stopping at every card.
+- **"What you get"** names the five pillars, with their real numbers, names,
+  taglines and accents from `PILLARS` — so it cannot drift from what ships.
+- **The status card tells the truth.** It now reads `state`, `will_renew` and
+  `billing_issue`, which the page ignored: a card that had failed still said
+  "renews on the 3rd". It distinguishes active, trialing, ending, and a billing
+  problem, each with its own colour and wording, and turns the border red only
+  for the one that needs action.
+
+Every new colour pairing was measured in both themes: lowest is 4.81:1 (the
+offer chip) against a 4.5:1 floor, and the five pillar badges sit between 4.96
+and 9.01:1 against a 3:1 floor for UI text.
+
 ## 2026-09-19 - All five standard departments now work the same way
 
 **AM/PM and Delegation were the odd ones out.** Expanding either department
