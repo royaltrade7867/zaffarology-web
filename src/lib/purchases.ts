@@ -152,7 +152,7 @@ export async function classifyPurchaseError(err: unknown): Promise<PurchaseFailu
       case ErrorCode.PaymentPendingError:
         return { kind: "pending" };
       case ErrorCode.NetworkError:
-        return { kind: "error", message: "Connection lost during checkout. You have not been charged twice — check your subscription, then try again." };
+        return { kind: "error", message: "Connection lost during checkout. You have not been charged twice. Check your subscription, then try again." };
       case ErrorCode.PurchaseInvalidError:
       case ErrorCode.StoreProblemError:
         return { kind: "error", message: "The payment did not go through. Please check your card details and try again." };

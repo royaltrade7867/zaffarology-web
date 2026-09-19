@@ -144,7 +144,7 @@ function BillingCard() {
     const via = `Subscribed through ${STORE_NAMES[billing.store ?? "other"]}`;
     detail =
       label === "Payment problem"
-        ? `${via}. The last payment failed — update your payment method to keep access.`
+        ? `${via}. The last payment failed. Update your payment method to keep access.`
         : billing.will_renew === false
           ? `${via}. Auto-renew is off; access ends ${when ?? "at the end of the period"}.`
           : when

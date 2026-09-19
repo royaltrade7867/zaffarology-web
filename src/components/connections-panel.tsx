@@ -201,7 +201,7 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
       {outgoing.length ? (
         <Group title="Invites sent">
           {outgoing.map((r) => (
-            <Row key={r.id} r={r} sub="Invited — they'll join when they sign up">
+            <Row key={r.id} r={r} sub="Invited, they'll join when they sign up">
               <IconButton
                 label={`Withdraw invite to ${r.email}`}
                 onClick={() => cancelInvite(r)}

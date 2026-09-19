@@ -134,7 +134,7 @@ export function usePartnersWithAdd() {
            which happened. It covers both real paths instead. */
         await dialog.alert(
           "Invite sent",
-          `If ${email.trim()} can be added, they've been invited. Someone with an account joins your team straight away — otherwise they join when they sign up with that address.`,
+          `If ${email.trim()} can be added, they've been invited. Someone with an account joins your team straight away; otherwise they join when they sign up with that address.`,
         );
       } catch (err) {
         await dialog.alert(apiErrorMessage(err, "Could not send that invite. Please try again."));

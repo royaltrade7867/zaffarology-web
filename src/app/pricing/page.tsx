@@ -201,7 +201,7 @@ export default function Pricing() {
         ) : null}
         {sandbox ? (
           <p className="mx-auto mt-3 inline-flex rounded-full border border-dashed border-gold px-3 py-0.5 text-[12px] font-semibold text-gold">
-            Test mode — no real charges
+            Test mode: no real charges
           </p>
         ) : null}
       </div>
@@ -248,7 +248,7 @@ export default function Pricing() {
           {isStoreManaged(billing.store) ? (
             <p className="mt-2 text-[13px] text-muted">
               To change or cancel it, use {STORE_NAMES[billing.store ?? "other"]} on the device you
-              subscribed with. It works here too — nothing else to buy.
+              subscribed with. It works here too, nothing else to buy.
             </p>
           ) : billing.management_url ? (
             <a
