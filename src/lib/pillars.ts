@@ -130,6 +130,32 @@ export const rowLocked = (items: { text: string }[], i: number): boolean => {
 };
 
 /**
+ * `rowLocked`, plus a required date: the next row opens only once the one
+ * before it has text AND its date.
+ *
+ * Zaffar, 19 Sep: "If the date is not chosen it must not write further.
+ * Deadline, implementation dates are compulsory." Same safety rule as above:
+ * a row that already has text is never locked, so nothing written is stranded.
+ */
+export const rowLockedDated = <K extends string>(
+  items: ({ text: string } & Record<K, string>)[],
+  i: number,
+  dateKey: K,
+): boolean => {
+  if (i === 0) return false;
+  if (items[i]?.text.trim()) return false;
+  const prev = items[i - 1];
+  return !prev?.text.trim() || !prev[dateKey]?.trim();
+};
+
+/** Why row `i` is locked, in plain words, for the alert a locked row shows. */
+export const lockReason = (items: { text: string }[], i: number, dateLabel: string): string => {
+  const prev = items[i - 1];
+  if (!prev?.text.trim()) return "Fill in the one above first.";
+  return `Choose the ${dateLabel} for the one above first.`;
+};
+
+/**
  * The id the BACKEND uses for a pillar in `per_pillar` maps — which is not the
  * number shown in the UI. Pillar 5 is stored as `pillar-8-business-systems` and
  * reported as 8, because renumbering would orphan every existing blob row.

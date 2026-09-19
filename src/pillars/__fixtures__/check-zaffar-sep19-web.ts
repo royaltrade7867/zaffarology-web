@@ -7,6 +7,8 @@
  */
 import { readFileSync } from "node:fs";
 
+import { blankDeleg, emptyGoal, revealStage, type GoalPlan } from "@/pillars/schemas/pillar-1";
+
 let pass = 0;
 const fails: string[] = [];
 const ck = (name: string, ok: boolean, detail = "") => {
@@ -34,6 +36,21 @@ const code = (src: string) => src.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/
   const board = code(read("src/components/am-pm-board.tsx"));
   ck("money box shows A$ inside it", />A\$</.test(board));
   ck("money box explains a refused keystroke", /Numbers only/.test(board));
+}
+
+/* ------------------------- A4: Pillar 1 step-by-step ------------------------- */
+{
+  const g = (over: Partial<GoalPlan>): GoalPlan => ({ ...emptyGoal(), ...over });
+  const full = { goal: "Grow sales", plan: "Hire two agents", target: "2027-01-01" };
+  ck("a brand-new goal shows only the goal box", revealStage(g({})) === 1);
+  ck("goal + plan without a deadline is still step 1", revealStage(g({ goal: "x", plan: "y" })) === 1);
+  ck("goal, plan and deadline open step 2", revealStage(g(full)) === 2);
+  ck("writing the work of the day opens everything", revealStage(g({ ...full, work: { text: "Call Ali", done: false } })) === 3);
+  ck("a do-or-die task opens everything", revealStage(g({ ...full, dod: [{ text: "x", done: false }, ...emptyGoal().dod.slice(1)] })) === 3);
+  // Never hide what someone already wrote, even with the goal box incomplete.
+  ck("an existing extra task is never hidden", revealStage(g({ extra: [{ text: "Read", done: false }] })) === 3);
+  ck("an existing delegation is never hidden", revealStage(g({ deleg: [{ ...blankDeleg(), text: "Chase bank" }] })) === 3);
+  ck("existing day tasks are never hidden", revealStage(g({ dod: [{ text: "x", done: false }, ...emptyGoal().dod.slice(1)] })) === 3);
 }
 
 if (fails.length) { console.error(pass + " passed, " + fails.length + " FAILED"); fails.forEach((f) => console.error("  FAIL " + f)); process.exit(1); }

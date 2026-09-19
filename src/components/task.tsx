@@ -77,6 +77,7 @@ export function TaskRow({
   noStrike,
   slot,
   below,
+  lockedReason,
 }: {
   accent: string;
   symbol: ReactNode;
@@ -98,6 +99,8 @@ export function TaskRow({
   slot?: boolean;
   /** Rendered under the row, lined up with the text — e.g. a deadline. */
   below?: ReactNode;
+  /** What a locked row says when clicked. Defaults to "Fill the previous field first." */
+  lockedReason?: string;
 }) {
   const dialog = useDialog();
   const filled = value.trim().length > 0;
@@ -145,7 +148,18 @@ export function TaskRow({
       {/* The pillar rule: red while it still wants writing, green once written
           in. Green rather than transparent when filled — a transparent fill
           paints `--on-card` ink on the navy card at 1.30:1. */}
-      <div className="flex-1 min-w-0 rounded-lg px-2" style={{ backgroundColor: filled ? FIELD_EMPTY : FIELD_RED }}>
+      <div className="relative flex-1 min-w-0 rounded-lg px-2" style={{ backgroundColor: filled ? FIELD_EMPTY : FIELD_RED }}>
+        {/* A locked row must SAY why. The field is disabled, and a disabled
+            control swallows its own click, so the old onClick on it never ran
+            and the row just ignored you. This transparent button sits over it. */}
+        {locked ? (
+          <button
+            type="button"
+            onClick={() => void dialog.alert(lockedReason ?? "Fill the previous field first.")}
+            aria-label={`Locked: ${lockedReason ?? "fill the previous field first"}`}
+            className="absolute inset-0 z-10 cursor-not-allowed rounded-lg"
+          />
+        ) : null}
         {/* One line that grows: a long task WRAPS instead of being clipped
             mid-word behind the box edge. */}
         <GrowField
@@ -160,7 +174,6 @@ export function TaskRow({
           disabled={locked}
           autoCorrect="off"
           spellCheck={false}
-          onClick={() => locked && void dialog.alert("Fill the previous field first.")}
           /* `--on-card`, NEVER `--ink` or `--muted`. This row's background is a
              writing surface — red while empty, green once filled — and it stays
              that way in BOTH themes, so the theme's ink tokens are wrong on it:
