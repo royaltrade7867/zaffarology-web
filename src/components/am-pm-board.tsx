@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Accents, INK, FIELD_EMPTY , rowLocked} from "@/lib/pillars";
 import { shortDate, todayKey } from "@/lib/dates";
@@ -31,6 +31,8 @@ const TAG: Record<Section, { label: string; color: string; bg: string }> = {
 export function AmPmBoard({ state, update }: { state: P3State; update: (m: (s: P3State) => void) => void }) {
   const dialog = useDialog();
   const pmRef = useAutoGrow(state.pm);
+  /** Set when a keystroke in "money made" was refused, so it says why. */
+  const [moneyHint, setMoneyHint] = useState(false);
 
   // A board last touched on an earlier day rolls that day into Previous Days.
   useEffect(() => {
@@ -168,47 +170,58 @@ export function AmPmBoard({ state, update }: { state: P3State; update: (m: (s: P
           />
             <CharsLeft value={state.pm} max={600} />
           <div className="flex items-center gap-2.5 mt-3">
-            <span className="font-heading text-[11px] tracking-[0.15em]" style={{ color: GREEN }}>$ MONEY MADE</span>
-            {/* Money, so keep it to digits and one decimal point: this was
-                `inputMode="text"`, which raises the full alphabetic keyboard on
-                a phone for a number, and accepted `abc-!@#$` verbatim.
+            <span className="font-heading text-[11px] tracking-[0.15em]" style={{ color: GREEN }}>MONEY MADE</span>
+            {/* Money: digits, thousands commas and one decimal point.
+                Zaffar found this "dead": anything else ("$250", "250 dollars")
+                was dropped without a word, so the box looked frozen. The
+                currency now sits INSIDE the box as a fixed "A$", so nobody
+                types a "$", and a refused keystroke says why.
 
                 `min-w-0` and `size={1}` are what let it SHRINK. A flex item
                 keeps `min-width: auto`, which for an input resolves to its
-                intrinsic width from the default `size="20"` — about 241px at
-                this font. At a 320px viewport that pushed the field 7px past
-                the edge, and since the page never scrolls sideways the overflow
-                was unreachable rather than merely ugly. */}
-            <input
-              value={state.money}
-              onChange={(e) =>
-                update((s) => {
-                  const cleaned = e.target.value.replace(/[^\d.]/g, "");
-                  const [whole, ...rest] = cleaned.split(".");
-                  s.money = rest.length ? `${whole}.${rest.join("").slice(0, 2)}` : whole;
-                })
-              }
-              placeholder="e.g. 250"
-              maxLength={20}
-              size={1}
-              inputMode="decimal"
-              aria-label="Money made today"
-              autoCorrect="off"
-              spellCheck={false}
-              /* The ink is `--on-card`, never the pillar accent. A field is white
-                 or green paper in BOTH themes, but `--p3` is lightened to #5fc191
-                 for the navy page, which lands at 1.61:1 on the empty green wash —
-                 invisible exactly when the box is blank and most needs reading.
-                 That is what "money made is not working" was. `--on-card` gives
-                 12.71:1 empty and 17.39:1 filled. The accent stays on the border,
-                 where it is decoration rather than text. */
+                intrinsic width from the default `size="20"`, about 241px at
+                this font. At a 320px viewport that pushed the field past the
+                edge, and the page never scrolls sideways. */}
+            <label
+              className="flex min-w-0 flex-1 items-center rounded border-2 pl-2.5"
               style={{
                 borderColor: state.money.trim() ? GREEN : "var(--field-red-border)",
                 backgroundColor: state.money.trim() ? FIELD_EMPTY : "var(--field-red)",
               }}
-              className="min-w-0 flex-1 rounded border-2 px-2.5 py-1.5 font-heading text-[16px] text-on-card outline-none placeholder:text-placeholder"
-            />
+            >
+              <span aria-hidden className="font-heading text-[16px] text-on-card">A$</span>
+              <input
+                value={state.money}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const cleaned = raw.replace(/[^\d.,]/g, "");
+                  setMoneyHint(cleaned !== raw);
+                  const [whole, ...rest] = cleaned.split(".");
+                  update((s) => {
+                    s.money = rest.length ? `${whole}.${rest.join("").replace(/,/g, "").slice(0, 2)}` : whole;
+                  });
+                }}
+                onBlur={() => setMoneyHint(false)}
+                placeholder="e.g. 250"
+                maxLength={20}
+                size={1}
+                inputMode="decimal"
+                aria-label="Money made today"
+                aria-describedby={moneyHint ? "money-hint" : undefined}
+                autoCorrect="off"
+                spellCheck={false}
+                /* The ink is `--on-card`, never the pillar accent: a field is
+                   white or green paper in BOTH themes, and the navy-page accent
+                   is 1.61:1 on the empty wash. The accent stays on the border. */
+                className="min-w-0 flex-1 bg-transparent px-1.5 py-1.5 font-heading text-[16px] text-on-card outline-none placeholder:text-placeholder"
+              />
+            </label>
           </div>
+          {moneyHint ? (
+            <p id="money-hint" role="status" className="mt-1.5 text-[12px] text-muted">
+              Numbers only, e.g. 1,200.50
+            </p>
+          ) : null}
         </MiwBox>
       </section>
 

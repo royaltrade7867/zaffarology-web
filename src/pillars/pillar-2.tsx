@@ -96,7 +96,23 @@ export default function Pillar2() {
           if (!s.sols.length) s.sols = [{ text: "", done: false }];
         }),
     },
-    { label: "File", kind: "file", onClick: () => fileEntry(state.sols[i].text) },
+    {
+      label: "File",
+      kind: "file",
+      /* Zaffar: "File button is not working". It was filing, silently: the
+         entry landed in the collapsed Solved Problems box, the solution stayed
+         in the list, and a second press filed it twice. Filing now MOVES the
+         solution out of the list and says where it went. */
+      onClick: () => {
+        const text = state.sols[i]?.text ?? "";
+        if (!fileEntry(text)) return;
+        update((s) => {
+          s.sols.splice(i, 1);
+          if (!s.sols.length) s.sols = [{ text: "", done: false }];
+        });
+        void dialog.alert("Filed to Solved Problems.", "You can find it in the Solved Problems list below.");
+      },
+    },
     {
       label: "Solved",
       kind: "file",

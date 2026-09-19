@@ -259,7 +259,8 @@ const uiFiles = [
   // `inputMode="text"` on a money field raises the alphabetic keyboard on a
   // phone, and the field accepted `abc-!@#$` verbatim.
   ck("the money field asks for a number", /inputMode="decimal"/.test(p3));
-  ck("and strips anything that is not one", /replace\(\/\[\^\\d\.\]\/g, ""\)/.test(p3));
+  // Thousands commas are allowed since 19 Sep ("1,200.50"); anything else is still stripped.
+  ck("and strips anything that is not one", /replace\(\/\[\^\\d\.,?\]\/g, ""\)/.test(p3));
   ck("and is labelled", /aria-label="Money made today"/.test(p3));
 
   const me = read("src/components/meeting-editor.tsx");
