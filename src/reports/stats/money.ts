@@ -27,6 +27,9 @@ export function parseMoney(raw: string): number | null {
 
   // Strip currency symbols/codes and grouping separators.
   let cleaned = s
+    // "A$" (Australian dollars, the app's currency since 19 Sep) goes first,
+    // or stripping "$" alone would leave an unreadable "A250".
+    .replace(/a\$/gi, '')
     .replace(/[$£€₹]/g, '')
     .replace(/\b(usd|gbp|eur|pkr|aud|rs)\b/gi, '')
     .replace(/,/g, '')
@@ -86,7 +89,7 @@ export function formatAmount(n: number): string {
  */
 export function describeMoney(m: MoneyTotal, daysWithEntries: number): string {
   if (!m.parsed && !m.unreadable.length) return 'No money recorded in this period.';
-  const parts = [`${formatAmount(m.total)} recorded across ${m.parsed} of ${daysWithEntries} entries`];
+  const parts = [`A$${formatAmount(m.total)} recorded across ${m.parsed} of ${daysWithEntries} entries`];
   if (m.unreadable.length) {
     const shown = m.unreadable.slice(0, 3).map((u) => `"${u}"`).join(', ');
     const more = m.unreadable.length > 3 ? ` and ${m.unreadable.length - 3} more` : '';

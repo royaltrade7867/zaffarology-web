@@ -38,7 +38,7 @@ import { bar, card, footer, para, pill, section, stats, table } from './blocks';
 import { esc } from './escape';
 import { renderShell } from './shell';
 
-const pct = (v: number | null): string => (v === null ? '—' : `${Math.round(v * 100)}%`);
+const pct = (v: number | null): string => (v === null ? 'n/a' : `${Math.round(v * 100)}%`);
 
 /** One headline line per pillar for the engagement grid. */
 function headline(loaded: LoadedPillar, range: DateRange): string {
@@ -97,7 +97,7 @@ function rangeDetail(loaded: LoadedPillar, range: DateRange): string {
             ['Goal', 'Target', 'Do-or-Die today', 'Open delegated'],
             s.goals.map((g) => [
               g.goal || 'Untitled goal',
-              g.target || '—',
+              g.target || 'Not set',
               `${g.dod.done} of ${g.dod.total}`,
               `${g.delegOpen}${g.delegOverdue ? ` (${g.delegOverdue} overdue)` : ''}`,
             ]),

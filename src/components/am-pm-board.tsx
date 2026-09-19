@@ -246,7 +246,7 @@ export function AmPmBoard({ state, update }: { state: P3State; update: (m: (s: P
               </DayGroup>
             ) : null}
             <DayField label="PM Achievement" value={d.pm} />
-            <DayField label="Money made" value={d.money.trim() ? `$${d.money.trim()}` : ""} />
+            <DayField label="Money made" value={d.money.trim() ? `A$${d.money.trim()}` : ""} />
           </>
         )}
       />

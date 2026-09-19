@@ -9,7 +9,6 @@ import { AuthGuard } from "@/components/shell";
 import { friendlyTimestamp } from "@/lib/dates";
 import { STORE_NAMES, isStoreManaged, api, apiErrorMessage, setToken } from "@/lib/api";
 import { Button, TextField, cx } from "@/components/ui";
-import { useTheme, type ThemeChoice } from "@/lib/theme";
 import { useDialog } from "@/components/dialog";
 
 /* The KEYS are the backend's role values and must stay as they are — they come
@@ -86,7 +85,6 @@ function ProfileInner() {
         </div>
 
         <div>
-          <ThemePicker />
           <PasswordCard />
 
           <div className="mt-8 space-y-2">
@@ -315,41 +313,6 @@ function PasswordCard() {
           </div>
         </form>
       )}
-    </section>
-  );
-}
-
-/** Light / Dark / System, the same three the phone offers. */
-function ThemePicker() {
-  const { choice, setChoice } = useTheme();
-  return (
-    <section className="mt-8 max-w-sm">
-      <h2 className="font-heading text-[12px] uppercase tracking-wide text-muted">Appearance</h2>
-      <div role="group" aria-label="Appearance" className="mt-2 flex gap-2">
-        {(
-          [
-            { k: "light" as const, label: "Light" },
-            { k: "dark" as const, label: "Dark" },
-            { k: "system" as const, label: "System" },
-          ]
-        ).map(({ k, label }) => {
-          const on = choice === k;
-          return (
-            <button
-              key={k}
-              type="button"
-              aria-pressed={on}
-              onClick={() => setChoice(k as ThemeChoice)}
-              className={cx(
-                "flex-1 rounded-xl border px-3 py-2 text-[13px] font-semibold transition-colors",
-                on ? "border-gold text-gold" : "border-line text-muted hover:bg-line-soft",
-              )}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
     </section>
   );
 }

@@ -153,7 +153,7 @@ export default function Pricing() {
       // Re-check the account right before charging: this tab may have been
       // open while someone else signed in on another.
       const purchases = await purchasesFor(config);
-      await purchases.purchase({ rcPackage: pkg, customerEmail: config.email });
+      await purchases.purchase({ rcPackage: pkg, customerEmail: config.email, selectedLocale: "en-AU" });
     } catch (err) {
       const failure = await classifyPurchaseError(err);
       if (failure.kind === "cancelled") {

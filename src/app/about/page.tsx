@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { AuthGuard, Eagle } from "@/components/shell";
 import { InstructionsPanel } from "@/components/instructions-panel";
+import { ThemePicker } from "@/components/theme-picker";
 import { cx } from "@/components/ui";
 import { APP_MOTTO } from "@/content/pillars";
 import {
@@ -135,6 +136,11 @@ export default function About() {
             </a>
           ))}
         </div>
+      </div>
+
+      {/* Appearance lives here, under Help (Zaffar, 19 Sep). */}
+      <div className="mt-6 rounded-xl border border-line bg-surface p-5">
+        <ThemePicker />
       </div>
         </>
       )}

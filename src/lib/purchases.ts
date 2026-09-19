@@ -59,10 +59,11 @@ export async function loadOffering(
   offeringId: string | null,
 ): Promise<Offering | null> {
   if (offeringId) {
-    const offerings = await purchases.getOfferings({ offeringIdentifier: offeringId });
+    const offerings = await purchases.getOfferings({ offeringIdentifier: offeringId, currency: "AUD" });
     return offerings.all[offeringId] ?? offerings.current ?? null;
   }
-  const offerings = await purchases.getOfferings();
+  // AUD whatever country the visitor is in: the business is Australian.
+  const offerings = await purchases.getOfferings({ currency: "AUD" });
   return offerings.current;
 }
 

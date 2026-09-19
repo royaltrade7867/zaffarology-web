@@ -5,10 +5,11 @@
  *
  * Run from the web root:  npx tsx src/pillars/__fixtures__/check-zaffar-sep19-web.ts
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 import { blankDeleg, emptyGoal, revealStage, type GoalPlan } from "@/pillars/schemas/pillar-1";
 import { deptDisplayName, normalize as normP5, type P8State } from "@/pillars/schemas/business-systems";
+import { parseMoney } from "@/reports/stats/money";
 
 let pass = 0;
 const fails: string[] = [];
@@ -79,6 +80,43 @@ const code = (src: string) => src.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/
   ck("A18 the AM/PM department without '($)' is not duplicated", renamed.departments.length === 5, renamed.departments.map((d) => d.name).join(" | "));
   const again = trip(lost);
   ck("A18 running twice changes nothing", again.departments.length === lost.departments.length);
+}
+
+/* ------------------- B4: Australian dollars ------------------- */
+{
+  ck("parses A$ amounts", parseMoney("A$1,250.50") === 1250.5, String(parseMoney("A$1,250.50")));
+  ck("still parses old $ amounts", parseMoney("$300") === 300);
+  ck("parses AUD suffix", parseMoney("300 AUD") === 300);
+  ck("parses a plain number", parseMoney("1,200") === 1200);
+  const shown = [read("src/components/am-pm-board.tsx"), read("src/lib/pillars.ts")].map(code).join("\n");
+  // A "$" shown to people must be "A$": a label like "$ MONEY", or a template
+  // like `$${money}`. (A `${` on its own is just template syntax.)
+  const bare = shown.match(/(?<!A)\$(?=\s?[A-Z0-9]|\$\{)/g) ?? [];
+  ck("no bare '$' money label left in the app copy", bare.length === 0, `${bare.length} found`);
+  const purchases = code(read("src/lib/purchases.ts"));
+  ck("offerings are loaded in AUD", (purchases.match(/currency: "AUD"/g) ?? []).length >= 2);
+  ck("checkout runs in the Australian locale", /selectedLocale: "en-AU"/.test(code(read("src/app/pricing/page.tsx"))));
+}
+
+/* ------------------- A19: no dashes in any writing ------------------- */
+{
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const f = `${dir}/${e.name}`;
+      if (e.isDirectory()) { if (e.name !== "__fixtures__") walk(f); }
+      else if (/\.(tsx?|css)$/.test(e.name) && !/\.css$/.test(e.name)) files.push(f);
+    }
+  };
+  walk("src");
+  const hits: string[] = [];
+  for (const f of files) {
+    const c = code(read(f));
+    c.split("\n").forEach((line, i) => {
+      if (/[—–]/.test(line)) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 90)}`);
+    });
+  }
+  ck("no em or en dash in any user-visible web text", hits.length === 0, `${hits.length} found:\n    ` + hits.slice(0, 12).join("\n    "));
 }
 
 if (fails.length) { console.error(pass + " passed, " + fails.length + " FAILED"); fails.forEach((f) => console.error("  FAIL " + f)); process.exit(1); }

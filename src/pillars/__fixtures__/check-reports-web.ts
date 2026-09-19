@@ -138,8 +138,9 @@ const pdfCode = pdf.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
 ck("the PDF reads the stats functions directly", /p1Stats\(/.test(pdfCode) && /p4Stats\(/.test(pdfCode));
 ck("and never parses the HTML or text renderers' output",
    !/renderPillarReport|renderPillarText|renderProgress/.test(pdfCode));
-ck("a null rate shows as a dash, not 0%",
-   /r\.pct === null \? "—"/.test(pdf),
+// "n/a" since 19 Sep: no dashes in any writing (Zaffar). Still never a bare 0%.
+ck("a null rate shows as n/a, not 0%",
+   /r\.pct === null \? "n\/a"/.test(pdf),
    "a bare 0% reads as failure where nothing is measurable");
 ck("every pillar kind is handled",
    ["p1", "p2", "p3", "p4", "business-systems"].every((k) => pdf.includes(`case "${k}"`)));

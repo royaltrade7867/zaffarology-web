@@ -69,7 +69,9 @@ const uiFiles = [
   const p4 = read("src/pillars/pillar-4.tsx");
   const deleteBlock = /Delete this item\?[\s\S]{0,220}danger: true/.test(p4);
   ck("huddle Delete confirms before destroying", deleteBlock);
-  ck("huddle Remove still confirms", /Remove this item from the huddle board\?[\s\S]{0,120}danger: true/.test(p4));
+  // "Remove" was renamed "Delete" on 19 Sep (Zaffar: "for uniformity"); both
+  // of the huddle's destroying buttons must still confirm first.
+  ck("huddle Remove (now Delete) still confirms", (p4.match(/Delete this item\?[\s\S]{0,220}?danger: true/g) ?? []).length >= 2);
 }
 
 /* Every confirm whose wording is destructive must LOOK destructive. Flow steps

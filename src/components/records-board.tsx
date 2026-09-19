@@ -222,7 +222,7 @@ export function RecordsBoard({
           maxLength={300}
           style={fieldStyle(where)}
         />
-        <FLabel>Link - Dropbox / Google Drive (optional)</FLabel>
+        <FLabel>Link: Dropbox or Google Drive (optional)</FLabel>
         <GrowField
           value={link}
           onChange={setLink}

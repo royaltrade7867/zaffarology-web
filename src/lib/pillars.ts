@@ -82,7 +82,7 @@ export const PILLARS: PillarMeta[] = [
     accent: Accents.green, accentHex: AccentHex.green,
     name: "AM Planning & PM Achievement",
     tag: "The money-making engine",
-    sub: "$ This pillar is for money-making activity only",
+    sub: "A$ This pillar is for money-making activity only",
   },
   {
     n: 4,

@@ -65,10 +65,10 @@ const facts = (rows: [string, string][]): Node => ({
   margin: GAP,
 });
 
-/** "7 of 10 (70%)", or "—" when there is nothing to rate. A bare 0% would read
+/** "7 of 10 (70%)", or "n/a" when there is nothing to rate. A bare 0% would read
  *  as failure where the honest answer is "nothing to measure yet". */
 const rateText = (r: Rate): string =>
-  r.pct === null ? "—" : `${r.done} of ${r.total} (${Math.round(r.pct * 100)}%)`;
+  r.pct === null ? "n/a" : `${r.done} of ${r.total} (${Math.round(r.pct * 100)}%)`;
 
 /** Deadlines, only when something is actually measurable. */
 function deadlineNodes(d: DeadlineStats): Node[] {
@@ -81,7 +81,7 @@ function deadlineNodes(d: DeadlineStats): Node[] {
       ["Overdue now", String(d.overdue)],
       ["Still ahead", String(d.pending)],
       ["No deadline set", String(d.noDeadline)],
-      ["Hit rate", d.hitRate === null ? "—" : `${Math.round(d.hitRate * 100)}%`],
+      ["Hit rate", d.hitRate === null ? "n/a" : `${Math.round(d.hitRate * 100)}%`],
     ]),
   ];
   if (d.misses.length) {

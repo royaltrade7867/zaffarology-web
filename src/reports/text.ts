@@ -24,7 +24,7 @@ import {
 import type { ReportMeta } from '@/reports/types';
 
 const RULE = '─'.repeat(34);
-const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%`);
+const pct = (v: number | null) => (v === null ? 'n/a' : `${Math.round(v * 100)}%`);
 const tick = (done: boolean) => (done ? '[x]' : '[ ]');
 
 const lines = (...xs: (string | false | null | undefined)[]) => xs.filter(Boolean).join('\n');
@@ -128,7 +128,7 @@ function pillarBody(loaded: LoadedPillar): string {
         "\nTODAY'S ACHIEVEMENT",
         `  ${d.data.pm.trim() || '(not filled in)'}`,
         '\nMONEY MADE',
-        `  ${d.data.money.trim() || '(not filled in)'}`,
+        `  ${d.data.money.trim() ? `A$${d.data.money.trim()}` : '(not filled in)'}`,
       );
 
     case 'p4': {
