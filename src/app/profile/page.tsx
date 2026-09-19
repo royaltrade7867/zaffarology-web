@@ -8,8 +8,16 @@ import { useAuth } from "@/lib/auth-context";
 import { AuthGuard } from "@/components/shell";
 import { friendlyTimestamp } from "@/lib/dates";
 import { STORE_NAMES, isStoreManaged, api, apiErrorMessage, setToken } from "@/lib/api";
-import { Button, TextField, cx } from "@/components/ui";
+import { Button, Loading, TextField, cx } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
+import {
+  cancelSubscription,
+  formatMoney,
+  getSubscription,
+  intervalWords,
+  resumeSubscription,
+  type SubscriptionSummary,
+} from "@/lib/stripe";
 
 /* The KEYS are the backend's role values and must stay as they are — they come
    from the database and the auth routes. Only the labels shown to people change. */
@@ -193,8 +201,188 @@ function BillingCard() {
           {billing.entitled ? "Subscribe" : "See plans"}
         </Link>
       ) : null}
+
+      {/* A web subscription is managed HERE, in our own UI, because we sell it
+          ourselves through Stripe — there is no store page to send people to.
+          A store-managed one (App Store, Play) still goes to its own store. */}
+      {paid && !storeManaged ? <StripeManage /> : null}
     </div>
   );
+}
+
+/**
+ * Cancel, resume, change the card, and the receipts.
+ *
+ * Loaded on demand rather than with the page: it costs three Stripe calls, and
+ * most visits to Profile are not about billing. Everything here is also written
+ * by Stripe's webhook, so this only ever ASKS Stripe to change something and
+ * then re-reads the answer — it never decides access itself.
+ */
+function StripeManage() {
+  const { refreshBilling } = useAuth();
+  const dialog = useDialog();
+  const [open, setOpen] = useState(false);
+  const [sub, setSub] = useState<SubscriptionSummary | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    setError(null);
+    try {
+      setSub(await getSubscription());
+    } catch (err) {
+      setError(apiErrorMessage(err, "Could not load your subscription."));
+    }
+  };
+
+  const act = async (run: () => Promise<unknown>, failure: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await run();
+      await load();
+      await refreshBilling();
+    } catch (err) {
+      setError(apiErrorMessage(err, failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+          void load();
+        }}
+        className="tap-row mt-3 inline-flex rounded-lg border border-line px-3 text-[13px] font-semibold text-heading transition-colors hover:bg-line-soft"
+      >
+        Manage subscription
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-4 border-t border-line pt-4">
+      {error ? (
+        <p role="alert" className="mb-3 text-[13px] font-semibold text-danger">
+          {error}
+        </p>
+      ) : null}
+
+      {!sub ? (
+        <Loading full={false} label="Loading your subscription" />
+      ) : !sub.has_subscription ? (
+        <p className="text-[13px] text-muted">No subscription is on file.</p>
+      ) : (
+        <>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
+            <dt className="text-muted">Plan</dt>
+            <dd className="tabular-nums text-ink">
+              {formatMoney(sub.amount, sub.currency)} {intervalWords(sub.interval)}
+            </dd>
+            <dt className="text-muted">Renews</dt>
+            <dd className="text-ink">
+              {sub.cancel_at_period_end
+                ? `No — access ends ${epochDate(sub.current_period_end)}`
+                : sub.current_period_end
+                  ? epochDate(sub.current_period_end)
+                  : "N/A"}
+            </dd>
+            {sub.cards?.length ? (
+              <>
+                <dt className="text-muted">Card</dt>
+                <dd className="text-ink">
+                  {sub.cards[0].brand} ending {sub.cards[0].last4}
+                  {sub.cards[0].exp_month
+                    ? ` (expires ${sub.cards[0].exp_month}/${sub.cards[0].exp_year})`
+                    : ""}
+                </dd>
+              </>
+            ) : null}
+          </dl>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {sub.cancel_at_period_end ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void act(resumeSubscription, "Could not resume your subscription.")}
+                className="tap-row rounded-lg border border-gold px-3 text-[13px] font-semibold text-gold transition-colors hover:bg-gold/8 disabled:opacity-60"
+              >
+                {busy ? "Working…" : "Resume subscription"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={async () => {
+                  /* Say what cancelling actually does. "Are you sure?" alone
+                     leaves people thinking they lose access immediately, and
+                     they do not — they keep what they paid for. */
+                  const ends = epochDate(sub.current_period_end);
+                  const ok = await dialog.confirm(
+                    "Cancel your subscription?",
+                    {
+                      body: ends
+                        ? `You keep full access until ${ends}, then it stops renewing. You can resume any time before then.`
+                        : "You keep access until the end of the period you have paid for.",
+                      confirmLabel: "Cancel subscription",
+                      danger: true,
+                    },
+                  );
+                  if (ok) await act(cancelSubscription, "Could not cancel your subscription.");
+                }}
+                className="tap-row rounded-lg border border-line px-3 text-[13px] font-semibold text-heading transition-colors hover:bg-line-soft disabled:opacity-60"
+              >
+                Cancel subscription
+              </button>
+            )}
+          </div>
+
+          {sub.invoices?.length ? (
+            <div className="mt-5">
+              <h3 className="font-heading text-[11px] uppercase tracking-widest text-muted">
+                Receipts
+              </h3>
+              <ul className="mt-2 space-y-1">
+                {sub.invoices.slice(0, 6).map((inv) => (
+                  <li key={inv.id} className="flex items-center gap-3 text-[13px]">
+                    <span className="tabular-nums text-muted">{epochDate(inv.created)}</span>
+                    <span className="tabular-nums text-ink">
+                      {formatMoney(inv.amount, inv.currency)}
+                    </span>
+                    {inv.pdf ? (
+                      <a
+                        href={inv.pdf}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="ml-auto font-semibold text-gold hover:underline"
+                      >
+                        PDF
+                      </a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Stripe timestamps are epoch SECONDS; `Date` takes milliseconds. */
+function epochDate(seconds: number | null | undefined): string {
+  if (!seconds) return "";
+  return new Date(seconds * 1000).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 /** The minimum the backend enforces (`ChangePasswordIn`). Stated in the UI so
