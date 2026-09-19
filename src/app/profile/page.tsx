@@ -293,7 +293,7 @@ function StripeManage() {
             <dt className="text-muted">Renews</dt>
             <dd className="text-ink">
               {sub.cancel_at_period_end
-                ? `No — access ends ${epochDate(sub.current_period_end)}`
+                ? `No, access ends ${epochDate(sub.current_period_end)}`
                 : sub.current_period_end
                   ? epochDate(sub.current_period_end)
                   : "N/A"}

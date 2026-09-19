@@ -29,6 +29,25 @@ import { useAuth } from "@/lib/auth-context";
  * from the server, so the edit was gone either way. The pending key is separate
  * precisely so the load path can find it and win.
  */
+/**
+ * A copy of what the server last returned.
+ *
+ * READ ONLY WHEN THE SERVER CANNOT BE REACHED. It used to also fill in when the
+ * server answered with nothing, and that was wrong in two ways that both
+ * happened in practice:
+ *
+ *   - a pillar deleted on the server reappeared from localStorage, and the next
+ *     keystroke uploaded it again, undoing the deletion;
+ *   - with one account on two machines, whichever had the staler cache would
+ *     show it and then overwrite the other's newer work.
+ *
+ * A reachable server that holds nothing MEANS nothing. This is a whole-blob
+ * store with no merge, so a second opinion cannot be reconciled — it can only
+ * compete, and the server has to win.
+ *
+ * It is still WRITTEN, because `reports/load.ts` reads it to build a report
+ * offline, and `check-reports-web.ts` asserts the two keys match.
+ */
 const cacheKey = (userId: string, key: string) => `zaff:v3:${userId}:${key}`;
 /** An edit the server has NOT accepted. Survives reload; cleared on success. */
 const pendingKey = (userId: string, key: string) => `zaff:v3:pending:${userId}:${key}`;
@@ -135,13 +154,21 @@ export function usePillarState<T extends object>(
           hydrate(remote);
           writeJson(cacheKey(userId, key), remote);
         } else {
-          const cached = readJson<T>(cacheKey(userId, key));
-          if (cached) hydrate(cached);
+          /* THE SERVER ANSWERED, AND IT HOLDS NOTHING.
+             So this pillar IS empty. It used to fall back to the cache here,
+             which resurrected deleted data and let a stale machine overwrite a
+             fresh one — see the note on `cacheKey`. The stale copy is dropped
+             rather than left to be read by a later offline load. */
+          drop(cacheKey(userId, key));
+          hydrate(makeInitial());
         }
         setLoaded(true);
       })
       .catch(() => {
         if (!active) return;
+        /* The server is UNREACHABLE. Now the cache is the best answer there is,
+           and showing someone their own work beats showing them an empty
+           workbook. Unsent edits still win over it — they are newer. */
         const unsaved = readJson<T>(pendingKey(userId, key));
         const cached = unsaved ?? readJson<T>(cacheKey(userId, key));
         if (cached) hydrate(cached);

@@ -414,7 +414,7 @@ function PlanCard({ config }: { config: StripeConfig }) {
       {/* Tabular so a price change does not shift the layout under it. */}
       <span className="mt-4 flex items-baseline gap-1.5">
         <span className="font-heading text-[34px] leading-none tabular-nums text-heading">
-          {price || "—"}
+          {price || "..."}
         </span>
         <span className="text-[13px] text-muted">{intervalWords(config.interval)}</span>
       </span>

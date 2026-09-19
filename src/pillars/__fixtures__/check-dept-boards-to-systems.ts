@@ -35,6 +35,18 @@ const ck = (name: string, ok: boolean, detail = "") => {
 /** A full save -> load cycle, exactly as the blob store does it. */
 const trip = (s: unknown): P8State => normalize(JSON.parse(JSON.stringify(s)) as P8State);
 
+/**
+ * Find a department by NAME, never by position.
+ *
+ * `normalize` restores all five standard departments and orders them, so the
+ * one under test is not `departments[0]` — it was, before that rule landed, and
+ * this fixture failed for that reason alone while the migration itself worked.
+ */
+const dept = (st: P8State, name: string) =>
+  st.businesses[0].departments.find(
+    (d) => d.name.trim().toLowerCase() === name.trim().toLowerCase(),
+  )!;
+
 /** A blob in the OLD shape: the board hangs off the department. */
 const oldShape = (deptName: string, board: Record<string, unknown>) => ({
   businesses: [
@@ -75,7 +87,7 @@ const amPmWork = {
 
 {
   const st = trip(oldShape("Delegation", delegWork));
-  const d = st.businesses[0].departments[0];
+  const d = dept(st, "Delegation");
   ck("a delegation board with work gets a system", d.systems.length === 1, `got ${d.systems.length}`);
   ck(
     "the board is now on the system",
@@ -89,7 +101,7 @@ const amPmWork = {
 
 {
   const st = trip(oldShape("AM Planning & PM Achievement ($)", amPmWork));
-  const d = st.businesses[0].departments[0];
+  const d = dept(st, "AM Planning & PM Achievement ($)");
   ck("an AM/PM board with work gets a system", d.systems.length === 1, `got ${d.systems.length}`);
   ck("the AM/PM board is now on the system", d.systems[0]?.amPm?.work.text === "Sign the lease");
   ck("the AM/PM department still carries the old copy", !!d.amPm);
@@ -115,14 +127,14 @@ const amPmWork = {
   const st = trip(oldShape("AM Planning & PM Achievement ($)", untouched));
   ck(
     "an untouched AM/PM board makes no system",
-    st.businesses[0].departments[0].systems.length === 0,
+    dept(st, "AM Planning & PM Achievement ($)").systems.length === 0,
   );
 }
 
 {
   const empty = { delegation: { items: [], filed: [] } };
   const st = trip(oldShape("Delegation", empty));
-  ck("an empty delegation board makes no system", st.businesses[0].departments[0].systems.length === 0);
+  ck("an empty delegation board makes no system", dept(st, "Delegation").systems.length === 0);
 }
 
 {
@@ -131,7 +143,7 @@ const amPmWork = {
   const st = trip(oldShape("Delegation", blankRow));
   ck(
     "a blank delegation row makes no system",
-    st.businesses[0].departments[0].systems.length === 0,
+    dept(st, "Delegation").systems.length === 0,
   );
 }
 
@@ -141,7 +153,7 @@ const amPmWork = {
   /* `normalize` runs on EVERY load, so the second pass must be a no-op. */
   const once = trip(oldShape("Delegation", delegWork));
   const twice = trip(once);
-  const d = twice.businesses[0].departments[0];
+  const d = dept(twice, "Delegation");
   ck("running twice does not add a second system", d.systems.length === 1, `got ${d.systems.length}`);
   ck("the board survives the second pass", d.systems[0]?.delegation?.items.length === 1);
 }
@@ -178,7 +190,7 @@ const amPmWork = {
     nextDeptNum: 2,
   };
   const st = trip(migrated);
-  const sys = st.businesses[0].departments[0].systems[0];
+  const sys = dept(st, "Delegation").systems[0];
   ck(
     "a stale department copy never overwrites system-level work",
     sys?.delegation?.items[0]?.text === "EDITED AT SYSTEM LEVEL",
@@ -196,7 +208,7 @@ const amPmWork = {
   const again = trip(st);
   ck(
     "System.delegation survives a save/load round trip",
-    again.businesses[0].departments[0].systems[0]?.delegation?.items[0]?.text ===
+    dept(again, "Delegation").systems[0]?.delegation?.items[0]?.text ===
       "Chase the Kandahar invoice",
   );
 }
@@ -206,7 +218,7 @@ const amPmWork = {
   const again = trip(st);
   ck(
     "System.amPm survives a save/load round trip",
-    again.businesses[0].departments[0].systems[0]?.amPm?.work.text === "Sign the lease",
+    dept(again, "AM Planning & PM Achievement ($)").systems[0]?.amPm?.work.text === "Sign the lease",
   );
 }
 
@@ -215,7 +227,7 @@ const amPmWork = {
 {
   /* Nothing about this should touch a department that never had a board. */
   const st = trip(oldShape("Warehouse", {}));
-  ck("an ordinary department is untouched", st.businesses[0].departments[0].systems.length === 0);
+  ck("an ordinary department is untouched", dept(st, "Warehouse").systems.length === 0);
 }
 
 /* ------------------------- the screen ------------------------- */
