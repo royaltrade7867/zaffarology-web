@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { useDialog } from "@/components/dialog";
+
 import { Accents, FIELD_EMPTY } from "@/lib/pillars";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { SectionLabel, AddButton, GrowField } from "@/components/ui";
@@ -97,7 +99,23 @@ export function DelegateSection({
     cursor: off ? "not-allowed" : "pointer",
   });
 
+  const dialog = useDialog();
   const add = () => {
+    /* Zaffar, 19 Sep: "If the date is not chosen it must not write further.
+       Deadline ... dates are compulsory." A new task waits until the last one
+       has both its words and its deadline. One task shows at a time here, so
+       the rule sits on Add rather than on a locked row nobody can see. */
+    const last = items[items.length - 1];
+    if (last && !last.text.trim()) {
+      void dialog.alert("Write the current task first.", "Then you can add another one.");
+      setCur(items.length - 1);
+      return;
+    }
+    if (last && !last.due.trim()) {
+      void dialog.alert("Choose a deadline first.", "Every delegated task needs a deadline before you add the next one.");
+      setCur(items.length - 1);
+      return;
+    }
     onAdd();
     // Land on the task just created, not wherever the pager happened to be.
     setCur(items.length);
@@ -220,10 +238,12 @@ export function DelegateSection({
                 <DateField label="Deadline" value={d.due} onChange={(iso) => onEdit(idx, (x) => { x.due = iso; })} />
               </div>
 
-              {/* Only ask once there is something to ask about. An empty row
-                  showing "Completed / Not Completed" invites an answer about a
-                  task that does not exist yet. */}
-              {d.text.trim() ? (
+              {/* Only ask once there is something to ask about: the task is
+                  written AND has a deadline. Without a deadline there is no
+                  "on time or not", and no date to move (Zaffar, 18 Sep: "If
+                  deadline is not there, there should not be visible New
+                  Completion Date etc"). A status already saved stays saved. */}
+              {d.text.trim() && d.due.trim() ? (
                 <>
                   <YesNoRow
                     value={d.status === "completed" ? "yes" : d.status === "notdone" ? "no" : ""}
@@ -268,7 +288,7 @@ export function DelegateSection({
                           onChange={(iso) => onEdit(idx, (x) => { x.newDate = iso; })}
                         />
                       </div>
-                      <FLabel>Note (optional, 1 to 3 sentences max)</FLabel>
+                      <FLabel>Additional Notes:</FLabel>
                       {/* `GrowField`, not a bare textarea: it carries
                           `useAutoGrow`, so the box starts at one line and grows
                           with the answer instead of opening as an empty
@@ -276,7 +296,7 @@ export function DelegateSection({
                       <GrowField
                         value={d.note}
                         onChange={(v) => onEdit(idx, (x) => { x.note = v; })}
-                        placeholder="What happens next. Not why it didn't happen."
+                        aria-label="Additional notes"
                         maxLength={280}
                         style={{
                           backgroundColor: d.note.trim() ? FIELD_EMPTY : "var(--field-red)",

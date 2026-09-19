@@ -1,6 +1,6 @@
 "use client";
 
-import { Accents , rowLocked} from "@/lib/pillars";
+import { Accents, rowLockedDated, lockReason } from "@/lib/pillars";
 import { weekdayShortDate } from "@/lib/dates";
 import { SectionLabel, AddButton, MiwBox } from "@/components/ui";
 import { TaskRow, DateField, FiledBox, type TaskAction } from "@/components/task";
@@ -83,13 +83,33 @@ export function IdeaBoard({
     },
   ];
 
-  /** The "Implement by" date, indented so it reads as belonging to the idea
-   *  above it rather than to the list. */
+  /** The "Implement by" date. It goes in the row's own `below` slot, so it
+   *  starts on the same left edge as the idea text (Zaffar, 19 Sep: "idea and
+   *  date ... align from left side"). Always shown, even before the idea is
+   *  written, so no list looks as if it has no date ("Under extra idea you
+   *  forgot to put implement by"). */
   const implRow = (value: string, onChange: (iso: string) => void) => (
-    <div className="mb-2.5 ml-8 max-w-[260px]">
+    <div className="max-w-[260px]">
       <DateField label="Implement by" value={value} onChange={onChange} />
     </div>
   );
+
+  /* Dates are compulsory (Zaffar, 19 Sep): the next idea opens only once the
+     one before it has its words AND its implement-by date. */
+  const IMPL = "implement by date";
+
+  const addExtra = () => {
+    const last = state.extra[state.extra.length - 1];
+    if (last && !last.text.trim()) {
+      void dialog.alert("Write the last extra idea first.");
+      return;
+    }
+    if (last && !last.impl.trim()) {
+      void dialog.alert("Choose the implement by date first.", "Every idea needs its date before you add the next one.");
+      return;
+    }
+    update((s) => { s.extra.push(blankIdea()); });
+  };
 
   return (
     <>
@@ -106,10 +126,8 @@ export function IdeaBoard({
             onToggle={(v) => update((s) => { s.iod.done = v; })}
             placeholder={cfg.iodPh}
             actions={iodActions()}
+            below={implRow(state.iod.impl, (iso) => update((s) => { s.iod.impl = iso; }))}
           />
-          {state.iod.text.trim()
-            ? implRow(state.iod.impl, (iso) => update((s) => { s.iod.impl = iso; }))
-            : null}
         </MiwBox>
       </section>
 
@@ -126,12 +144,11 @@ export function IdeaBoard({
               onChange={(t) => update((s) => { s.ideas[i].text = t; })}
               onToggle={(v) => update((s) => { s.ideas[i].done = v; })}
               actions={listActions(i)}
-              locked={rowLocked(state.ideas, i)}
+              locked={rowLockedDated(state.ideas, i, "impl")}
+              lockedReason={lockReason(state.ideas, i, IMPL)}
               placeholder={`Idea ${i + 1}`}
+              below={implRow(it.impl, (iso) => update((s) => { s.ideas[i].impl = iso; }))}
             />
-            {it.text.trim()
-              ? implRow(it.impl, (iso) => update((s) => { s.ideas[i].impl = iso; }))
-              : null}
           </div>
         ))}
       </section>
@@ -150,18 +167,17 @@ export function IdeaBoard({
               onToggle={(v) => update((s) => { s.extra[i].done = v; })}
               onDelete={() => update((s) => { s.extra.splice(i, 1); })}
               actions={extraActions(i)}
-              locked={rowLocked(state.extra, i)}
+              locked={rowLockedDated(state.extra, i, "impl")}
+              lockedReason={lockReason(state.extra, i, IMPL)}
               placeholder="Extra idea"
+              below={implRow(it.impl, (iso) => update((s) => { s.extra[i].impl = iso; }))}
             />
-            {it.text.trim()
-              ? implRow(it.impl, (iso) => update((s) => { s.extra[i].impl = iso; }))
-              : null}
           </div>
         ))}
         <AddButton
           label="+ Add extra idea"
           accent={Accents.green}
-          onClick={() => update((s) => { s.extra.push(blankIdea()); })}
+          onClick={addExtra}
         />
       </section>
 

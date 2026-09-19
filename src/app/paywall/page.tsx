@@ -23,6 +23,11 @@ export default function Paywall() {
   const { user, loading, billing, syncBilling, signOut } = useAuth();
   const router = useRouter();
   const [checking, setChecking] = useState(false);
+  /* Every hook sits ABOVE the early return below. This one used to follow it,
+     so the first render (loading) ran two hooks and the next ran three, and
+     React threw "Rendered more hooks than during the previous render" the
+     moment billing was switched on. */
+  const [stillLocked, setStillLocked] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -35,7 +40,6 @@ export default function Paywall() {
   if (loading || !user) return <Loading />;
 
   const ended = friendlyTimestamp(billing?.until);
-  const [stillLocked, setStillLocked] = useState(false);
 
   return (
     <AuthShell>

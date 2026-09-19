@@ -70,7 +70,9 @@ const oldP5 = {
   nextSysNum: 2, nextDeptNum: 3,
 };
 const p5 = trip(normP5, oldP5);
-const sys = p5.businesses[0].departments[1].systems[0];
+// By name: since 19 Sep missing standard departments are re-added, so positions move.
+const wh = (b: P8State) => b.businesses[0].departments.find((d) => d.name === "Warehouse")!;
+const sys = wh(p5).systems[0];
 ck("old training keeps its verdict and remarks", sys.trainings[0].satisfied === "no" && sys.trainings[0].remarks === "More practice");
 ck("old evaluation keeps satisfied + implementation date", sys.evals[0].satisfied === "yes" && sys.evals[0].implDate === "2026-10-01");
 ck("old review keeps its confidential remarks", sys.reviews[0].remarks === "Weak follow-through");
@@ -79,9 +81,9 @@ ck("nothing else in the system was lost", sys.jobs[0] === "Check stock levels ev
 
 // A rating written by the new screen survives a save/load.
 const rated = JSON.parse(JSON.stringify(p5)) as P8State;
-rated.businesses[0].departments[1].systems[0].evals[0].rating = "average";
-rated.businesses[0].departments[1].systems[0].evals[0].satisfied = "no";
-const back = trip(normP5, rated).businesses[0].departments[1].systems[0].evals[0];
+wh(rated).systems[0].evals[0].rating = "average";
+wh(rated).systems[0].evals[0].satisfied = "no";
+const back = wh(trip(normP5, rated)).systems[0].evals[0];
 ck("a rating round-trips", back.rating === "average" && back.satisfied === "no");
 
 /* ----------------------- standard departments ----------------------- */
@@ -93,7 +95,9 @@ ck("matching ignores case and spaces", isStandardDept("  delegation ") && isStan
 ck("a user's own department is not standard", !isStandardDept("Warehouse"));
 // A business that lost a default department BEFORE the rule is not re-seeded.
 const lost = trip(normP5, { businesses: [{ id: "b", name: "B", seeded: true, departments: [{ id: "d", name: "Delegation", systems: [] }] }] });
-ck("a business that already lost a standard department is left as it is", lost.businesses[0].departments.length === 1);
+// Reversed on 19 Sep by Zaffar ("5 must departments must be visible"): a business
+// that lost a standard department gets it back. See check-zaffar-sep19-web.ts.
+ck("a business that lost standard departments gets all five back", lost.businesses[0].departments.length === 5);
 // The rule is by name, never a stored flag the phone could drop.
 ck("no 'standard' flag is written into the blob", !JSON.stringify(p5).includes('"standard"'));
 

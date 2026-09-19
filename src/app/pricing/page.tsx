@@ -6,7 +6,7 @@ import type { Offering, Purchases } from "@revenuecat/purchases-js";
 
 import { Eagle } from "@/components/shell";
 import { Check } from "@/components/icons";
-import { Button, Loading, cx } from "@/components/ui";
+import { Button, Loading, TextField, cx } from "@/components/ui";
 import {
   STORE_NAMES,
   api,
@@ -71,6 +71,10 @@ export default function Pricing() {
   const [selected, setSelected] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [sandbox, setSandbox] = useState(false);
+  /** Cardholder full name (Hammad's list: "cardholder name also during
+   *  checkout *full name"). Starts as the account's name. */
+  const [cardName, setCardName] = useState("");
+  const [cardNameError, setCardNameError] = useState<string | null>(null);
   const purchasesRef = useRef<Purchases | null>(null);
   // Stops the activation poll if the person leaves the page.
   const aliveRef = useRef(true);
@@ -84,9 +88,16 @@ export default function Pricing() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) router.replace("/login");
-    else if (!user.isVerified) router.replace("/verify-email");
+    /* Keep the place (and a QR code's ?plan=) through login and verification,
+       so a new sign-up lands back here, not on Home. */
+    const next = `?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    if (!user) router.replace(`/login${next}`);
+    else if (!user.isVerified) router.replace(`/verify-email${next}`);
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user?.fullName) setCardName((c) => c || user.fullName);
+  }, [user?.fullName]);
 
   const paidElsewhere = Boolean(billing?.entitled && billing.store);
 
@@ -108,10 +119,13 @@ export default function Pricing() {
         setPhase({ kind: "no_plans" });
         return;
       }
+      // A link or QR code can pick the plan: /pricing?plan=monthly|annual.
+      const asked = new URLSearchParams(window.location.search).get("plan");
+      const fromLink = asked === "monthly" ? offering.monthly : asked === "annual" ? offering.annual : null;
       setSelected((current) =>
         current && offering.availablePackages.some((p) => p.identifier === current)
           ? current
-          : (offering.annual ?? offering.monthly ?? offering.availablePackages[0]).identifier,
+          : (fromLink ?? offering.annual ?? offering.monthly ?? offering.availablePackages[0]).identifier,
       );
       setPhase({ kind: "plans", offering });
     } catch (err) {
@@ -155,13 +169,27 @@ export default function Pricing() {
     const pkg = phase.offering.availablePackages.find((p) => p.identifier === selected);
     if (!pkg) return;
     const offering = phase.offering;
+    const fullName = cardName.trim().replace(/\s+/g, " ");
+    if (fullName.split(" ").length < 2) {
+      setCardNameError("Enter the full name as it appears on the card, first and last name.");
+      return;
+    }
+    setCardNameError(null);
     setNotice(null);
     setPhase({ kind: "paying" });
     try {
       // Re-check the account right before charging: this tab may have been
       // open while someone else signed in on another.
       const purchases = await purchasesFor(config);
-      await purchases.purchase({ rcPackage: pkg, customerEmail: config.email });
+      // The cardholder's name travels with the customer and with this purchase.
+      // Saving the attribute is best effort: it must never block a payment.
+      await purchases.setAttributes({ $displayName: fullName }).catch(() => undefined);
+      await purchases.purchase({
+        rcPackage: pkg,
+        customerEmail: config.email,
+        selectedLocale: "en-AU",
+        metadata: { full_name: fullName },
+      });
     } catch (err) {
       const failure = await classifyPurchaseError(err);
       if (failure.kind === "cancelled") {
@@ -304,9 +332,19 @@ export default function Pricing() {
             </p>
           ) : null}
 
-          <div className="mx-auto mt-6 max-w-md">
+          {/* The name sits with the button, inside the same narrow column: it
+              is part of paying, not part of choosing a plan. */}
+          <div className="mx-auto mt-6 max-w-md space-y-3">
+            <TextField
+              label="Full name (as on card)"
+              value={cardName}
+              onChange={(v) => { setCardName(v); if (cardNameError) setCardNameError(null); }}
+              autoComplete="cc-name"
+              maxLength={120}
+              error={cardNameError ?? undefined}
+            />
             <Button label="Continue to checkout" onClick={() => void checkout()} disabled={!selected} />
-            <p className="mt-3 text-center text-[12.5px] leading-relaxed text-muted">
+            <p className="text-center text-[12.5px] leading-relaxed text-muted">
               Card details are handled by our payment provider. Cancel any time.
               One subscription works on the web, iPhone and Android.
             </p>

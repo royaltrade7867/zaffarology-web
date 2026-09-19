@@ -7,7 +7,7 @@ import { friendlyISO, shortDate, todayKey } from "@/lib/dates";
 import { usePillarState } from "@/lib/use-pillar-state";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { PillarScaffold } from "@/components/pillar-scaffold";
-import { Loading, MiwBox, SectionLabel, AddButton, TextArea, CharsLeft, GrowField } from "@/components/ui";
+import { Loading, SectionLabel, AddButton, TextArea, CharsLeft, GrowField, GroupBox } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
 import { DelegateSection } from "@/components/delegate-section";
 import { usePartnersWithAdd, useOutgoingAssignments, type Partner } from "@/lib/use-connections";
@@ -42,6 +42,7 @@ import {
   emptyGoal,
   makeInitial,
   normalize,
+  revealStage,
   type Deleg,
   type GoalPlan,
   type P1State,
@@ -134,6 +135,8 @@ export default function Pillar1() {
   const goals = state.goals.length ? state.goals : [emptyGoal()];
   const gi = Math.min(cur, goals.length - 1);
   const g = goals[gi];
+  /** How much of this goal's page is showing (A4): never hides written work. */
+  const stage = revealStage(g);
   const dodDone = g.dod.filter((t) => t.done).length;
 
   /** Mutate the currently-viewed goal.
@@ -146,6 +149,18 @@ export default function Pillar1() {
       const i = Math.min(gi, s.goals.length - 1);
       fn(s.goals[i]);
     });
+
+  /* One click (and a second chance) to empty the goal or the plan, instead of
+     selecting all the text and deleting it (Zaffar, 18 Sep). */
+  const clearField = async (field: "goal" | "plan") => {
+    const what = field === "goal" ? `exact goal ${gi + 1}` : `exact plan ${gi + 1}`;
+    const ok = await dialog.confirm(`Clear ${what}?`, {
+      body: "The text in this box will be removed. Everything else stays.",
+      confirmLabel: "Clear",
+      danger: true,
+    });
+    if (ok) setG((x) => { x[field] = ""; });
+  };
 
   const fileTask = (text: string, section: Section, clear: () => void) => {
     if (!text.trim()) return void dialog.alert("This task is empty, nothing to file.");
@@ -388,35 +403,36 @@ export default function Pillar1() {
         </div>
       ) : null}
 
-      {/* Exact Goal — the project itself. Keyed by goal, so each page change
-          replays the slide from the side the goal came from. */}
+      {/* ---- Group 1: Exact Goal, Plan and Deadline, in ONE border ----
+          Keyed by goal, so each page change replays the slide from the side the
+          goal came from. */}
       <section
         key={gi}
-        className={`mb-8 ${dir ? `zaff-slide-${dir}` : ""}`}
+        className={dir ? `zaff-slide-${dir}` : ""}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        {/* Add and Remove together, at the top, where the goal is named. */}
-        <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <SectionLabel text={`Exact Goal (Project) ${gi + 1}`} small="be specific, what exactly are you going for?" color={pillar.accent} />
+        <GroupBox accent={pillar.accent}>
+          {/* Add and Remove together, at the top, where the goal is named. */}
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <SectionLabel text={`Exact Goal (Project) ${gi + 1}`} small="be specific, what exactly are you going for?" color={pillar.accent} />
+            </div>
+            <AddButton compact label="+ Add goal" accent={pillar.accent} dimmed={!lastFilled} onClick={addGoal} />
+            {goals.length > 1 ? (
+              <button
+                type="button"
+                onClick={removeGoal}
+                aria-label={`Remove exact goal ${gi + 1}`}
+                className="tap-row shrink-0 rounded-lg border-[1.5px] px-3 py-1.5 text-[12.5px] font-semibold transition-opacity hover:opacity-70"
+                style={{ color: RED, borderColor: RED }}
+              >
+                Remove
+              </button>
+            ) : null}
           </div>
-          <AddButton compact label="+ Add goal" accent={pillar.accent} dimmed={!lastFilled} onClick={addGoal} />
-          {goals.length > 1 ? (
-            <button
-              type="button"
-              onClick={removeGoal}
-              aria-label={`Remove exact goal ${gi + 1}`}
-              className="tap-row shrink-0 rounded-lg border-[1.5px] px-3 py-1.5 text-[12.5px] font-semibold transition-opacity hover:opacity-70"
-              style={{ color: RED, borderColor: RED }}
-            >
-              Remove
-            </button>
-          ) : null}
-        </div>
-        <MiwBox accent={pillar.accent}>
-          {/* Shown in CAPITALS, stored as typed: the phone app and the reports
-              read this same text, so the capitals are display only. */}
+          {/* Shown in CAPITALS, stored as typed: the reports read this same
+              text, so the capitals are display only. */}
           <GrowField
             value={g.goal}
             onChange={(v) => setG((x) => { x.goal = v; })}
@@ -426,82 +442,103 @@ export default function Pillar1() {
             autoCorrect="off"
             spellCheck={false}
             style={{ backgroundColor: g.goal.trim() ? "var(--field-empty)" : "var(--field-red)" }}
-            className="w-full rounded-lg px-2 py-2 font-semibold text-[16px] uppercase tracking-[0.02em] text-on-card outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-placeholder"
+            className="w-full rounded-lg px-2 py-[9px] font-semibold text-[16px] uppercase tracking-[0.02em] text-on-card outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-placeholder"
           />
-          <CharsLeft value={g.goal} max={GOAL_MAX} />
-          </MiwBox>
+          <FieldFoot value={g.goal} max={GOAL_MAX} clearLabel={`Clear exact goal ${gi + 1}`} onClear={() => clearField("goal")} />
 
-        <div className="mt-4">
-          <SectionLabel text={`Exact Plan ${gi + 1}`} small="how you'll get there" color={pillar.accent} />
-          <TextArea
-            value={g.plan}
-            onChange={(v) => setG((x) => { x.plan = v; })}
-            placeholder={`Write the plan for goal ${gi + 1}: the steps, the order, the deadlines…`}
-            maxLength={GOAL_MAX}
-            tone="red"
-          />
-            <CharsLeft value={g.plan} max={GOAL_MAX} />
-        </div>
+          <div className="mt-4">
+            <SectionLabel text={`Exact Plan ${gi + 1}`} small="how you'll get there" color={pillar.accent} />
+            <TextArea
+              value={g.plan}
+              onChange={(v) => setG((x) => { x.plan = v; })}
+              placeholder={`Write the plan for goal ${gi + 1} here…`}
+              maxLength={GOAL_MAX}
+              tone="red"
+              compact
+            />
+            <FieldFoot value={g.plan} max={GOAL_MAX} clearLabel={`Clear exact plan ${gi + 1}`} onClear={() => clearField("plan")} className="-mt-3" />
+          </div>
 
-        <div className="mt-4">
-          <DateField label="Deadline" value={g.target} onChange={(iso) => setG((x) => { x.target = iso; })} />
-        </div>
+          <div className="mt-2">
+            <DateField label="Deadline" value={g.target} onChange={(iso) => setG((x) => { x.target = iso; })} />
+          </div>
+
+          {stage === 1 ? (
+            <p className="mt-3 text-[13px] text-muted">
+              Fill in the exact goal, the plan and the deadline, and your day opens below.
+            </p>
+          ) : null}
+        </GroupBox>
       </section>
 
-      <div className="border-t-[3px] border-ink pt-3 mb-6">
-        <p className="font-heading text-[20px] uppercase text-heading">Do <span style={{ color: RED }}>or</span> Die</p>
-        <p className="font-semibold text-[12px] tracking-wide mt-1.5" style={{ color: RED }}>PRIORITISE YOUR DAY</p>
-      </div>
+      {/* ---- Group 2: Work of the Day and the 5 Do-or-Die tasks, ONE border ----
+          Appears once the goal box is complete (A4). */}
+      {stage >= 2 ? (
+        <GroupBox accent={RED} className="zaff-reveal">
+          <div className="mb-5">
+            <p className="font-heading text-[20px] uppercase text-heading">Do <span style={{ color: RED }}>or</span> Die</p>
+            <p className="font-semibold text-[12px] tracking-wide mt-1.5" style={{ color: RED }}>PRIORITISE YOUR DAY</p>
+          </div>
 
-      <section className="mb-8">
-        <SectionLabel text="Work of the Day" small="only one, the thing that matters most" />
-        <MiwBox accent={RED} filled={!!g.work.text.trim()}>
-          <TaskRow accent={RED} symbol="★" value={g.work.text} done={g.work.done} onChange={(t) => setG((x) => { x.work.text = t; })} onToggle={(v) => setG((x) => { x.work.done = v; })} placeholder="If you do nothing else, do this…" noBorder slot actions={workActions()} />
-        </MiwBox>
-      </section>
+          <section className="mb-6">
+            <SectionLabel text="Work of the Day" small="only one, the thing that matters most" />
+            <TaskRow accent={RED} symbol="★" value={g.work.text} done={g.work.done} onChange={(t) => setG((x) => { x.work.text = t; })} onToggle={(v) => setG((x) => { x.work.done = v; })} placeholder="If you do nothing else, do this…" noBorder slot actions={workActions()} />
+          </section>
 
-      <section className="mb-8">
-        <SectionLabel text="Do or Die Tasks" small="max 5, no more" color={RED} />
-        {g.dod.map((t, i) => (
-          <TaskRow key={i} accent={RED} symbol={i + 1} value={t.text} done={t.done} onChange={(text) => setG((x) => { x.dod[i].text = text; })} onToggle={(v) => setG((x) => { x.dod[i].done = v; })} actions={dodActions(i)} slot placeholder={`Do-or-die task ${i + 1}`} locked={rowLocked(g.dod, i)} />
-        ))}
-        <Footer progress={`${dodDone} / 5 do-or-die done`} resetLabel="New day (reset)" onReset={newDay} />
-      </section>
+          <section>
+            <SectionLabel text="Do or Die Tasks" small="max 5, no more" color={RED} />
+            {g.dod.map((t, i) => (
+              <TaskRow key={i} accent={RED} symbol={i + 1} value={t.text} done={t.done} onChange={(text) => setG((x) => { x.dod[i].text = text; })} onToggle={(v) => setG((x) => { x.dod[i].done = v; })} actions={dodActions(i)} slot placeholder={`Do-or-die task ${i + 1}`} locked={rowLocked(g.dod, i)} />
+            ))}
+            <Footer progress={`${dodDone} / 5 do-or-die done`} resetLabel="New day (reset)" onReset={newDay} />
+          </section>
+        </GroupBox>
+      ) : null}
 
-      <section className="mb-8">
-        <SectionLabel text="Go-Extra-Mile Daily Tasks" small="anything beyond the 5" color={GREEN} />
-        {g.extra.map((t, i) => (
-          <TaskRow key={i} accent={GREEN} symbol="+" value={t.text} done={t.done} onChange={(text) => setG((x) => { x.extra[i].text = text; })} onToggle={(v) => setG((x) => { x.extra[i].done = v; })} onDelete={() => setG((x) => { x.extra.splice(i, 1); })} actions={extraActions(i)} locked={rowLocked(g.extra, i)} placeholder="Extra task" />
-        ))}
-        <AddButton label="+ Add extra-mile task" accent={GREEN} dimmed={!lastExtraFilled} onClick={addExtra} />
-      </section>
+      {/* ---- Groups 3 and 4: Go-Extra-Mile, then Delegate, each in one box ----
+          Appear once the day has been started. */}
+      {stage >= 3 ? (
+        <>
+          <GroupBox accent={GREEN} className="zaff-reveal">
+            <section>
+              <SectionLabel text="Go-Extra-Mile Daily Tasks" small="anything beyond the 5" color={GREEN} />
+              {g.extra.map((t, i) => (
+                <TaskRow key={i} accent={GREEN} symbol="+" value={t.text} done={t.done} onChange={(text) => setG((x) => { x.extra[i].text = text; })} onToggle={(v) => setG((x) => { x.extra[i].done = v; })} onDelete={() => setG((x) => { x.extra.splice(i, 1); })} actions={extraActions(i)} locked={rowLocked(g.extra, i)} placeholder="Extra task" />
+              ))}
+              <AddButton label="+ Add extra-mile task" accent={GREEN} dimmed={!lastExtraFilled} onClick={addExtra} />
+            </section>
+          </GroupBox>
 
-      {/* blankDeleg(), never an inline literal: a new row needs a real `id`
-          (task assignments point at it) plus `due`/`whoUserId`. Without one,
-          `withId` mints a fresh random id on every load until a save lands,
-          so an assignment made on the phone loses its "Sent to X" badge. */}
-      <DelegateSection
-        items={g.deleg}
-        accent={BLUE}
-        onAdd={() => setG((x) => { x.deleg.push(blankDeleg()); })}
-        onEdit={(i, mut) => setG((x) => { if (x.deleg[i]) mut(x.deleg[i]); })}
-        onRemove={(i) => setG((x) => { x.deleg.splice(i, 1); })}
-        onFile={fileDeleg}
-        partners={partners}
-        onTag={onTagDeleg}
-        onAddPerson={addPerson}
-        statusNoteFor={(d) => {
-          const sent = outgoing.byTaskId[d.id];
-          if (!sent) return null;
-          const extra = outgoing.extraCount(d.id);
-          return (
-            (sent.status === "completed"
-              ? `✓ ${sent.assignee_name} marked this done`
-              : `Sent to ${sent.assignee_name}, waiting`) +
-            (extra ? ` · +${extra} more assigned` : "")
-          );
-        }}
-      />
+          {/* blankDeleg(), never an inline literal: a new row needs a real `id`
+              (task assignments point at it) plus `due`/`whoUserId`. Without one,
+              `withId` mints a fresh random id on every load until a save lands,
+              so an assignment made elsewhere loses its "Sent to X" badge. */}
+          <GroupBox accent={BLUE} className="zaff-reveal">
+            <DelegateSection
+              items={g.deleg}
+              accent={BLUE}
+              onAdd={() => setG((x) => { x.deleg.push(blankDeleg()); })}
+              onEdit={(i, mut) => setG((x) => { if (x.deleg[i]) mut(x.deleg[i]); })}
+              onRemove={(i) => setG((x) => { x.deleg.splice(i, 1); })}
+              onFile={fileDeleg}
+              partners={partners}
+              onTag={onTagDeleg}
+              onAddPerson={addPerson}
+              statusNoteFor={(d) => {
+                const sent = outgoing.byTaskId[d.id];
+                if (!sent) return null;
+                const extra = outgoing.extraCount(d.id);
+                return (
+                  (sent.status === "completed"
+                    ? `✓ ${sent.assignee_name} marked this done`
+                    : `Sent to ${sent.assignee_name}, waiting`) +
+                  (extra ? ` · +${extra} more assigned` : "")
+                );
+              }}
+            />
+          </GroupBox>
+        </>
+      ) : null}
 
       {/* Previous days, grouped per goal/project */}
       <DayReport
@@ -541,5 +578,29 @@ export default function Pillar1() {
         ))}
       </FiledBox>
     </PillarScaffold>
+  );
+}
+
+/** Under a goal / plan box: the characters-left note, and a Clear button once
+ *  there is something to clear. */
+function FieldFoot({ value, max, clearLabel, onClear, className }: { value: string; max: number; clearLabel: string; onClear: () => void; className?: string }) {
+  // Nothing to clear and no count to show: take no space, so an empty box is
+  // not followed by a blank gap.
+  const nearLimit = max - value.length <= Math.max(20, Math.round(max * 0.15));
+  if (!value.trim() && !nearLimit) return null;
+  return (
+    <div className={`mt-1 flex min-h-[26px] items-start justify-between gap-3 ${className ?? ""}`}>
+      <div className="min-w-0 flex-1"><CharsLeft value={value} max={max} /></div>
+      {value.trim() ? (
+        <button
+          type="button"
+          onClick={onClear}
+          aria-label={clearLabel}
+          className="tap-row inline-flex shrink-0 items-center gap-1 rounded px-1.5 text-[12px] font-semibold text-muted transition-colors hover:text-danger"
+        >
+          <span aria-hidden>✕</span> Clear
+        </button>
+      ) : null}
+    </div>
   );
 }

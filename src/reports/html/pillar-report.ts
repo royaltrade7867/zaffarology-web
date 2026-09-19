@@ -56,7 +56,7 @@ function renderBody(loaded: LoadedPillar): string {
                     ['Task', 'Delegated to', 'Deadline', 'Chased'],
                     g.deleg
                       .filter((x) => x.text.trim())
-                      .map((x) => [x.text, x.who || '—', x.due ? dateLabel(x.due) : '—', x.done ? 'Yes' : 'No']),
+                      .map((x) => [x.text, x.who || 'Not set', x.due ? dateLabel(x.due) : 'Not set', x.done ? 'Yes' : 'No']),
                   )}</div>`,
               );
             })
@@ -103,7 +103,7 @@ function renderBody(loaded: LoadedPillar): string {
         `<div class="field"><div class="label">Do or Die</div>${taskList(d.data.dod)}</div>` +
         `<div class="field"><div class="label">Go the Extra Mile</div>${taskList(d.data.extra)}</div>` +
         field("Today's achievement (PM)", d.data.pm) +
-        field('Money made', d.data.money);
+        field('Money made', d.data.money.trim() ? `A$${d.data.money.trim()}` : '');
 
       const recent = d.data.history.slice(0, 30);
       return (
@@ -121,9 +121,9 @@ function renderBody(loaded: LoadedPillar): string {
               const done = planned.filter((t) => t.done).length;
               return [
                 friendlyISO(h.date) ?? h.date,
-                planned.length ? `${done} of ${planned.length}` : '—',
-                h.money.trim() || '—',
-                h.pm.trim() ? 'Yes' : '—',
+                planned.length ? `${done} of ${planned.length}` : 'n/a',
+                h.money.trim() ? `A$${h.money.trim()}` : 'Not set',
+                h.pm.trim() ? 'Yes' : 'No',
               ];
             }),
           ),
@@ -149,11 +149,11 @@ function renderBody(loaded: LoadedPillar): string {
             ['Project / Task', 'Owner', 'Due', 'Status', 'Completed on', 'Note'],
             items.map((i) => [
               i.name,
-              i.who || '—',
-              i.due ? dateLabel(i.due) : '—',
+              i.who || 'Not set',
+              i.due ? dateLabel(i.due) : 'Not set',
               statusText(i.status) + (i.newDate ? ` (moved to ${friendlyISO(i.newDate) ?? i.newDate})` : ''),
-              i.completedOn ? friendlyISO(i.completedOn) ?? i.completedOn : '—',
-              i.note || '—',
+              i.completedOn ? friendlyISO(i.completedOn) ?? i.completedOn : 'Not set',
+              i.note || 'Not set',
             ]),
           ),
         ) +
@@ -161,7 +161,7 @@ function renderBody(loaded: LoadedPillar): string {
           'Completed & Filed (all time)',
           table(
             ['Project / Task', 'Owner', 'Result', 'Filed'],
-            d.data.filed.map((f) => [f.name, f.who || '—', f.early || '—', f.date]),
+            d.data.filed.map((f) => [f.name, f.who || 'Not set', f.early || 'Not set', f.date]),
           ),
         )
       );
@@ -194,7 +194,7 @@ function renderBody(loaded: LoadedPillar): string {
                   'Effort & result questions',
                   sys.pairs
                     .filter((q) => q.effort.trim() || q.result.trim())
-                    .map((q, i) => `${i + 1}. ${q.effort || '—'}\n   → ${q.result || '—'}`)
+                    .map((q, i) => `${i + 1}. ${q.effort || 'Not set'}\n   → ${q.result || 'Not set'}`)
                     .join('\n'),
                 ) +
                                   field('Results', sys.results.filter(Boolean).join('\n')) +
@@ -205,32 +205,32 @@ function renderBody(loaded: LoadedPillar): string {
                                   `<div class="field"><div class="label">Training</div>${table(
                                     ['Trainee', 'Trainer', 'Date', 'Satisfied', 'Remarks'],
                                     sys.trainings.map((t) => [
-                                      t.trainee || '—',
-                                      t.trainer || '—',
-                                      t.date || '—',
-                                      t.satisfied || '—',
-                                      t.remarks || '—',
+                                      t.trainee || 'Not set',
+                                      t.trainer || 'Not set',
+                                      t.date || 'Not set',
+                                      t.satisfied || 'Not set',
+                                      t.remarks || 'Not set',
                                     ]),
                                   )}</div>` +
                                   `<div class="field"><div class="label">Evaluation</div>${table(
                                     ['Trainee', 'Evaluator', 'Evaluated', 'Satisfied', 'Implemented', 'Remarks'],
                                     sys.evals.map((t) => [
-                                      t.trainee || '—',
-                                      t.evaluator || '—',
-                                      t.evalDate || '—',
-                                      t.satisfied || '—',
-                                      t.implDate || '—',
-                                      t.remarks || '—',
+                                      t.trainee || 'Not set',
+                                      t.evaluator || 'Not set',
+                                      t.evalDate || 'Not set',
+                                      t.satisfied || 'Not set',
+                                      t.implDate || 'Not set',
+                                      t.remarks || 'Not set',
                                     ]),
                                   )}</div>` +
                                   `<div class="field"><div class="label">Review</div>${table(
                                     ['Trainee', 'Reviewer', 'Date', 'Satisfied', 'Remarks'],
                                     sys.reviews.map((t) => [
-                                      t.trainee || '—',
-                                      t.reviewer || '—',
-                                      t.date || '—',
-                                      t.satisfied || '—',
-                                      t.remarks || '—',
+                                      t.trainee || 'Not set',
+                                      t.reviewer || 'Not set',
+                                      t.date || 'Not set',
+                                      t.satisfied || 'Not set',
+                                      t.remarks || 'Not set',
                                     ]),
                                   )}</div>`,
                               ),

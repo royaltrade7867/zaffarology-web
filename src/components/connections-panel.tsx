@@ -81,7 +81,7 @@ export function ConnectionsPanel({ refreshKey }: { refreshKey?: number }) {
       await inviteConnection(value);
       // The server answers the same way whether or not that address has an
       // account, so this message must not claim to know either.
-      setSent(`If ${value} can be invited, we've sent them an invite.`);
+      setSent(`We've sent an invite to ${value}. They'll appear in your team once they join.`);
       setEmail("");
       await refresh();
     } catch (err) {

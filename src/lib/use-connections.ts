@@ -134,7 +134,10 @@ export function usePartnersWithAdd() {
            which happened. It covers both real paths instead. */
         await dialog.alert(
           "Invite sent",
-          `If ${email.trim()} can be added, they've been invited. Someone with an account joins your team straight away; otherwise they join when they sign up with that address.`,
+          /* Plain words (Zaffar, 19 Sep: "after reading I don't understand what is
+           written"). It still does not say whether that address has an account:
+           the backend keeps that private on purpose. */
+        `We've sent an invite to ${email.trim()}. They'll appear in your team once they join.`,
         );
       } catch (err) {
         await dialog.alert(apiErrorMessage(err, "Could not send that invite. Please try again."));

@@ -152,11 +152,14 @@ export function PersonTagField({
 
   /** Ask before anything leaves, then tag. */
   const pick = async (p: Partner) => {
-    const notify = await dialog.confirm(
-      `Email ${p.name}?\n\n` +
-        `${p.name} will be tagged on this either way, it appears on their board. ` +
-        `OK also emails them about it; Cancel just tags them.`,
-    );
+    /* Two buttons that say what they do. It was "Email X? ... OK also emails
+       them; Cancel just tags them", and Zaffar could not tell what either
+       button would do. Either way they are tagged and it shows on their board. */
+    const notify = await dialog.confirm(`Tag ${p.name}`, {
+      body: `${p.name} will see this on their board. Do you also want to email them about it?`,
+      confirmLabel: "Tag and email",
+      cancelLabel: "Just tag",
+    });
     if (multi) {
       const already = committed.some((n) => n.toLowerCase() === p.name.trim().toLowerCase());
       setAll(already ? committed : [...committed, p.name], "");
@@ -259,10 +262,13 @@ export function PersonTagField({
            painted the green "write here" background behind the chip and read as
            an empty field to assistive tech. */
         <div
+          /* The filled green of every other written box, not white paper:
+             Zaffar, 19 Sep, "Hasham Shahid box is in white. It should change
+             its colour". Ink is `on-card`, readable on the wash in both themes. */
           className="flex min-h-[44px] items-center gap-2 rounded-xl border px-3 py-2"
-          style={{ borderColor: tint, backgroundColor: "var(--field)" }}
+          style={{ borderColor: "var(--field-empty-border)", backgroundColor: "var(--field-empty)" }}
         >
-          <span className="min-w-0 flex-1 break-words text-[15px] font-semibold" style={{ color: tint }}>
+          <span className="min-w-0 flex-1 break-words text-[15px] font-semibold text-on-card">
             {tagged.name}
           </span>
           <button

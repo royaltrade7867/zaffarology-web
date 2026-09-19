@@ -40,6 +40,8 @@ interface Request {
   body?: string;
   /** Label for the affirmative button. */
   confirmLabel?: string;
+  /** Label for the other button, when "Cancel" would not say what it does. */
+  cancelLabel?: string;
   /** Draws the affirmative button as destructive. */
   danger?: boolean;
   /** `prompt` only. */
@@ -52,7 +54,7 @@ interface DialogApi {
   alert: (title: string, body?: string) => Promise<void>;
   confirm: (
     title: string,
-    opts?: { body?: string; confirmLabel?: string; danger?: boolean },
+    opts?: { body?: string; confirmLabel?: string; cancelLabel?: string; danger?: boolean },
   ) => Promise<boolean>;
   prompt: (
     title: string,
@@ -208,7 +210,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                   onClick={() => close(req.kind === "prompt" ? null : false)}
                   className="min-h-[40px] rounded-xl border border-line px-4 text-[13.5px] font-semibold text-muted transition-colors hover:bg-line-soft"
                 >
-                  Cancel
+                  {req.cancelLabel ?? "Cancel"}
                 </button>
               ) : null}
               <button

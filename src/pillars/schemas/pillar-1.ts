@@ -84,6 +84,31 @@ export const emptyGoal = (): GoalPlan => ({
   deleg: [],
 });
 
+/** Goal, plan and deadline are all written in. */
+export const goalReady = (g: GoalPlan): boolean => !!(g.goal.trim() && g.plan.trim() && g.target.trim());
+
+/**
+ * How much of a goal's page to show.
+ *
+ *  1 = the goal box only (exact goal, plan, deadline)
+ *  2 = plus work of the day and the 5 do-or-die tasks
+ *  3 = plus go-extra-mile and delegate
+ *
+ * Zaffar, 19 Sep: "There should be visible only first box ... Once you
+ * complete there should appear another box with work of the day & 5 do or die
+ * tasks. Then Go-Extra and Delegate."
+ *
+ * The one rule it may never break: anything already written stays visible.
+ * A goal from before this change, or one whose plan was later cleared, still
+ * shows every group that has content in it.
+ */
+export const revealStage = (g: GoalPlan): 1 | 2 | 3 => {
+  const dayStarted = !!g.work.text.trim() || g.dod.some((t) => t.text.trim());
+  const laterContent = g.extra.some((t) => t.text.trim()) || g.deleg.some((d) => d.text.trim());
+  if (dayStarted || laterContent) return 3;
+  return goalReady(g) ? 2 : 1;
+};
+
 /** Fill in any missing per-goal field so a partially-shaped blob is safe to render. */
 export const healGoal = (g: Partial<GoalPlan> | undefined): GoalPlan => ({
   goal: g?.goal ?? '',

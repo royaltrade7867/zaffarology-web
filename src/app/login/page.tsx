@@ -107,7 +107,7 @@ function Login() {
           job here; the children keep their own display. */}
       <div className="mt-3 flex flex-col items-center gap-2">
         <Link href="/forgot-password" className="tap-row text-center text-[14px] font-semibold text-heading">Forgot password?</Link>
-        <Link href="/signup" className="tap-row text-center text-[14px] font-semibold text-heading">New here? Create account</Link>
+        <Link href={`/signup${search.get("next") ? `?next=${encodeURIComponent(search.get("next")!)}` : ""}`} className="tap-row text-center text-[14px] font-semibold text-heading">New here? Create account</Link>
       </div>
     </AuthShell>
   );

@@ -54,6 +54,8 @@ export default function Pillar2() {
     update((s) => { s.sols.push({ text: "", done: false }); });
   };
 
+  const showSolutions = !!state.problem.trim() || sols.some((x) => x.text.trim());
+
   const progress = winner
     ? "Winning solution found ✓"
     : `${nonEmpty} ${nonEmpty === 1 ? "solution" : "solutions"} on the table`;
@@ -96,7 +98,23 @@ export default function Pillar2() {
           if (!s.sols.length) s.sols = [{ text: "", done: false }];
         }),
     },
-    { label: "File", kind: "file", onClick: () => fileEntry(state.sols[i].text) },
+    {
+      label: "File",
+      kind: "file",
+      /* Zaffar: "File button is not working". It was filing, silently: the
+         entry landed in the collapsed Solved Problems box, the solution stayed
+         in the list, and a second press filed it twice. Filing now MOVES the
+         solution out of the list and says where it went. */
+      onClick: () => {
+        const text = state.sols[i]?.text ?? "";
+        if (!fileEntry(text)) return;
+        update((s) => {
+          s.sols.splice(i, 1);
+          if (!s.sols.length) s.sols = [{ text: "", done: false }];
+        });
+        void dialog.alert("Filed to Solved Problems.", "You can find it in the Solved Problems list below.");
+      },
+    },
     {
       label: "Solved",
       kind: "file",
@@ -136,6 +154,12 @@ export default function Pillar2() {
         </MiwBox>
       </section>
 
+      {/* Possible Solutions appear once the problem is written (Zaffar,
+          19 Sep: "Only one box should appear to start with, but once you
+          start writing, then possible solution should come"). Solutions
+          already written always show, even if the problem was cleared. */}
+      {showSolutions ? (
+      <>
       {/* Possible Solutions */}
       <section className="mb-8">
         <SectionLabel
@@ -177,6 +201,8 @@ export default function Pillar2() {
         </div>
         <Footer progress={progress} resetLabel="Solved, file & start new problem" onReset={solvedReset} />
       </section>
+      </>
+      ) : null}
 
       {/* Solved Problems */}
       <FiledBox

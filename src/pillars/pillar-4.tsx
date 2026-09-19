@@ -12,7 +12,7 @@ import { PersonTagField } from "@/components/person-tag-field";
 import { assignTask, unassignTask } from "@/lib/connections-api";
 import { apiErrorMessage } from "@/lib/api";
 import { usePartnersWithAdd, useIncomingAssignments, useOutgoingAssignments, type Partner } from "@/lib/use-connections";
-import { Loading, SectionLabel, AddButton, useAutoGrow } from "@/components/ui";
+import { Loading, AddButton, useAutoGrow } from "@/components/ui";
 import { useDialog } from "@/components/dialog";
 /**
  * Types come from the SHARED schema, not local copies.
@@ -175,7 +175,7 @@ export default function Pillar4() {
   };
 
   const removeItem = async () => {
-    if (!await dialog.confirm("Remove this item from the huddle board?", { body: "It will not be kept in the filed archive. To keep a record, use File instead.", confirmLabel: "Remove", danger: true })) return;
+    if (!await dialog.confirm("Delete this item?", { body: "It will not be kept in the filed archive. To keep a record, use File instead.", confirmLabel: "Delete", danger: true })) return;
     update((s) => {
       s.items.splice(idx, 1);
       if (!s.items.length) s.items = [blank()];
@@ -204,8 +204,6 @@ export default function Pillar4() {
   return (
     <PillarScaffold pillar={pillar} saveStatus={status} onRetrySave={retrySave}>
       <AssignedToMe rows={incoming.rows} onToggle={incoming.markDone} accent={BLUE} />
-
-      <SectionLabel text="Huddle Board" small="one project at a time, 2 minutes each" color={BLUE} />
 
       {/* Navigator */}
       <div className="flex items-center justify-between mb-3">
@@ -296,6 +294,11 @@ export default function Pillar4() {
           </div>
         </div>
 
+        {/* Completed / Not Completed only once there is a due date: without
+            one there is no "on time", and nothing to move (Zaffar, 18 Sep).
+            A status already saved stays saved. */}
+        {item.due.trim() ? (
+        <>
         <YesNoRow
           value={item.status === "completed" ? "yes" : item.status === "notdone" ? "no" : ""}
           onChange={onStatus}
@@ -322,11 +325,12 @@ export default function Pillar4() {
               NO REASONS WHY. NEW COMPLETION DATE ONLY.
             </p>
             <DateField label="New Completion Date" value={item.newDate} onChange={(iso) => setItem({ newDate: iso })} />
-            <FLabel>Note (optional, 1 to 3 sentences max)</FLabel>
+            <FLabel>Additional Notes:</FLabel>
             <textarea
               value={item.note}
               onChange={(e) => setItem({ note: e.target.value })}
-              placeholder="What happens next. Not why it didn't happen."
+              aria-label="Additional notes"
+              rows={1}
               maxLength={280}
               autoCorrect="off"
               spellCheck={false}
@@ -339,11 +343,14 @@ export default function Pillar4() {
             </p>
           </div>
         ) : null}
+        </>
+        ) : null}
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 mt-3">
-          <button onClick={removeItem} className="mr-auto p-1 text-[11px] font-semibold" style={{ color: "var(--muted)" }}>
-            <Close size={13} /> Remove
+          {/* ✕ and "Delete" on one line, in the red every other delete uses. */}
+          <button onClick={removeItem} className="tap-row mr-auto inline-flex items-center gap-1 p-1 text-[12px] font-semibold" style={{ color: Accents.red }}>
+            <Close size={13} /> Delete
           </button>
           {item.status === "completed" ? (
             <>

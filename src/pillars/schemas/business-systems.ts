@@ -260,6 +260,26 @@ export const DEFAULT_DEPARTMENTS = [
   'Record Keeping',
 ] as const;
 
+/** Which standard department a name is (0-4), or -1. "AM Planning & PM
+ *  Achievement" matches with or without the "($)". */
+export const standardIndex = (name: string): number => {
+  const n = name.trim().toLowerCase().replace(/\s*\(a?\$\)\s*$/, "");
+  return DEFAULT_DEPARTMENTS.findIndex((d) => d.toLowerCase().replace(/\s*\(\$\)\s*$/, "") === n);
+};
+
+/**
+ * How a department's name is SHOWN: "Department of Delegation" (Zaffar,
+ * 19 Sep), with the AM/PM department's "($)" shown as "(A$)" for Australian
+ * dollars. Display only: the stored name, and everything matched on it
+ * (`isStandardDept`, `deptKind`, `deptAccent`), are unchanged. A name the
+ * user already wrote as "Department of X" is not prefixed twice.
+ */
+export const deptDisplayName = (name: string): string => {
+  const n = name.trim().replace(/\(\$\)/g, "(A$)");
+  if (!n) return "Department";
+  return /^(department|dept\.?|dep\.?)\s+of\b/i.test(n) ? n : `Department of ${n}`;
+};
+
 /**
  * One of the five standard departments — these cannot be deleted.
  *
@@ -268,10 +288,7 @@ export const DEFAULT_DEPARTMENTS = [
  * here would be dropped by the next phone save and the department would
  * silently become deletable again.
  */
-export const isStandardDept = (name: string): boolean => {
-  const n = name.trim().toLowerCase();
-  return DEFAULT_DEPARTMENTS.some((d) => d.trim().toLowerCase() === n);
-};
+export const isStandardDept = (name: string): boolean => standardIndex(name) >= 0;
 
 /**
  * The colour a department is drawn in.
@@ -598,23 +615,30 @@ export const normalize = (st: P8State): P8State => {
      renumbers the rest to D1-D4 rather than leaving D1, D3, D4, D5.
 
      System numbers work the same way, per department, since 2026-09-15. */
-  /* ---- the five standard departments ----
-     Businesses created before this existed get them once, retroactively. The
-     `seeded` flag is what makes it ONCE: without it this runs on every read and
-     a department the user deleted would reappear next time they opened the
-     pillar.
+  /* ---- the five standard departments: always all five ----
+     Zaffar, 19 Sep: "5 must departments must be visible". Since 18 Sep they
+     cannot be deleted from the screen, so a business missing one lost it
+     before that rule (or through a rename, or another device). Every load puts
+     any missing one back, in the standard order, next to the standard
+     departments already there. Custom departments and all their systems are
+     untouched. Re-running changes nothing, because a present department is
+     matched by name (case-insensitive, with or without "($)").
 
-     Matching is by NAME, case-insensitively, so a business that already has its
-     own "Loyalty" does not end up with two. An unseeded business with all five
-     already present is simply marked and left alone. */
+     This replaces the old once-per-business seed, whose `seeded` flag existed
+     only to let a deleted default stay deleted. `seeded` is still written, so
+     other readers of the blob find the field they expect. */
   for (const b of businesses) {
-    if (b.seeded) continue;
-    const existing = new Set(b.departments.map((d) => d.name.trim().toLowerCase()));
-    for (const name of DEFAULT_DEPARTMENTS) {
-      if (existing.has(name.trim().toLowerCase())) continue;
-      // Number is a placeholder: the pass below renumbers every department by
-      // position anyway.
-      b.departments.push(blankDepartment(name, 0));
+    for (let k = 0; k < DEFAULT_DEPARTMENTS.length; k += 1) {
+      if (b.departments.some((d) => standardIndex(d.name) === k)) continue;
+      // Insert after the last department that is a standard one earlier in the
+      // order, so "Delegation" lands after "AM Planning", not at the end.
+      let at = 0;
+      b.departments.forEach((d, i) => {
+        const j = standardIndex(d.name);
+        if (j >= 0 && j < k) at = i + 1;
+      });
+      // Number is a placeholder: the pass below renumbers by position.
+      b.departments.splice(at, 0, blankDepartment(DEFAULT_DEPARTMENTS[k], 0));
     }
     b.seeded = true;
   }

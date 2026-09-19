@@ -113,7 +113,10 @@ function NotesAndMeetings() {
   const dialog = useDialog();
   const [undo, setUndo] = useState<{ what: "note" | "meeting"; id: number } | null>(null);
 
-  const [kind, setKind] = useState<Kind>("notes");
+  /* Nothing is selected when Notes opens (Zaffar, 19 Sep: "When we click
+     notes, should be empty default"). Picking Personal or Business shows that
+     list and its New button. */
+  const [kind, setKind] = useState<Kind | null>(null);
   /** What the share sheet is currently showing, or null. Held here rather than
    *  per-card so the sheet has ONE mount point and works from the list and the
    *  open editor alike. */
@@ -124,7 +127,7 @@ function NotesAndMeetings() {
   const [cur, setCur] = useState(0);
 
   /* Every note and every meeting, unfiltered. The tab is the only division. */
-  const list: (ApiNote | ApiMeeting)[] = kind === "notes" ? notes : meetings;
+  const list: (ApiNote | ApiMeeting)[] = kind === "notes" ? notes : kind === "meetings" ? meetings : [];
   const idx = Math.min(cur, Math.max(0, list.length - 1));
 
   /* `lastTag` is gone with the filter. A new item's tag now comes from the TAB
@@ -180,6 +183,7 @@ function NotesAndMeetings() {
   const switchKind = (k: Kind) => { setKind(k); setCur(0); };
 
   const newItem = async () => {
+    if (!kind) return;
     // A new item takes the current filter's tag, so creating one while
     // "Business" is selected does not immediately hide it. Under "All" it
     // repeats whichever tag was last used here, since defaulting a business
@@ -465,6 +469,7 @@ function NotesAndMeetings() {
 
       {/* The new-item button. The All / Personal / Business filters that used
           to sit beside it are gone — the tabs above are the only division now. */}
+      {kind ? (
       <div className="mb-5 flex items-center gap-2">
         <button
           type="button"
@@ -489,6 +494,7 @@ function NotesAndMeetings() {
           )}
         </button>
       </div>
+      ) : null}
 
       {error ? (
         <p className="mb-4 text-[13px] font-semibold text-danger" role="alert">{error}</p>
@@ -512,7 +518,12 @@ function NotesAndMeetings() {
         </div>
       ) : null}
 
-      {list.length === 0 ? (
+      {!kind ? (
+        <div className="mb-2 rounded-2xl border border-dashed border-line px-5 py-8 text-center">
+          <p className="text-[14.5px] font-semibold text-heading">Choose Personal notes or Business notes</p>
+          <p className="mt-1 text-[13px] text-muted">Your notes open here once you pick one.</p>
+        </div>
+      ) : list.length === 0 ? (
         <Empty kind={kind} onNew={newItem} />
       ) : (
         <>

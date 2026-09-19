@@ -69,7 +69,9 @@ const uiFiles = [
   const p4 = read("src/pillars/pillar-4.tsx");
   const deleteBlock = /Delete this item\?[\s\S]{0,220}danger: true/.test(p4);
   ck("huddle Delete confirms before destroying", deleteBlock);
-  ck("huddle Remove still confirms", /Remove this item from the huddle board\?[\s\S]{0,120}danger: true/.test(p4));
+  // "Remove" was renamed "Delete" on 19 Sep (Zaffar: "for uniformity"); both
+  // of the huddle's destroying buttons must still confirm first.
+  ck("huddle Remove (now Delete) still confirms", (p4.match(/Delete this item\?[\s\S]{0,220}?danger: true/g) ?? []).length >= 2);
 }
 
 /* Every confirm whose wording is destructive must LOOK destructive. Flow steps
@@ -259,7 +261,8 @@ const uiFiles = [
   // `inputMode="text"` on a money field raises the alphabetic keyboard on a
   // phone, and the field accepted `abc-!@#$` verbatim.
   ck("the money field asks for a number", /inputMode="decimal"/.test(p3));
-  ck("and strips anything that is not one", /replace\(\/\[\^\\d\.\]\/g, ""\)/.test(p3));
+  // Thousands commas are allowed since 19 Sep ("1,200.50"); anything else is still stripped.
+  ck("and strips anything that is not one", /replace\(\/\[\^\\d\.,?\]\/g, ""\)/.test(p3));
   ck("and is labelled", /aria-label="Money made today"/.test(p3));
 
   const me = read("src/components/meeting-editor.tsx");

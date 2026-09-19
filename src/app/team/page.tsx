@@ -9,6 +9,12 @@ import { AuthGuard } from "@/components/shell";
 import { ConnectionsPanel } from "@/components/connections-panel";
 import { Loading, cx } from "@/components/ui";
 
+/* Team progress is hidden for now and comes back in phase 2 with business,
+   department and system filters (Hammad's list, 19 Sep). The code stays, so
+   turning it back on is this one switch. While off, the page does not even
+   ask for /company/team, which answered every non-admin with a red error. */
+const SHOW_TEAM_PROGRESS = false;
+
 function TeamInner() {
   const { company } = useAuth();
   const [data, setData] = useState<ApiTeamOut | null>(null);
@@ -16,6 +22,7 @@ function TeamInner() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!SHOW_TEAM_PROGRESS) return;
     api
       .get<ApiTeamOut>("/company/team")
       .then(setData)
@@ -29,6 +36,8 @@ function TeamInner() {
           progress table below only exists for a company. */}
       <ConnectionsPanel />
 
+      {SHOW_TEAM_PROGRESS ? (
+      <>
       <hr className="my-8 border-line" />
 
       <p className="text-[12px] tracking-widest font-heading text-gold">YOUR TEAM</p>
@@ -128,6 +137,8 @@ function TeamInner() {
           </div>
         </div>
       )}
+      </>
+      ) : null}
     </div>
   );
 }
