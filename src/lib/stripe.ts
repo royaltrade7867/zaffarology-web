@@ -122,16 +122,29 @@ export function formatMoney(minor: number | null | undefined, currency: string |
   if (minor == null || !currency) return "";
   const code = currency.toUpperCase();
   const major = ZERO_DECIMAL.has(code) ? minor : minor / 100;
+  const decimals = ZERO_DECIMAL.has(code) ? 0 : 2;
+  let amount: string;
   try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: code,
-      currencyDisplay: "narrowSymbol",
+    /* The NUMBER only; the currency is prefixed below. `style: "currency"` is
+       deliberately not used, because what it produces depends on who is reading:
+       `en-AU` renders AUD as a bare "$35.00" (it is the local currency there,
+       so the prefix is dropped), while `en-US` renders the same value as
+       "A$35.00". Leaving that to the visitor's locale means an Australian price
+       reads as US dollars for an Australian — the one reader most likely to
+       assume it. `en-AU` is pinned so grouping and decimals do not shift about
+       either. */
+    amount = new Intl.NumberFormat("en-AU", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
     }).format(major);
   } catch {
-    // An unknown code must still render a price, not an empty string.
-    return `${code} ${major.toFixed(ZERO_DECIMAL.has(code) ? 0 : 2)}`;
+    amount = major.toFixed(decimals);
   }
+  /* "A$" for Australian dollars, always and everywhere — the convention the
+     rest of the app already follows (Pillar 3's money box, the AM/PM department
+     name), and a fixture asserts it. Any other currency keeps its code, which
+     is unambiguous without knowing local habits. */
+  return code === "AUD" ? `A$${amount}` : `${code} ${amount}`;
 }
 
 /** "per month" / "per year", from Stripe's interval. */
