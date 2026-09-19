@@ -2,27 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Offering, Purchases } from "@revenuecat/purchases-js";
 
 import { Eagle } from "@/components/shell";
 import { Check } from "@/components/icons";
+import { StripeCheckout } from "@/components/stripe-checkout";
 import { Button, Loading, TextField, cx } from "@/components/ui";
-import {
-  STORE_NAMES,
-  api,
-  apiErrorMessage,
-  isStoreManaged,
-  type ApiBillingConfig,
-} from "@/lib/api";
+import { STORE_NAMES, apiErrorMessage, isStoreManaged } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { friendlyTimestamp } from "@/lib/dates";
 import { PILLARS } from "@/lib/pillars";
 import {
-  classifyPurchaseError,
-  describePackage,
-  loadOffering,
-  purchasesFor,
-} from "@/lib/purchases";
+  formatMoney,
+  getStripeConfig,
+  intervalWords,
+  syncCheckout,
+  type StripeConfig,
+} from "@/lib/stripe";
 
 /** How long to wait for a paid purchase to show up as access. */
 const ACTIVATION_TIMEOUT_MS = 45_000;
@@ -32,9 +27,8 @@ type Phase =
   | { kind: "loading" }
   | { kind: "disabled" }
   | { kind: "subscribed" }
-  | { kind: "plans"; offering: Offering }
-  | { kind: "no_plans" }
-  | { kind: "paying" }
+  | { kind: "plan"; config: StripeConfig }
+  | { kind: "checkout"; config: StripeConfig }
   | { kind: "activating" }
   | { kind: "activation_slow" }
   | { kind: "error"; message: string };
@@ -42,40 +36,26 @@ type Phase =
 /**
  * Plans, current status, and checkout.
  *
- * NOT `AuthShell` (2026-09-19): that is a `max-w-md` auth-form column, and two
- * plans stacked inside 448px cannot be compared — the page read as a form with
- * a price on it. This lays its own page out, so the plans sit side by side from
- * `sm:` and the five pillars can say what is actually being bought.
+ * Buys through STRIPE DIRECTLY, not `purchases-js` (19 Sep 2026). RevenueCat's
+ * Stripe checkout sends `ui_mode=embedded`, which Stripe removed in the dahlia
+ * API line, so it answers 422 on any current account and no purchase can
+ * complete. RevenueCat still owns entitlements and will carry iOS and Android
+ * purchases when mobile ships — only this screen changed.
  *
- * `AuthShell`'s other job — letting an unsubscribed person in — is kept: there
- * is no `AuthGuard` here, because the people who most need this page are the
- * ones without a subscription, and the guard would bounce them to /paywall,
- * which links back here.
+ * `AuthShell` is deliberately not used: the people who most need this page are
+ * the ones without a subscription, and `AuthGuard` would bounce them to
+ * /paywall, which links back here.
  *
- * Prices and plans come from RevenueCat's offering, never from this file, so a
- * price change in the dashboard is a price change here. Checkout is RevenueCat
- * Billing's own sheet (card details go to Stripe, never to us).
- *
- * After paying, access is confirmed by OUR backend, not by the SDK's own
- * answer: the backend is what every platform reads, and it may take a few
- * seconds to hear from RevenueCat. This page asks it to re-check and waits.
- *
- * Someone already paying through the App Store or Google Play is not offered a
- * second subscription here — they are told where theirs lives.
+ * After paying, access is confirmed by OUR backend, never by the browser. The
+ * webhook is what grants it; this page polls until it lands.
  */
 export default function Pricing() {
   const { user, loading, billing, billingLoading, refreshBilling, syncBilling } = useAuth();
   const router = useRouter();
-  const [config, setConfig] = useState<ApiBillingConfig | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
-  const [selected, setSelected] = useState<string | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [sandbox, setSandbox] = useState(false);
-  /** Cardholder full name (Hammad's list: "cardholder name also during
-   *  checkout *full name"). Starts as the account's name. */
-  const [cardName, setCardName] = useState("");
-  const [cardNameError, setCardNameError] = useState<string | null>(null);
-  const purchasesRef = useRef<Purchases | null>(null);
   // Stops the activation poll if the person leaves the page.
   const aliveRef = useRef(true);
 
@@ -88,74 +68,62 @@ export default function Pricing() {
 
   useEffect(() => {
     if (loading) return;
-    /* Keep the place (and a QR code's ?plan=) through login and verification,
-       so a new sign-up lands back here, not on Home. */
-    const next = `?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-    if (!user) router.replace(`/login${next}`);
-    else if (!user.isVerified) router.replace(`/verify-email${next}`);
+    /* Keep the place through login and verification, so a new sign-up lands
+       back here rather than on Home. */
+    if (!user || !user.isVerified) {
+      const next = `?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+      router.replace(`${!user ? "/login" : "/verify-email"}${next}`);
+    }
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (user?.fullName) setCardName((c) => c || user.fullName);
+    if (user?.fullName) setFullName((current) => current || user.fullName);
   }, [user?.fullName]);
 
-  const paidElsewhere = Boolean(billing?.entitled && billing.store);
+  const paid = Boolean(billing?.entitled && billing.store);
 
-  const loadPlans = useCallback(async () => {
+  const load = useCallback(async () => {
     setPhase({ kind: "loading" });
-    setNotice(null);
     try {
-      const cfg = await api.get<ApiBillingConfig>("/billing/config");
-      setConfig(cfg);
-      if (!cfg.enabled) {
+      const config = await getStripeConfig();
+      if (!config.enabled || !config.price_id) {
         setPhase({ kind: "disabled" });
         return;
       }
-      const purchases = await purchasesFor(cfg);
-      purchasesRef.current = purchases;
-      setSandbox(purchases.isSandbox());
-      const offering = await loadOffering(purchases, cfg.offering_id);
-      if (!offering || offering.availablePackages.length === 0) {
-        setPhase({ kind: "no_plans" });
-        return;
-      }
-      // A link or QR code can pick the plan: /pricing?plan=monthly|annual.
-      const asked = new URLSearchParams(window.location.search).get("plan");
-      const fromLink = asked === "monthly" ? offering.monthly : asked === "annual" ? offering.annual : null;
-      setSelected((current) =>
-        current && offering.availablePackages.some((p) => p.identifier === current)
-          ? current
-          : (fromLink ?? offering.annual ?? offering.monthly ?? offering.availablePackages[0]).identifier,
-      );
-      setPhase({ kind: "plans", offering });
+      setPhase({ kind: "plan", config });
     } catch (err) {
       setPhase({
         kind: "error",
-        message: apiErrorMessage(err, "Could not load the plans. Check your connection and try again."),
+        message: apiErrorMessage(err, "Could not load the plan. Check your connection and try again."),
       });
     }
   }, []);
 
   const userId = user?.id;
   const verified = user?.isVerified;
-  // Plans load once per person. Later status changes (the activation poll
-  // updates billing) must not reload them underneath someone mid-checkout.
   const loadedFor = useRef<string | null>(null);
-  const busy = phase.kind === "paying" || phase.kind === "activating";
+  const busy = phase.kind === "checkout" || phase.kind === "activating";
   useEffect(() => {
     if (loading || billingLoading || !userId || !verified || busy) return;
-    if (paidElsewhere) {
+    if (paid) {
       setPhase({ kind: "subscribed" });
       return;
     }
     if (loadedFor.current === userId) return;
     loadedFor.current = userId;
-    void loadPlans();
-  }, [loading, billingLoading, userId, verified, paidElsewhere, busy, loadPlans]);
+    void load();
+  }, [loading, billingLoading, userId, verified, paid, busy, load]);
 
   /** Wait until the backend reports the purchase as access. */
-  const awaitActivation = async (): Promise<boolean> => {
+  const awaitActivation = async (sessionId?: string): Promise<boolean> => {
     const deadline = Date.now() + ACTIVATION_TIMEOUT_MS;
+    // Ask the backend to read the session once, so access usually appears
+    // before the webhook has even arrived.
+    try {
+      await syncCheckout(sessionId);
+    } catch {
+      // The webhook is still coming; polling below will see it.
+    }
     while (aliveRef.current && Date.now() < deadline) {
       const fresh = await syncBilling();
       if (fresh?.entitled && fresh.store) return true;
@@ -164,57 +132,21 @@ export default function Pricing() {
     return false;
   };
 
-  const checkout = async () => {
-    if (phase.kind !== "plans" || !config || !purchasesRef.current) return;
-    const pkg = phase.offering.availablePackages.find((p) => p.identifier === selected);
-    if (!pkg) return;
-    const offering = phase.offering;
-    const fullName = cardName.trim().replace(/\s+/g, " ");
-    if (fullName.split(" ").length < 2) {
-      setCardNameError("Enter the full name as it appears on the card, first and last name.");
+  const beginCheckout = () => {
+    if (phase.kind !== "plan") return;
+    const name = fullName.trim().replace(/\s+/g, " ");
+    if (name.split(" ").length < 2) {
+      setNameError("Enter the full name as it appears on the card, first and last name.");
       return;
     }
-    setCardNameError(null);
+    setNameError(null);
     setNotice(null);
-    setPhase({ kind: "paying" });
-    try {
-      // Re-check the account right before charging: this tab may have been
-      // open while someone else signed in on another.
-      const purchases = await purchasesFor(config);
-      // The cardholder's name travels with the customer and with this purchase.
-      // Saving the attribute is best effort: it must never block a payment.
-      await purchases.setAttributes({ $displayName: fullName }).catch(() => undefined);
-      await purchases.purchase({
-        rcPackage: pkg,
-        customerEmail: config.email,
-        selectedLocale: "en-AU",
-        metadata: { full_name: fullName },
-      });
-    } catch (err) {
-      const failure = await classifyPurchaseError(err);
-      if (failure.kind === "cancelled") {
-        setPhase({ kind: "plans", offering });
-        return;
-      }
-      if (failure.kind === "already_owned") {
-        setPhase({ kind: "activating" });
-        const ok = await awaitActivation();
-        if (ok) router.replace("/home");
-        else setPhase({ kind: "activation_slow" });
-        return;
-      }
-      if (failure.kind === "pending") {
-        setNotice("Your payment is still being confirmed by your bank. Access starts as soon as it clears.");
-        setPhase({ kind: "plans", offering });
-        return;
-      }
-      setNotice(failure.message);
-      setPhase({ kind: "plans", offering });
-      return;
-    }
+    setPhase({ kind: "checkout", config: phase.config });
+  };
 
+  const onPaid = async (sessionId: string) => {
     setPhase({ kind: "activating" });
-    const ok = await awaitActivation();
+    const ok = await awaitActivation(sessionId);
     if (!aliveRef.current) return;
     if (ok) router.replace("/home");
     else setPhase({ kind: "activation_slow" });
@@ -225,9 +157,6 @@ export default function Pricing() {
   const subscribed = phase.kind === "subscribed";
 
   return (
-    /* The page lays itself out rather than borrowing the auth column. Plans need
-       to sit beside each other to be compared; everything else reads at a
-       book measure. */
     <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">
       <header className="text-center">
         <Eagle size={64} />
@@ -240,16 +169,11 @@ export default function Pricing() {
             pillars.
           </p>
         ) : null}
-        {sandbox ? (
-          <p className="mt-4 inline-flex rounded-full border border-dashed border-gold px-3 py-1 text-[12px] font-semibold text-gold">
-            Test mode: no real charges
-          </p>
-        ) : null}
       </header>
 
       {phase.kind === "loading" ? (
         <div className="mt-10">
-          <Loading full={false} label="Loading plans" />
+          <Loading full={false} label="Loading the plan" />
         </div>
       ) : null}
 
@@ -258,7 +182,7 @@ export default function Pricing() {
           <p className="text-[14px] font-semibold text-danger" role="alert">
             {phase.message}
           </p>
-          <Button label="Try again" variant="ghost" onClick={() => void loadPlans()} />
+          <Button label="Try again" variant="ghost" onClick={() => void load()} />
         </div>
       ) : null}
 
@@ -272,48 +196,12 @@ export default function Pricing() {
         </div>
       ) : null}
 
-      {phase.kind === "no_plans" ? (
-        <p className="mx-auto mt-10 max-w-md rounded-2xl border border-dashed border-line px-6 py-8 text-center text-[14px] text-muted">
-          No plans are available right now. Please try again later.
-        </p>
-      ) : null}
-
       {subscribed && billing ? <SubscriptionCard /> : null}
 
-      {phase.kind === "plans" ? (
+      {phase.kind === "plan" ? (
         <>
-          {/* A real radiogroup: arrow keys move between plans and only the
-              chosen one is in the tab order, so Tab crosses the group once. */}
-          <div
-            role="radiogroup"
-            aria-label="Plans"
-            onKeyDown={(e) => {
-              if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-              const list = phase.offering.availablePackages;
-              if (list.length < 2) return;
-              e.preventDefault();
-              const at = list.findIndex((p) => p.identifier === selected);
-              const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
-              const next = list[(Math.max(at, 0) + step + list.length) % list.length];
-              setSelected(next.identifier);
-              /* Focus follows selection inside a radiogroup, or the arrow keys
-                 move the tick while the focus ring stays behind. */
-              const el = e.currentTarget.querySelector<HTMLElement>(`[data-plan="${next.identifier}"]`);
-              el?.focus();
-            }}
-            className="mt-9 grid gap-3 sm:grid-cols-2"
-          >
-            {phase.offering.availablePackages.map((pkg) => {
-              const view = describePackage(pkg);
-              return (
-                <PlanCard
-                  key={view.id}
-                  view={view}
-                  on={selected === view.id}
-                  onPick={() => setSelected(view.id)}
-                />
-              );
-            })}
+          <div className="mt-9">
+            <PlanCard config={phase.config} />
           </div>
 
           {billing?.grant?.kind === "trial" && billing.grant.until ? (
@@ -332,21 +220,22 @@ export default function Pricing() {
             </p>
           ) : null}
 
-          {/* The name sits with the button, inside the same narrow column: it
-              is part of paying, not part of choosing a plan. */}
           <div className="mx-auto mt-6 max-w-md space-y-3">
             <TextField
               label="Full name (as on card)"
-              value={cardName}
-              onChange={(v) => { setCardName(v); if (cardNameError) setCardNameError(null); }}
+              value={fullName}
+              onChange={(v) => {
+                setFullName(v);
+                if (nameError) setNameError(null);
+              }}
               autoComplete="cc-name"
               maxLength={120}
-              error={cardNameError ?? undefined}
+              error={nameError ?? undefined}
             />
-            <Button label="Continue to checkout" onClick={() => void checkout()} disabled={!selected} />
+            <Button label="Continue to checkout" onClick={beginCheckout} />
             <p className="text-center text-[12.5px] leading-relaxed text-muted">
-              Card details are handled by our payment provider. Cancel any time.
-              One subscription works on the web, iPhone and Android.
+              Card details go straight to Stripe and are never stored by us.
+              Cancel any time.
             </p>
           </div>
 
@@ -354,9 +243,26 @@ export default function Pricing() {
         </>
       ) : null}
 
-      {phase.kind === "paying" ? (
-        <div className="mt-10">
-          <Loading full={false} label="Opening checkout" />
+      {phase.kind === "checkout" ? (
+        <div className="mt-9">
+          <StripeCheckout
+            fullName={fullName}
+            returnUrl={`${window.location.origin}/pricing`}
+            onComplete={(sessionId) => void onPaid(sessionId)}
+            onError={(message) => {
+              setNotice(message);
+              setPhase({ kind: "plan", config: phase.config });
+            }}
+          />
+          <div className="mx-auto mt-4 max-w-md text-center">
+            <button
+              type="button"
+              onClick={() => setPhase({ kind: "plan", config: phase.config })}
+              className="tap-row rounded px-2 text-[13.5px] font-semibold text-muted transition-colors hover:text-heading"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -378,8 +284,8 @@ export default function Pricing() {
             label="Check again"
             onClick={async () => {
               setPhase({ kind: "activating" });
-              const fresh = await syncBilling();
-              if (fresh?.entitled && fresh.store) router.replace("/home");
+              const ok = await awaitActivation();
+              if (ok) router.replace("/home");
               else setPhase({ kind: "activation_slow" });
             }}
           />
@@ -404,11 +310,9 @@ export default function Pricing() {
   /* ---------------------------------------------------------------- status */
 
   /**
-   * What someone already paying needs: where it is billed, what happens next,
-   * and the way to change it.
-   *
-   * It reads `state`, `will_renew` and `billing_issue`, which the page used to
-   * ignore — a card that had failed still said "renews on the 3rd".
+   * What someone already paying needs: what happens next, and where to change
+   * it. Reads `state`, `will_renew` and `billing_issue` — a card that has
+   * failed must not be told its subscription renews normally.
    */
   function SubscriptionCard() {
     if (!billing) return null;
@@ -417,7 +321,6 @@ export default function Pricing() {
 
     const trouble = billing.billing_issue;
     const ending = billing.will_renew === false;
-    /* One line that is true in every case, rather than always "renews on". */
     const when = billing.until ? friendlyTimestamp(billing.until) : null;
     const lede = trouble
       ? "We could not take the last payment"
@@ -441,8 +344,6 @@ export default function Pricing() {
           trouble ? "border-danger" : "border-line",
         )}
       >
-        {/* A state dot, not an icon: the colour IS the status, and it needs no
-            second reading. `aria-hidden` because the words below say it. */}
         <span
           aria-hidden
           className={cx(
@@ -470,98 +371,68 @@ export default function Pricing() {
             To change or cancel it, use {store} on the device you subscribed with.
             It works here too, nothing else to buy.
           </p>
-        ) : billing.management_url ? (
-          <a
-            href={billing.management_url}
-            target="_blank"
-            rel="noreferrer noopener"
+        ) : (
+          /* Managing a web subscription lives in Profile now, in our own UI,
+             rather than on a store's page we do not control. */
+          <button
+            type="button"
+            onClick={() => router.push("/profile")}
             className="tap-row mt-3 inline-flex items-center justify-center rounded-xl border border-line px-4 text-[13.5px] font-semibold text-heading transition-colors hover:bg-line-soft"
           >
             Manage subscription
-          </a>
-        ) : null}
+          </button>
+        )}
       </div>
     );
   }
 }
 
-/* ------------------------------------------------------------------ plans */
+/* ------------------------------------------------------------------- plan */
 
 /**
- * One plan, as a radio.
+ * The one plan, and its price.
  *
- * The price is the largest thing on the card because it is what the card is
- * for. A chosen plan is marked by BOTH the gold border and a tick — colour
- * alone would be the only signal for someone who cannot see it.
+ * A single plan does not need a radio group — there is nothing to choose
+ * between. It reads as a statement of what the subscription costs.
  */
-function PlanCard({
-  view,
-  on,
-  onPick,
-}: {
-  view: ReturnType<typeof describePackage>;
-  on: boolean;
-  onPick: () => void;
-}) {
+function PlanCard({ config }: { config: StripeConfig }) {
+  const price = formatMoney(config.amount, config.currency);
   return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={on}
-      // Only the selected radio is tabbable; arrow keys move within the group.
-      tabIndex={on ? 0 : -1}
-      data-plan={view.id}
-      onClick={onPick}
-      className={cx(
-        "group relative flex flex-col rounded-2xl border bg-surface p-5 text-left transition-colors",
-        on ? "border-gold" : "border-line hover:bg-line-soft",
-      )}
-    >
+    <div className="mx-auto max-w-md rounded-2xl border border-gold bg-surface p-6">
       <span className="flex items-start justify-between gap-3">
         <span className="font-heading text-[13px] uppercase tracking-[0.1em] text-muted">
-          {view.title}
+          Zaffarology
         </span>
         <span
           aria-hidden
-          className={cx(
-            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
-            on ? "border-gold bg-gold text-on-gold" : "border-line",
-          )}
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gold bg-gold text-on-gold"
         >
-          {on ? <Check size={12} /> : null}
+          <Check size={12} />
         </span>
       </span>
 
-      {/* The number is the point of the card. Tabular so the two plans'
-          prices line up down the column. */}
+      {/* Tabular so a price change does not shift the layout under it. */}
       <span className="mt-4 flex items-baseline gap-1.5">
-        <span className="font-heading text-[30px] leading-none tabular-nums text-heading">
-          {view.price}
+        <span className="font-heading text-[34px] leading-none tabular-nums text-heading">
+          {price || "—"}
         </span>
-        {view.per ? <span className="text-[13px] text-muted">{view.per}</span> : null}
+        <span className="text-[13px] text-muted">{intervalWords(config.interval)}</span>
       </span>
 
-      {view.offer ? (
-        <span className="mt-3 inline-flex self-start rounded-full bg-gold/8 px-2.5 py-1 text-[12px] font-semibold text-gold">
-          {view.offer}
-        </span>
-      ) : null}
-
-      {view.description ? (
-        <span className="mt-3 text-[13px] leading-relaxed text-muted">{view.description}</span>
-      ) : null}
-    </button>
+      <p className="mt-3 text-[13px] leading-relaxed text-muted">
+        Every pillar, on the web and on your phone. Cancel whenever you like.
+      </p>
+    </div>
   );
 }
 
 /* ------------------------------------------------------------ what you get */
 
 /**
- * What the subscription actually buys: the five pillars, by name.
+ * What the subscription buys: the five pillars, by name.
  *
- * The page sold a price without ever naming the product. These are the real
- * pillars from `PILLARS` — the same names, numbers and accents as the rest of
- * the app — so this cannot drift from what ships.
+ * Read from `PILLARS`, the same source the rest of the app uses, so it cannot
+ * drift from what ships.
  */
 function WhatYouGet() {
   return (
