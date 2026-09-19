@@ -46,9 +46,12 @@ const withSystem = (mut: (s: System) => void): System => {
       },
     ],
   } as unknown as P8State);
-  const sys = st.businesses[0].departments[0].systems[0];
+  // By id: since 19 Sep a missing standard department is re-added in front
+  // of this one, so its position is not fixed.
+  const dept = (x: P8State) => x.businesses[0].departments.find((d) => d.id === "d")!;
+  const sys = dept(st).systems[0];
   mut(sys);
-  return trip(st).businesses[0].departments[0].systems[0];
+  return dept(trip(st)).systems[0];
 };
 
 /* ---------------------- the data-loss bug itself ------------------------- */

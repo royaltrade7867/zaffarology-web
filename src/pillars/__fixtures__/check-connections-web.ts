@@ -49,8 +49,10 @@ ck("the overlay's only control is the done checkbox",
 
 /* ----------------------- the invite privacy rule ------------------------- */
 
+// One fixed sentence for every address (reworded 19 Sep for plain English),
+// so it still cannot reveal whether that address has an account.
 ck("the invite message does not branch on the reply",
-   /If \$\{value\} can be invited/.test(panel));
+   /setSent\(`We've sent an invite to \$\{value\}\. They'll appear in your team once they join\.`\)/.test(panel));
 /* Anything that inspects the response body to decide what to show would leak
    whether the address has an account. */
 ck("the panel does not read the server's message",
@@ -60,8 +62,10 @@ ck("connections-api documents the rule", /must NOT try to infer/.test(api));
 /* --------------------- confirm before anything sends --------------------- */
 
 ck("picking a person confirms first", /dialog\.confirm\(/.test(tagField));
+// Since 19 Sep the two answers are named buttons, "Tag and email" and "Just
+// tag", so both visibly still tag the person (Zaffar found OK/Cancel unclear).
 ck("the confirm says BOTH answers assign",
-   /tagged on this either way/.test(tagField));
+   /confirmLabel: "Tag and email"/.test(tagField) && /cancelLabel: "Just tag"/.test(tagField));
 ck("the choice is passed through as notify", /onTag\(p, notify\)/.test(tagField));
 ck("no undo window was reintroduced",
    !/UNDO_WINDOW/.test(tagField) && !/UNDO_WINDOW/.test(api));
