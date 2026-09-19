@@ -451,11 +451,11 @@ export default function Pillar1() {
             <TextArea
               value={g.plan}
               onChange={(v) => setG((x) => { x.plan = v; })}
-              placeholder={`Write the plan for goal ${gi + 1}: the steps, the order, the deadlines…`}
+              placeholder={`Write the plan for goal ${gi + 1} here…`}
               maxLength={GOAL_MAX}
               tone="red"
             />
-            <FieldFoot value={g.plan} max={GOAL_MAX} clearLabel={`Clear exact plan ${gi + 1}`} onClear={() => clearField("plan")} />
+            <FieldFoot value={g.plan} max={GOAL_MAX} clearLabel={`Clear exact plan ${gi + 1}`} onClear={() => clearField("plan")} className="-mt-2" />
           </div>
 
           <div className="mt-2">
@@ -582,9 +582,13 @@ export default function Pillar1() {
 
 /** Under a goal / plan box: the characters-left note, and a Clear button once
  *  there is something to clear. */
-function FieldFoot({ value, max, clearLabel, onClear }: { value: string; max: number; clearLabel: string; onClear: () => void }) {
+function FieldFoot({ value, max, clearLabel, onClear, className }: { value: string; max: number; clearLabel: string; onClear: () => void; className?: string }) {
+  // Nothing to clear and no count to show: take no space, so an empty box is
+  // not followed by a blank gap.
+  const nearLimit = max - value.length <= Math.max(20, Math.round(max * 0.15));
+  if (!value.trim() && !nearLimit) return null;
   return (
-    <div className="mt-1 flex min-h-[26px] items-start justify-between gap-3">
+    <div className={`mt-1 flex min-h-[26px] items-start justify-between gap-3 ${className ?? ""}`}>
       <div className="min-w-0 flex-1"><CharsLeft value={value} max={max} /></div>
       {value.trim() ? (
         <button
