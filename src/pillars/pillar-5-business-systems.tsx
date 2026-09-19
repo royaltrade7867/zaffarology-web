@@ -38,6 +38,7 @@ import {
   blankPair,
   blankSystem,
   deptAccent,
+  deptDisplayName,
   deptKind,
   type DeptKind,
   isStandardDept,
@@ -280,7 +281,7 @@ function Hierarchy({ biz, dept, sys, onBack }: { biz: Business; dept?: Departmen
              departments are coloured by identity, not by position. */
           style={{ color: `var(--${ACCENT_VAR[deptAccent(dept.name, 0)]})` }}
         >
-          {dept.num} · {(dept.name || "Department").toUpperCase()}
+          {dept.num} · {deptDisplayName(dept.name).toUpperCase()}
         </p>
       ) : null}
       {sys ? (
@@ -437,7 +438,7 @@ function DeptBlock({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block break-words font-heading text-[14px] tracking-[0.06em]" style={{ color: tint }}>
-              {(dept.name || "Department").toUpperCase()}
+              {deptDisplayName(dept.name).toUpperCase()}
             </span>
             <span className="mt-0.5 block text-[12.5px]" style={{ color: "var(--muted)" }}>{sub}</span>
           </span>
