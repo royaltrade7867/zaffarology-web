@@ -442,7 +442,7 @@ export default function Pillar1() {
             autoCorrect="off"
             spellCheck={false}
             style={{ backgroundColor: g.goal.trim() ? "var(--field-empty)" : "var(--field-red)" }}
-            className="w-full rounded-lg px-2 py-2 font-semibold text-[16px] uppercase tracking-[0.02em] text-on-card outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-placeholder"
+            className="w-full rounded-lg px-2 py-[9px] font-semibold text-[16px] uppercase tracking-[0.02em] text-on-card outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-placeholder"
           />
           <FieldFoot value={g.goal} max={GOAL_MAX} clearLabel={`Clear exact goal ${gi + 1}`} onClear={() => clearField("goal")} />
 
@@ -454,8 +454,9 @@ export default function Pillar1() {
               placeholder={`Write the plan for goal ${gi + 1} here…`}
               maxLength={GOAL_MAX}
               tone="red"
+              compact
             />
-            <FieldFoot value={g.plan} max={GOAL_MAX} clearLabel={`Clear exact plan ${gi + 1}`} onClear={() => clearField("plan")} className="-mt-2" />
+            <FieldFoot value={g.plan} max={GOAL_MAX} clearLabel={`Clear exact plan ${gi + 1}`} onClear={() => clearField("plan")} className="-mt-3" />
           </div>
 
           <div className="mt-2">

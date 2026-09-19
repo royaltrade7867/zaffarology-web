@@ -198,9 +198,12 @@ type AreaProps = {
    * switched on here, because a red sign-in form reads as an error state.
    */
   tone?: "green" | "red";
+  /** Same one-line height (40px) as a single-line field or a date button,
+   *  still growing as the text runs on. */
+  compact?: boolean;
 } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange">;
 
-export function TextArea({ label, value, onChange, className, maxBreaks = MAX_INPUT_BREAKS, tone = "green", ...rest }: AreaProps) {
+export function TextArea({ label, value, onChange, className, maxBreaks = MAX_INPUT_BREAKS, tone = "green", compact, ...rest }: AreaProps) {
   const countBreaks = (t: string) => (t.match(/\n/g) ?? []).length;
   const empty = !value.trim();
   const red = tone === "red";
@@ -253,7 +256,8 @@ export function TextArea({ label, value, onChange, className, maxBreaks = MAX_IN
            surface passes its own `min-h-…` in `className`, which lands after
            this and wins — that is how the notes editor keeps its 45vh. */
         className={cx(
-          "w-full min-h-[40px] rounded-xl border px-3.5 py-3 text-[15px] text-on-card outline-none focus:border-line-focus",
+          "w-full min-h-[40px] rounded-xl border text-[15px] text-on-card outline-none focus:border-line-focus",
+          compact ? "px-3 py-2 leading-snug" : "px-3.5 py-3",
           className,
         )}
       />
