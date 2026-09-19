@@ -348,7 +348,8 @@ export default function Pillar4() {
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 mt-3">
-          <button onClick={removeItem} className="mr-auto p-1 text-[11px] font-semibold" style={{ color: "var(--muted)" }}>
+          {/* ✕ and "Delete" on one line, in the red every other delete uses. */}
+          <button onClick={removeItem} className="tap-row mr-auto inline-flex items-center gap-1 p-1 text-[12px] font-semibold" style={{ color: Accents.red }}>
             <Close size={13} /> Delete
           </button>
           {item.status === "completed" ? (
