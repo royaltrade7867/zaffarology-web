@@ -226,7 +226,12 @@ export function AuthGuard({ children }: { children: ReactNode }) {
           reading measure internally; a wide page is not a wide paragraph. */}
       <div className="mx-auto flex max-w-6xl gap-10 px-4 py-6 lg:px-6">
         <aside className="hidden w-56 shrink-0 lg:block">
-          <div className="sticky top-24">
+          {/* `top-24` clears the sticky header (56px) with air to spare.
+              The height cap and `overflow-y-auto` matter on a short viewport —
+              a laptop at 700px with browser chrome — where the rail would
+              otherwise be taller than the space it is pinned in and its last
+              rows would be unreachable. */}
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto">
             <PillarRail />
           </div>
         </aside>

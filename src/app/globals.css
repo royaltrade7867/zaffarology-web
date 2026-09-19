@@ -255,13 +255,23 @@
 
 html,
 body {
-  /* Wide content (the team table, the daily-report grid) scrolls inside its own
-     container. The page body itself never scrolls sideways. */
-  overflow-x: hidden;
   background: var(--background);
   color: var(--ink);
   font-family: var(--font-inter), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+body {
+  /* Wide content (the team table, the daily-report grid) scrolls inside its own
+     container. The page body itself never scrolls sideways.
+
+     On BODY only, never on `html`. `overflow-x: hidden` on the root element
+     makes the document itself the scroll container, which silently disables
+     `position: sticky` for everything on the page — the pillar rail had
+     `sticky top-24` and scrolled away regardless, with nothing in the markup to
+     explain why. Scoping it here keeps the horizontal clamp and gives sticky
+     back its scrollport. */
+  overflow-x: hidden;
 }
 
 /* The smallest a control may be, per WCAG 2.2 target size (2.5.8).
