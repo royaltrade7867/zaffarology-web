@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/lib/auth-context";
+import { useNextParam } from "@/lib/next-path";
 import { AuthShell, Eagle } from "@/components/shell";
 import { Button, TextField, Loading } from "@/components/ui";
 
@@ -14,12 +15,14 @@ export default function VerifyEmail() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  /** Where a sign-up was heading (a QR code's pricing link), else Home. */
+  const next = useNextParam();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || next === undefined) return;
     if (!user) router.replace("/login");
-    else if (user.isVerified) router.replace("/home");
-  }, [user, loading, router]);
+    else if (user.isVerified) router.replace(next ?? "/home");
+  }, [user, loading, router, next]);
 
   if (loading || !user) return <Loading />;
 
@@ -30,7 +33,7 @@ export default function VerifyEmail() {
     const err = await verifyEmail(code);
     setBusy(false);
     if (err) setError(err);
-    else router.replace("/home");
+    else router.replace(next ?? "/home");
   };
 
   return (

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useAuth } from "@/lib/auth-context";
+import { nextQuery, useNextParam } from "@/lib/next-path";
 import { AuthShell, Eagle } from "@/components/shell";
 import { Button, TextField } from "@/components/ui";
 
@@ -28,6 +29,8 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Where to go once the account is confirmed (e.g. pricing, from a QR code). */
+  const next = useNextParam();
 
   const submit = async () => {
     if (!fullName.trim() || !email.trim() || password.length < 6) {
@@ -39,7 +42,8 @@ export default function Signup() {
     const err = await signUpIndividual(fullName, email, password);
     setBusy(false);
     if (err) setError(err);
-    else router.replace("/home");
+    // A new account confirms its email first, so the destination rides along.
+    else router.replace(next ? `/verify-email${nextQuery(next)}` : "/home");
   };
 
   return (
@@ -63,7 +67,7 @@ export default function Signup() {
         <Button type="submit" label="Create account" onClick={submit} loading={busy} />
       </form>
 
-      <Link href="/login" className="mt-3 block text-center text-[14px] font-semibold text-heading">Already have an account? Log in</Link>
+      <Link href={`/login${nextQuery(next)}`} className="mt-3 block text-center text-[14px] font-semibold text-heading">Already have an account? Log in</Link>
     </AuthShell>
   );
 }
