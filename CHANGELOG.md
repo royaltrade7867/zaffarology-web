@@ -2,6 +2,30 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-23 - "Delegation" is now "Delegation and Follow-up"
+
+The second standard department in Pillar 5 was renamed. New businesses are
+seeded with the new name; nothing rewrites an existing one.
+
+Three behaviours key off that name, and each fails silently if the old spelling
+stops matching, so BOTH names keep working:
+
+- `deptKind` decides which board a system opens. Lose the match and an existing
+  delegate board becomes an ordinary 12-section system: the tasks are still
+  stored, but nothing renders them.
+- `isStandardDept` decides whether a department can be deleted. Lose it and a
+  standard department quietly becomes deletable.
+- `standardIndex` is what the seed checks before adding a missing standard
+  department. Lose it and every load inserts a SECOND delegation department
+  beside the first.
+
+The stored name is deliberately NOT rewritten. Doing so would mean a whole-blob
+write against a user's data purely to change a label, and an older phone build
+reading the same blob would not know the new spelling.
+
+New fixture `check-dept-rename.ts` (14 checks) covers both spellings, the
+absence of duplicates, and that an existing business keeps its board.
+
 ## 2026-09-19 - The pricing page now shows what you are buying
 
 It sold a price without ever naming the product, inside a 448px auth-form

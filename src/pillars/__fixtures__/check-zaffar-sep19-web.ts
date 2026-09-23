@@ -70,8 +70,8 @@ const code = (src: string) => src.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/
     { id: "l", name: "Loyalty", systems: [] },
   ] });
   const names = lost.departments.map((d) => d.name);
-  ck("A18 a business missing standard departments gets all five back", ["AM Planning & PM Achievement ($)", "Delegation", "Loyalty", "AI", "Record Keeping"].every((n) => names.includes(n)), names.join(" | "));
-  ck("A18 re-added ones sit in the standard order", names.indexOf("Delegation") === names.indexOf("AM Planning & PM Achievement ($)") + 1, names.join(" | "));
+  ck("A18 a business missing standard departments gets all five back", ["AM Planning & PM Achievement ($)", "Delegation and Follow-up", "Loyalty", "AI", "Record Keeping"].every((n) => names.includes(n)), names.join(" | "));
+  ck("A18 re-added ones sit in the standard order", names.indexOf("Delegation and Follow-up") === names.indexOf("AM Planning & PM Achievement ($)") + 1, names.join(" | "));
   ck("A18 custom departments and their systems are kept", lost.departments.find((d) => d.name === "Warehouse")?.systems.length === 1);
   const renamed = trip({ id: "b", name: "B", seeded: true, departments: [
     { id: "a", name: "AM Planning & PM Achievement", systems: [] },
@@ -95,7 +95,11 @@ const code = (src: string) => src.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/
   ck("no bare '$' money label left in the app copy", bare.length === 0, `${bare.length} found`);
   const purchases = code(read("src/lib/purchases.ts"));
   ck("offerings are loaded in AUD", (purchases.match(/currency: "AUD"/g) ?? []).length >= 2);
-  ck("checkout runs in the Australian locale", /selectedLocale: "en-AU"/.test(code(read("src/app/pricing/page.tsx"))));
+  /* `selectedLocale` was a RevenueCat `purchases-js` parameter and went with it
+     when web checkout moved to Stripe directly (the dahlia `ui_mode` break).
+     Stripe's embedded checkout has no locale option, so what makes a price
+     Australian now is the formatter — see check-money-format.ts. */
+  ck("money is formatted as Australian dollars", /`A\$\$\{/.test(read("src/lib/stripe.ts")));
 }
 
 /* ------------------- A19: no dashes in any writing ------------------- */

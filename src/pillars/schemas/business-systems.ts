@@ -237,7 +237,12 @@ export const deptKind = (name: string): DeptKind => {
   const n = name.trim().toLowerCase();
   // Zaffar, 18 Sep 2026: these two work like Pillar 3 and Pillar 1.
   if (n === 'am planning & pm achievement ($)' || n === 'am planning & pm achievement') return 'am-pm';
-  if (n === 'delegation') return 'delegation';
+  // Renamed 23 Sep 2026. BOTH spellings match: a business seeded before that
+  // still stores "Delegation", and dropping the old name would turn its
+  // delegate board into an ordinary 12-section system overnight.
+  if (n === 'delegation' || n === 'delegation and follow-up' || n === 'delegation and followup') {
+    return 'delegation';
+  }
   if (n === 'loyalty') return 'idea-loyalty';
   if (n === 'ai') return 'idea-ai';
   if (n === 'record keeping') return 'records';
@@ -254,16 +259,30 @@ export const deptKind = (name: string): DeptKind => {
  */
 export const DEFAULT_DEPARTMENTS = [
   'AM Planning & PM Achievement ($)',
-  'Delegation',
+  'Delegation and Follow-up',
   'Loyalty',
   'AI',
   'Record Keeping',
 ] as const;
 
+/**
+ * Names a standard department has been called before.
+ *
+ * "Delegation" was renamed to "Delegation and Follow-up" on 23 Sep 2026.
+ * Without this, an existing business would match neither `isStandardDept` (so
+ * its department became deletable) nor the seed (so a SECOND delegation
+ * department would appear beside the first on the next load).
+ */
+const FORMER_NAMES: Record<string, string> = {
+  'delegation': 'Delegation and Follow-up',
+};
+
 /** Which standard department a name is (0-4), or -1. "AM Planning & PM
- *  Achievement" matches with or without the "($)". */
+ *  Achievement" matches with or without the "($)", and a department's former
+ *  name still counts as that department. */
 export const standardIndex = (name: string): number => {
-  const n = name.trim().toLowerCase().replace(/\s*\(a?\$\)\s*$/, "");
+  const raw = name.trim().toLowerCase().replace(/\s*\(a?\$\)\s*$/, "");
+  const n = (FORMER_NAMES[raw] ?? raw).toLowerCase();
   return DEFAULT_DEPARTMENTS.findIndex((d) => d.toLowerCase().replace(/\s*\(\$\)\s*$/, "") === n);
 };
 
