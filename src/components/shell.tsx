@@ -177,8 +177,13 @@ export function TopNav() {
  * `/profile` hosts the billing card — gating it would lock someone out of the
  * one page that lets them pay. `/about` is Help, which is where a confused
  * person goes. Both are deliberate holes in the gate, not oversights.
+ *
+ * `/checkin` is the workshop accountability portal. A workshop member has the
+ * check-in portal WITHOUT necessarily paying for the five pillars, so gating
+ * it would lock out exactly the people it was built for. The pillars stay
+ * behind the paywall for them like anyone else.
  */
-const OPEN_WITHOUT_SUBSCRIPTION = ["/profile", "/about"];
+const OPEN_WITHOUT_SUBSCRIPTION = ["/profile", "/about", "/checkin"];
 
 /** Guards authenticated pages: redirects to /login, /verify-email or /paywall. */
 export function AuthGuard({ children }: { children: ReactNode }) {

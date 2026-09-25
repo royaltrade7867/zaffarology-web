@@ -2,6 +2,50 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-25 - Workshop check-in portal
+
+Four pages for the workshop accountability group. Three of them work with no
+sign in at all, because they are opened from a reminder email by someone who
+may never have logged in: the signed token in the URL is the credential.
+
+- `/checkin/[token]` the daily form. Two fields, one button, nothing else.
+  Built for the minute it actually gets: a phone, at 6am, before work. The
+  morning field is focused when empty; in the evening the plan is already
+  filled and focus moves to the achievement. Saving is explicit, because the
+  person may close the tab the second they finish typing and needs to see it
+  was kept. A closed day renders read-only with an explanation rather than an
+  error.
+- `/checkin/history` their own entries, newest first. Signed in, and scoped
+  server-side to the caller so there is no id to tamper with.
+- `/checkin/unsubscribe/[token]` stops the reminders. The copy's real job is
+  making clear this is not an account deletion: someone tapping "stop these
+  reminders" in an inbox at 6am has no way of knowing what else they might be
+  switching off, and the answer is nothing.
+- `/set-password/[token]` choose a first password from a workshop invite. One
+  step, because it verifies the address at the same time. It cannot reset a
+  password: the backend refuses when one already exists, and that refusal is
+  shown here pointing at Forgot password.
+
+**`/checkin` was added to `OPEN_WITHOUT_SUBSCRIPTION`.** A workshop member has
+the check-in portal without necessarily paying for the five pillars, so gating
+it would lock out exactly the people it was built for. The pillars stay behind
+the paywall for them like anyone else.
+
+**Fixed in review:** an untouched, empty form could be saved, answering "Kept"
+to someone who had written nothing. The backend already ignored an empty row,
+so the figures were never wrong; the confirmation was. Saving now needs
+content.
+
+The form also relied on `beforeunload` to protect typed text, which does not
+fire reliably on a phone. The real loss path is someone typing at 6am,
+switching apps, and the OS reclaiming the tab, which delivers no unload event
+at all. A draft is now kept in `localStorage` per token and cleared the moment
+a save succeeds, with every access guarded so a private window cannot break the
+page.
+
+No pillar schema, shared file or blob was touched. The existing fixture suite
+still passes at 775.
+
 ## 2026-09-23 - "Delegation" is now "Delegation and Follow-up"
 
 The second standard department in Pillar 5 was renamed. New businesses are
