@@ -55,8 +55,6 @@ interface AuthContextValue {
   signUpEmployee: (fullName: string, email: string, password: string, inviteCode: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
-  verifyEmail: (code: string) => Promise<string | null>;
-  resendVerification: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -139,21 +137,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    *
    * Order matters: `AuthGuard` decides on `user` and `billing` together, so
    * setting the user first would render the app with no billing answer and then
-   * bounce. An unverified user is skipped — `/billing/status` is behind the
-   * verified-user check and would only 403; `verifyEmail` loads it instead.
+   * bounce.
+   *
+   * This used to skip the read for an unverified account, because
+   * `/billing/status` sat behind a verified-user check that would only 403.
+   * Verification is gone and that check no longer rejects anyone, so skipping it
+   * would now leave `billing` null for every account created before the change,
+   * and a null billing answer reads as "not locked" — handing them the whole app
+   * for free.
    */
-  const loadBillingFor = useCallback(
-    async (verified: boolean | undefined) => {
-      if (verified ?? true) await refreshBilling();
-      else setBillingLoading(false);
-    },
-    [refreshBilling],
-  );
+  const loadBillingFor = useCallback(async () => {
+    await refreshBilling();
+  }, [refreshBilling]);
 
   const applyAuth = useCallback(
     async (data: ApiAuthOut) => {
       setToken(data.access_token);
-      await loadBillingFor(data.user.is_verified);
+      await loadBillingFor();
       setUser(toUser(data.user));
       setCompany(toCompany(data.user));
     },
@@ -169,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!data.access_token) return "Could not log in. Please try again.";
       setToken(data.access_token);
       const session = await api.get<ApiUser>("/auth/session");
-      await loadBillingFor(session.is_verified);
+      await loadBillingFor();
       setUser(toUser(session));
       setCompany(toCompany(session));
       return null;
@@ -241,33 +241,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setBillingLoading(false);
   }, []);
 
-  const verifyEmail = useCallback(
-    async (code: string) => {
-      if (!user) return "Please sign in again.";
-      try {
-        await api.post("/auth/verify-email", { email: user.email, code: code.trim() });
-        const session = await api.get<ApiUser>("/auth/session");
-        // Now verified, so billing is readable for the first time.
-        await loadBillingFor(session.is_verified);
-        setUser(toUser(session));
-        setCompany(toCompany(session));
-        return null;
-      } catch (err) {
-        return apiErrorMessage(err, "Invalid or expired code. Please try again.");
-      }
-    },
-    [user, loadBillingFor],
-  );
-
-  const resendVerification = useCallback(async () => {
-    if (!user) return;
-    try {
-      await api.post("/auth/verify-email/resend", { email: user.email });
-    } catch {
-      /* silent */
-    }
-  }, [user]);
-
   const deleteAccount = useCallback(async () => {
     try {
       await api.del("/auth/account");
@@ -295,10 +268,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpEmployee,
       signOut,
       deleteAccount,
-      verifyEmail,
-      resendVerification,
     }),
-    [user, company, loading, billing, billingLoading, refreshBilling, syncBilling, signIn, signUpIndividual, signUpCompany, signUpEmployee, signOut, deleteAccount, verifyEmail, resendVerification],
+    [user, company, loading, billing, billingLoading, refreshBilling, syncBilling, signIn, signUpIndividual, signUpCompany, signUpEmployee, signOut, deleteAccount],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

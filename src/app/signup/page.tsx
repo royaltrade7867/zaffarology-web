@@ -42,8 +42,9 @@ export default function Signup() {
     const err = await signUpIndividual(fullName, email, password);
     setBusy(false);
     if (err) setError(err);
-    // A new account confirms its email first, so the destination rides along.
-    else router.replace(next ? `/verify-email${nextQuery(next)}` : "/home");
+    // Straight in. There is no verification step: an invite arrives, they sign
+    // up, they are using the app. Nothing sits between those.
+    else router.replace(next ?? "/home");
   };
 
   return (

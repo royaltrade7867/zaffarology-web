@@ -68,11 +68,11 @@ export default function Pricing() {
 
   useEffect(() => {
     if (loading) return;
-    /* Keep the place through login and verification, so a new sign-up lands
-       back here rather than on Home. */
-    if (!user || !user.isVerified) {
+    /* Keep the place through login, so a new sign-up lands back here rather
+       than on Home. */
+    if (!user) {
       const next = `?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-      router.replace(`${!user ? "/login" : "/verify-email"}${next}`);
+      router.replace(`/login${next}`);
     }
   }, [user, loading, router]);
 
@@ -100,11 +100,10 @@ export default function Pricing() {
   }, []);
 
   const userId = user?.id;
-  const verified = user?.isVerified;
   const loadedFor = useRef<string | null>(null);
   const busy = phase.kind === "checkout" || phase.kind === "activating";
   useEffect(() => {
-    if (loading || billingLoading || !userId || !verified || busy) return;
+    if (loading || billingLoading || !userId || busy) return;
     if (paid) {
       setPhase({ kind: "subscribed" });
       return;
@@ -112,7 +111,7 @@ export default function Pricing() {
     if (loadedFor.current === userId) return;
     loadedFor.current = userId;
     void load();
-  }, [loading, billingLoading, userId, verified, paid, busy, load]);
+  }, [loading, billingLoading, userId, paid, busy, load]);
 
   /** Wait until the backend reports the purchase as access. */
   const awaitActivation = async (sessionId?: string): Promise<boolean> => {

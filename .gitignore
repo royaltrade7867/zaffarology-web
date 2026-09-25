@@ -6,6 +6,9 @@ build/
 *.pem
 
 # Local env — the API URL points at the production backend.
+# `.env` itself is ignored too: it is real deployment config, and it was only
+# ever untracked by luck rather than by rule.
+.env
 .env*.local
 
 npm-debug.log*
