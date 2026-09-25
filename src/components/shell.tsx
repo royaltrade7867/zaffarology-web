@@ -185,7 +185,7 @@ export function TopNav() {
  */
 const OPEN_WITHOUT_SUBSCRIPTION = ["/profile", "/about", "/checkin"];
 
-/** Guards authenticated pages: redirects to /login, /verify-email or /paywall. */
+/** Guards authenticated pages: redirects to /login or /paywall. */
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { user, loading, billing, billingLoading, refreshBilling } = useAuth();
   const router = useRouter();
@@ -208,10 +208,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       const here = window.location.pathname + window.location.search;
       const next = here && here !== "/" ? `?next=${encodeURIComponent(here)}` : "";
       router.replace(`/login${next}`);
-      // Verification BEFORE subscription: telling someone to pay when they
-      // cannot yet sign in properly is the wrong order.
-    } else if (!user.isVerified) router.replace("/verify-email");
-    else if (locked && !exempt) router.replace("/paywall");
+    } else if (locked && !exempt) router.replace("/paywall");
   }, [user, loading, locked, exempt, router]);
 
   // A mid-session lapse never reaches the effect above, because nothing
@@ -219,7 +216,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   // flips, and the redirect follows.
   useEffect(() => onPaymentRequired(() => void refreshBillingRef.current?.()), []);
 
-  if (loading || !user || !user.isVerified) return <Loading />;
+  if (loading || !user) return <Loading />;
   if (locked && !exempt) return <Loading />;
   return (
     <>

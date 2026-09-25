@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 
 import { useAuth } from "@/lib/auth-context";
+import { nextQuery, safeNext } from "@/lib/next-path";
 import { AuthGuard } from "@/components/shell";
 import { Loading } from "@/components/ui";
 import { PillarScaffold } from "@/components/pillar-scaffold";
@@ -25,11 +26,17 @@ export default function PillarPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) router.replace("/login");
-    else if (!user.isVerified) router.replace("/verify-email");
+    // Keep where they were going. This guard runs BEFORE `AuthGuard` mounts, so
+    // it has to carry `next` itself: emails deep-link into a pillar (the task
+    // assignment mail opens /pillar/4), and dropping it signed people in and
+    // then dumped them on Home to find their way back by hand.
+    if (!user) {
+      const here = window.location.pathname + window.location.search;
+      router.replace(`/login${nextQuery(safeNext(here))}`);
+    }
   }, [user, loading, router]);
 
-  if (loading || !user || !user.isVerified) return <Loading />;
+  if (loading || !user) return <Loading />;
 
   /* Every pillar renders INSIDE `AuthGuard`, which supplies the top bar, the
      left rail and the page grid. They used to be returned bare, so a pillar

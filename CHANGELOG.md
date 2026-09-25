@@ -2,6 +2,27 @@
 
 Next.js 16 + Tailwind v4. Newest entries first.
 
+## 2026-09-25 - No verification step, and deep links that survive signing in
+
+**`/verify-email` is gone.** Signing up now lands straight on Home. The page it
+replaced asked for a 6-digit code and posted it to an endpoint the API never
+had, so nothing typed into it could ever work; the email had only ever contained
+a link. Rather than repair a step we no longer want, the step is removed.
+
+- `AuthGuard` and the pillar page no longer bounce an unverified account, and
+  `/pricing` no longer routes through verification.
+- Billing is now read for every signed-in account. It used to be skipped for an
+  unverified one, because `/billing/status` would only 403. With the gate gone,
+  skipping it would leave billing null for every account created before this
+  change, and a null billing answer reads as "not locked" — handing them the
+  whole app for free.
+
+**A pillar deep link now keeps where it was going.** `/pillar/[id]` runs its own
+guard before `AuthGuard` mounts, and that guard sent people to a bare `/login`.
+Signing in then dropped them on Home, so the task-assignment email's "Open
+Zaffarology" button (which opens `/pillar/4`) never actually opened it. It
+carries `?next=` now, like every other guarded page.
+
 ## 2026-09-25 - Workshop check-in portal
 
 Four pages for the workshop accountability group. Three of them work with no
